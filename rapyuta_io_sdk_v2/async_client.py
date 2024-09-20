@@ -1,28 +1,42 @@
+# -*- coding: utf-8 -*-
+# Copyright 2024 Rapyuta Robotics
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+from contextlib import asynccontextmanager
+
 from rapyuta_io_sdk_v2.client import Client
-from typing import Optional, override
+from typing import Optional, override, Any, AsyncGenerator, List, Dict
 import httpx
 
+# from rapyuta_io_sdk_v2.config import Configuration
+
+
 class AsyncClient(Client):
-    def __init__(self, auth_token, project, organization: Optional[str] = None):
-        # super().__init__(auth_token=auth_token,project=project,organization=organization)
 
-        self._host = "https://pr1056api.apps.okd4v2.okd4beta.rapyuta.io"
-        self._project = project
-        self._token = "Bearer "+auth_token
-        self._organization = organization
+    def __init__(self,config: Any):
+        super().__init__(config)
 
-    async def async_init(self):
-        if not self._organization:
-            await self._set_organization(self._project)
-
-    def _get_auth_header(self, with_project: bool = True) -> dict:
-        headers = dict(Authorization=self._token)
-        return headers
+    @asynccontextmanager
+    async def _get_client(self) -> AsyncGenerator[httpx.AsyncClient,None]:
+        async with httpx.AsyncClient(
+                headers=self._get_headers(),
+        ) as async_client:
+            yield async_client
 
     @override
     async def list_projects(self, organization_guid: str = None):
-        url = "{}/v2/projects/".format(self._host)
-        headers = self._get_auth_header(with_project=False)
+        url = "{}/v2/projects/".format(self.v2api_host)
+        headers = self._get_headers(with_project=False)
         params = {}
         if organization_guid:
             params.update({
@@ -35,16 +49,58 @@ class AsyncClient(Client):
 
     @override
     async def get_project(self, project_guid: str):
-        url = "{}/v2/projects/{}/".format(self._host, project_guid)
-        headers = self._get_auth_header()
-        async with httpx.AsyncClient() as client:
+        url = "{}/v2/projects/{}/".format(self.v2api_host, project_guid)
+        headers = self._get_headers()
+
+        async with self._get_client() as client:
             response = await client.get(url=url, headers=headers)
             response.raise_for_status()
             return response.json()
 
-    async def _set_organization(self,project):
-        project_info= await self.get_project(project_guid=project)
-        self._organization = project_info['metadata']['organizationGUID']
+    @override
+    async def list_config_trees(self) -> List[str]:
+        url = "{}/v2/configtrees/".format(self.v2api_host)
+        try:
+            async with self._get_client() as client:
+                res = await client.get(url=url)
+                res.raise_for_status()
+
+        except Exception as e:
+            raise ValueError(f"Failed to list config trees: {res.text}") from e
+
+        if tree_list := res.json().get("items"):
+            return [item["metadata"]["name"] for item in tree_list]
+        else:
+            return []
+
+    async def get_config_tree(
+        self,
+        tree_name: str, rev_id: Optional[str] = None,
+        include_data: bool = False, filter_content_types: Optional[List[str]] = None,
+        filter_prefixes: Optional[List[str]] = None
+    ) :
+        url = "{}/v2/configtrees/{}/".format(self.v2api_host, tree_name)
+        try:
+            params: Dict[str, Any] = {
+                'includeData': include_data,
+                'contentTypes': filter_content_types,
+                'keyPrefixes': filter_prefixes,
+                'revision': rev_id,
+            }
+
+            async with self._get_client() as client:
+                res = await client.get(
+                    url=url,
+                    params=params
+                )
+                res.raise_for_status()
+        except Exception as e:
+            raise ValueError(f"Failed to get config tree data: {res.text}") from e
+
+        raw_config_tree = res.json().get("keys", {})
+        return raw_config_tree
+
+
 
 
 
