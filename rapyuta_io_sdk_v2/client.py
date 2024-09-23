@@ -14,15 +14,16 @@
 # limitations under the License.
 from typing import Optional, List, Any, Dict
 
-import httpx
+import httpx, json, http
 
-# from rapyuta_io_sdk_v2.config import Configuration
+from utils import handle_server_errors
 from rapyuta_io_sdk_v2.constants import GET_USER_PATH
 
 class Client(object):
+    PROD_V2API_URL = "https://api.rapyuta.io"
     def __init__(self,config: Any):
         self.config = config
-        self.v2api_host = config.hosts.get("v2api_host")
+        self.v2api_host = config.hosts.get("v2api_host",self.PROD_V2API_URL)
 
     def _get_headers(self, with_project: bool = True) -> dict:
         headers = {
@@ -38,8 +39,9 @@ class Client(object):
             _core_api_host = self.config.hosts.get("core_api_host")
             url = "{}{}".format(_core_api_host, GET_USER_PATH)
             headers = self._get_headers()
-            response = httpx.get(url=url, headers=headers).json()
-            return response
+            response = httpx.get(url=url, headers=headers)
+            handle_server_errors(response)
+            return response.json()
         except Exception as e:
             raise
 
@@ -56,8 +58,9 @@ class Client(object):
             params.update({
                 "organizations": organization_guid,
             })
-        response = httpx.get(url=url,headers=headers,params=params).json()
-        return response
+        response = httpx.get(url=url,headers=headers,params=params)
+        handle_server_errors(response)
+        return response.json()
 
     def get_project(self, project_guid: str):
         """
@@ -67,8 +70,9 @@ class Client(object):
         """
         url = "{}/v2/projects/{}/".format(self.v2api_host, project_guid)
         headers = self._get_headers(with_project=False)
-        response = httpx.get(url=url,headers=headers).json()
-        return response
+        response = httpx.get(url=url,headers=headers)
+        handle_server_errors(response)
+        return response.json()
 
     def get_config_tree(self,tree_name: str, rev_id: Optional[str]=None,
         include_data: bool = False, filter_content_types: Optional[List[str]] = None,
@@ -82,25 +86,41 @@ class Client(object):
             'revision': rev_id,
         }
         headers = self._get_headers()
-        response = httpx.get(url=url,headers=headers,params=query).json()
-        return response
+        response = httpx.get(url=url,headers=headers,params=query)
+        handle_server_errors(response)
+        return response.json()
 
     def create_config_tree(self,tree_spec: dict):
         url = "{}/v2/configtrees/".format(self.v2api_host)
         headers = self._get_headers()
         response = httpx.post(url=url,headers=headers,json=tree_spec)
-        # handle_server_errors(response)
-        return response
+        handle_server_errors(response)
+        return response.json()
 
     def delete_config_tree(self,tree_name:str):
         url = "{}/v2/configtrees/{}/".format(self.v2api_host, tree_name)
         headers = self._get_headers()
         response = httpx.delete(url=url,headers=headers)
-        return response
+        handle_server_errors(response)
+        return response.json()
 
     def list_config_trees(self):
         url = "{}/v2/configtrees/".format(self.v2api_host)
         headers = self._get_headers()
         response = httpx.get(url=url,headers=headers)
-        return response
+        handle_server_errors(response)
+        return response.json()
+
+    def set_revision_config_tree(self, tree_name: str, spec: dict) -> None:
+        url = "{}/v2/configtrees/{}/".format(self.v2api_host, tree_name)
+        headers = self._get_headers()
+        response = httpx.put(url=url,headers=headers,json=spec)
+        handle_server_errors(response)
+
+        data = json.loads(response.text)
+        print(data)
+        if not data.ok:
+            err_msg = data.get('error')
+            raise Exception("configtree: {}".format(err_msg))
+
 

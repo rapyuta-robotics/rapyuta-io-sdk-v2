@@ -18,12 +18,9 @@ from rapyuta_io_sdk_v2.client import Client
 from typing import Optional, override, Any, AsyncGenerator, List, Dict
 import httpx
 
-# from rapyuta_io_sdk_v2.config import Configuration
-
-
 class AsyncClient(Client):
 
-    def __init__(self,config: Any):
+    def __init__(self,config):
         super().__init__(config)
 
     @asynccontextmanager
@@ -36,24 +33,22 @@ class AsyncClient(Client):
     @override
     async def list_projects(self, organization_guid: str = None):
         url = "{}/v2/projects/".format(self.v2api_host)
-        headers = self._get_headers(with_project=False)
         params = {}
         if organization_guid:
             params.update({
                 "organizations": organization_guid,
             })
-        async with httpx.AsyncClient() as client:
-            response = await client.get(url=url, headers=headers, params=params)
+        async with self._get_client() as client:
+            response = await client.get(url=url, params=params)
             response.raise_for_status()
             return response.json()
 
     @override
     async def get_project(self, project_guid: str):
         url = "{}/v2/projects/{}/".format(self.v2api_host, project_guid)
-        headers = self._get_headers()
 
         async with self._get_client() as client:
-            response = await client.get(url=url, headers=headers)
+            response = await client.get(url=url)
             response.raise_for_status()
             return response.json()
 
@@ -73,6 +68,7 @@ class AsyncClient(Client):
         else:
             return []
 
+    @override
     async def get_config_tree(
         self,
         tree_name: str, rev_id: Optional[str] = None,
@@ -95,10 +91,27 @@ class AsyncClient(Client):
                 )
                 res.raise_for_status()
         except Exception as e:
-            raise ValueError(f"Failed to get config tree data: {res.text}") from e
+            raise ValueError(f"Failed to get config tree data: {res.text}")
 
-        raw_config_tree = res.json().get("keys", {})
+        raw_config_tree = res.json()
         return raw_config_tree
+
+    @override
+    async def create_config_tree(self,tree_spec: dict):
+        url = "{}/v2/configtrees/".format(self.v2api_host)
+        try:
+            async with self._get_client() as client:
+                res = await client.post(
+                    url=url,
+                    json=tree_spec
+                )
+                res.raise_for_status()
+        except Exception as e:
+            raise ValueError(f"Failed to create config tree: {res.text}")
+
+        raw_config_tree = res.json()
+        return raw_config_tree
+
 
 
 

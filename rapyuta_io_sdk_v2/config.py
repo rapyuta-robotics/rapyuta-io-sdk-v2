@@ -12,10 +12,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from typing import Optional
+
 from rapyuta_io_sdk_v2.async_client import AsyncClient
 from rapyuta_io_sdk_v2.client import Client
 from rapyuta_io_sdk_v2.constants import LOGIN_ROUTE_PATH, NAMED_ENVIRONMENTS, STAGING_ENVIRONMENT_SUBDOMAIN, PROD_ENVIRONMENT_SUBDOMAIN
-from rapyuta_io_sdk_v2.exceptions import ValidationError, AuthenticationError, LoggedOutError, UnauthorizedError
+from rapyuta_io_sdk_v2.exceptions import ValidationError, AuthenticationError, LoggedOutError
 import httpx
 
 from rapyuta_io_sdk_v2.utils import validate_auth_token
@@ -23,63 +25,60 @@ from rapyuta_io_sdk_v2.utils import validate_auth_token
 
 class Configuration(object):
 
-    def __init__(self, email: str, password: str, project_guid: str, organization_guid: str,auth_token: str=None, environment: str=None):
+    def __init__(self, project_guid: str, organization_guid: str, password: str=None,auth_token: str=None, environment: str=None,email: str=None):
         self.email = email
-        self.password = password
+        self._password = password
         self.auth_token = auth_token
         self.project_guid = project_guid
         self.organization_guid = organization_guid
         self.environment = environment
         self.hosts = {}
-        self._configure_environment(environment)
+        self.set_environment(environment)
 
-    def login(self):
+    def login(self) -> None:
         _rip_host = self.hosts.get("rip_host")
 
-        if self.auth_token is not None:
-            is_valid: bool = validate_auth_token(self)
-            if is_valid:
-                return
         try:
+            if self.auth_token is not None:
+                user = validate_auth_token(self)
+                self.email=user["emailID"]
+                return
+
             url = '{}{}'.format(_rip_host,LOGIN_ROUTE_PATH)
-            response = httpx.post(url, json={'email': self.email, 'password': self.password}).json()
+            response = httpx.post(url, json={'email': self.email, 'password': self._password}).json()
             if response['success']:
                 self.auth_token = response['data']['token']
-                return
-            raise AuthenticationError()
+            else:
+                raise AuthenticationError()
         except AuthenticationError as e:
             raise
         except Exception as e:
             raise
 
-    def logout(self):
+    def logout(self) -> None:
         self.email=None
         self.auth_token=None
         self.project_guid=None
         self.organization_guid=None
         self.environment=None
 
-    def set_project(self, project):
+    def set_project(self, project) -> None:
         self.project_guid = project
 
-    def set_organization(self,organization_guid):
+    def set_organization(self,organization_guid) -> None:
         self.organization_guid = organization_guid
 
-    def sync_client(self):
+    def sync_client(self) -> Optional[Client]:
         if self.auth_token is None:
             raise LoggedOutError("You are not logged in. Run config.login() to login.")
-
-        # validate the auth_token
         return Client(self)
 
-    def async_client(self):
+    def async_client(self) -> Optional[AsyncClient]:
         if self.auth_token is None:
             raise LoggedOutError("You are not logged in. Run config.login() to login.")
-
-        # validate the auth_token
         return AsyncClient(self)
 
-    def _configure_environment(self, name: str) -> None:
+    def set_environment(self, name: str) -> None:
 
         subdomain = PROD_ENVIRONMENT_SUBDOMAIN
         if name is not None:

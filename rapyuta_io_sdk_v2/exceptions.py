@@ -21,39 +21,26 @@ class AuthenticationError(Exception):
         self.message = message
         super().__init__(self.message)
 
-
-class ValidationError(Exception):
-
-    def __init__(self, message="Validation failed"):
-        self.message = message
-        super().__init__(self.message)
-
 class LoggedOutError(Exception):
 
     def __init__(self,message="Not Authenticated"):
         self.message = message
         super().__init__(self.message)
 
-class UnAuthorizedError(Exception):
-
-    def __init__(self,message="UnAuthorized to access"):
+class HttpNotFoundError(Exception):
+    def __init__(self, message='resource not found'):
+        self.message = message
+        super().__init__(self.message)
+class HttpAlreadyExistsError(Exception):
+    def __init__(self, message='resource already exists'):
         self.message = message
         super().__init__(self.message)
 
-class InvalidAuthTokenException(Exception):
-    def __init__(self, msg=None):
-        Exception.__init__(self, msg)
-
-class BadRequestError(Exception):
-    def __init__(self, msg=None):
-        Exception.__init__(self, msg)
-
-class UnauthorizedError(Exception):
-    def __init__(self, msg=None):
-        Exception.__init__(self, msg)
+class ValidationError(Exception):
+    def __init__(self, message=None):
+        self.message = message
+        super().__init__(self.message)
 
 
-class ForbiddenError(Exception):
-    def __init__(self, msg=None):
-        Exception.__init__(self, msg)
+
 
