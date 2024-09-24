@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Optional, Tuple, Type
+from typing import Optional, Tuple, Type,Any
 
 from pydantic_settings import (
     BaseSettings,
@@ -27,8 +27,9 @@ from rapyuta_io_sdk_v2 import Configuration
 
 class RIOAuthCredentials(BaseSettings):
     rio_auth_token: str = ""
-    rio_organisation_guid: str = ""
+    rio_organization_id: str = ""
     rio_project_id: str = ""
+    rio_environment:str = ""
 
 
 class RIOConfigTree(BaseSettings):
@@ -37,13 +38,13 @@ class RIOConfigTree(BaseSettings):
 
 
 class RRSettings(BaseSettings):
-    model_config = SettingsConfigDict(extra="allow")
-
+    model_config = SettingsConfigDict(extra="allow",env_prefix="RIO_")
     rio_auth_token: str = ""
     config_tree_name: str
     config_tree_version: Optional[str] = None
-    rio_organisation_guid: str = ""
+    rio_organization_id: str = ""
     rio_project_id: str = ""
+    __config_source__ = None
 
     @classmethod
     def settings_customise_sources(
@@ -61,11 +62,15 @@ class RRSettings(BaseSettings):
         rio_auth_token = init_settings.init_kwargs.get(
             "rio_auth_token", rio_auth_creds.rio_auth_token
         )
-        rio_organisation_guid = init_settings.init_kwargs.get(
-            "rio_organisation_guid", rio_auth_creds.rio_organisation_guid
+        rio_organization_id = init_settings.init_kwargs.get(
+            "rio_organization_id", rio_auth_creds.rio_organization_id
         )
         rio_project_id = init_settings.init_kwargs.get(
             "rio_project_id", rio_auth_creds.rio_project_id
+        )
+
+        rio_environment = init_settings.init_kwargs.get(
+            "rio_environment", rio_auth_creds.rio_environment
         )
         config_tree_name = init_settings.init_kwargs.get(
             "config_tree_name", rio_config_tree.config_tree_name
@@ -77,7 +82,8 @@ class RRSettings(BaseSettings):
         _client_config = Configuration(
             auth_token=rio_auth_token,
             project_guid=rio_project_id,
-            organization_guid=rio_organisation_guid
+            organization_guid=rio_organization_id,
+            environment=rio_environment
         )
 
         rr_config_settings_source = RRConfigSettingsSource(
@@ -86,6 +92,7 @@ class RRSettings(BaseSettings):
             config_tree_name=config_tree_name,
             config_tree_revision=config_tree_revision,
         )
+        cls.__config_source__ = rr_config_settings_source
 
         return (
             init_settings,
@@ -94,3 +101,8 @@ class RRSettings(BaseSettings):
             file_secret_settings,
             rr_config_settings_source,
         )
+
+    def get(self, key: str) -> Optional[Any]:
+        if hasattr(self.__config_source__,'get_value'):
+            return self.__config_source__.get_value(key)
+        return None

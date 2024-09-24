@@ -49,6 +49,7 @@ class RRConfigSettingsSource(PydanticBaseSettingsSource):
         res = await self.config_tree_aysnc_client.get_config_tree(
             tree_name=self.config_tree_name,
             rev_id=self.config_tree_revision,
+            include_data=True
         )
         self._config_tree = res
 
@@ -56,8 +57,19 @@ class RRConfigSettingsSource(PydanticBaseSettingsSource):
         self,
         field: FieldInfo,
         field_name: str,
-    ) -> Tuple[Any, str, bool]:
-        return "dummy_val", "dummy_val", False
+    ) -> Tuple[Any, str]:
+        return "str","str"
+
+    def get_value(self, key: str) -> Optional[Any]:
+        keys = key.split('.')
+        value = self._config_tree
+
+        try:
+            for k in keys:
+                value = value[k]
+            return value
+        except (KeyError, TypeError):
+            return None
 
     def __call__(self):
         return self._config_tree

@@ -55,18 +55,18 @@ class AsyncClient(Client):
     @override
     async def list_config_trees(self) -> List[str]:
         url = "{}/v2/configtrees/".format(self.v2api_host)
-        try:
-            async with self._get_client() as client:
+        async with self._get_client() as client:
+            try:
                 res = await client.get(url=url)
                 res.raise_for_status()
 
-        except Exception as e:
-            raise ValueError(f"Failed to list config trees: {res.text}") from e
+            except Exception as e:
+                raise ValueError(f"Failed to list config trees: {res.text}") from e
 
-        if tree_list := res.json().get("items"):
-            return [item["metadata"]["name"] for item in tree_list]
-        else:
-            return []
+            if tree_list := res.json().get("items"):
+                return [item["metadata"]["name"] for item in tree_list]
+            else:
+                return []
 
     @override
     async def get_config_tree(
@@ -76,41 +76,39 @@ class AsyncClient(Client):
         filter_prefixes: Optional[List[str]] = None
     ) :
         url = "{}/v2/configtrees/{}/".format(self.v2api_host, tree_name)
-        try:
-            params: Dict[str, Any] = {
-                'includeData': include_data,
-                'contentTypes': filter_content_types,
-                'keyPrefixes': filter_prefixes,
-                'revision': rev_id,
-            }
-
-            async with self._get_client() as client:
+        params: Dict[str, Any] = {
+            'includeData': include_data,
+            'contentTypes': filter_content_types,
+            'keyPrefixes': filter_prefixes,
+            'revision': rev_id,
+        }
+        async with self._get_client() as client:
+            try:
                 res = await client.get(
                     url=url,
                     params=params
                 )
                 res.raise_for_status()
-        except Exception as e:
-            raise ValueError(f"Failed to get config tree data: {res.text}")
+            except Exception as e:
+                raise ValueError(f"Failed to get config tree data")
 
-        raw_config_tree = res.json()
-        return raw_config_tree
+            raw_config_tree = res.json().get("keys", {})
+            return self._preprocess_config_tree_data(raw_config_tree)
 
     @override
     async def create_config_tree(self,tree_spec: dict):
         url = "{}/v2/configtrees/".format(self.v2api_host)
-        try:
-            async with self._get_client() as client:
+        async with self._get_client() as client:
+            try:
                 res = await client.post(
                     url=url,
                     json=tree_spec
                 )
                 res.raise_for_status()
-        except Exception as e:
-            raise ValueError(f"Failed to create config tree: {res.text}")
-
-        raw_config_tree = res.json()
-        return raw_config_tree
+            except Exception as e:
+                raise ValueError(f"Failed to create config tree: {res.text}")
+            raw_config_tree = res.json()
+            return raw_config_tree
 
 
 

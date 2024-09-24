@@ -12,16 +12,17 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Optional, List, Any, Dict
-
-import httpx, json, http
+from typing import Optional, List, Dict, Any
+from benedict import benedict
+from rapyuta_io_sdk_v2.utils import unflatten_keys
+import httpx, json
 
 from utils import handle_server_errors
 from rapyuta_io_sdk_v2.constants import GET_USER_PATH
 
 class Client(object):
     PROD_V2API_URL = "https://api.rapyuta.io"
-    def __init__(self,config: Any):
+    def __init__(self,config):
         self.config = config
         self.v2api_host = config.hosts.get("v2api_host",self.PROD_V2API_URL)
 
@@ -33,6 +34,13 @@ class Client(object):
             "organizationguid": self.config.organization_guid,
         }
         return headers
+
+    @staticmethod
+    def _preprocess_config_tree_data(raw_config_tree: Optional[Dict[str, Any]]):
+        if raw_config_tree:
+            return unflatten_keys(raw_config_tree)
+        else:
+            return benedict()
 
     def get_authenticated_user(self) -> Optional[Dict]:
         try:

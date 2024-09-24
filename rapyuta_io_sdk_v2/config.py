@@ -35,9 +35,11 @@ class Configuration(object):
         self.hosts = {}
         self.set_environment(environment)
 
-    def login(self) -> None:
-        _rip_host = self.hosts.get("rip_host")
+        # login
+        self._login()
 
+    def _login(self) -> None:
+        _rip_host = self.hosts.get("rip_host")
         try:
             if self.auth_token is not None:
                 user = validate_auth_token(self)
@@ -55,17 +57,11 @@ class Configuration(object):
         except Exception as e:
             raise
 
-    def logout(self) -> None:
-        self.email=None
-        self.auth_token=None
-        self.project_guid=None
-        self.organization_guid=None
-        self.environment=None
-
     def set_project(self, project) -> None:
         self.project_guid = project
 
     def set_organization(self,organization_guid) -> None:
+        self.project_guid=None
         self.organization_guid = organization_guid
 
     def sync_client(self) -> Optional[Client]:
@@ -89,13 +85,11 @@ class Configuration(object):
         else:
             name = "ga"
 
-        catalog = 'https://{}catalog.{}'.format(name, subdomain)
         core = 'https://{}apiserver.{}'.format(name, subdomain)
         rip = 'https://{}rip.{}'.format(name, subdomain)
         v2api = 'https://{}api.{}'.format(name, subdomain)
 
         self.hosts['environment'] = name
-        self.hosts['catalog_host'] = catalog
         self.hosts['core_api_host'] = core
         self.hosts['rip_host'] = rip
         self.hosts['v2api_host'] = v2api
