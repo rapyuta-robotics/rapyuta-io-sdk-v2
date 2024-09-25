@@ -48,6 +48,8 @@ pyyaml==6.0.2
     # via rapyuta-io-sdk-v2
 requests==2.32.3
     # via python-benedict
+setuptools==75.1.0
+    # via rapyuta-io-sdk-v2
 sniffio==1.3.1
     # via anyio
     # via httpx

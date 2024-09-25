@@ -21,7 +21,7 @@ from pydantic_settings import (
     SettingsConfigDict,
 )
 
-from pydantic_configs.app_config_source import RRConfigSettingsSource
+from rapyuta_io_sdk_v2.pydantic_configs.app_config_source import RRConfigSettingsSource
 from rapyuta_io_sdk_v2 import Configuration
 
 
@@ -38,7 +38,7 @@ class RIOConfigTree(BaseSettings):
 
 
 class RRSettings(BaseSettings):
-    model_config = SettingsConfigDict(extra="allow",env_prefix="RIO_")
+    model_config = SettingsConfigDict(extra="allow")
     rio_auth_token: str = ""
     config_tree_name: str
     config_tree_version: Optional[str] = None
@@ -59,38 +59,38 @@ class RRSettings(BaseSettings):
         rio_auth_creds = RIOAuthCredentials()
         rio_config_tree = RIOConfigTree()
 
-        rio_auth_token = init_settings.init_kwargs.get(
+        cls.rio_auth_token = init_settings.init_kwargs.get(
             "rio_auth_token", rio_auth_creds.rio_auth_token
         )
-        rio_organization_id = init_settings.init_kwargs.get(
+        cls.rio_organization_id = init_settings.init_kwargs.get(
             "rio_organization_id", rio_auth_creds.rio_organization_id
         )
-        rio_project_id = init_settings.init_kwargs.get(
+        cls.rio_project_id = init_settings.init_kwargs.get(
             "rio_project_id", rio_auth_creds.rio_project_id
         )
 
-        rio_environment = init_settings.init_kwargs.get(
+        cls.rio_environment = init_settings.init_kwargs.get(
             "rio_environment", rio_auth_creds.rio_environment
         )
-        config_tree_name = init_settings.init_kwargs.get(
+        cls.config_tree_name = init_settings.init_kwargs.get(
             "config_tree_name", rio_config_tree.config_tree_name
         )
-        config_tree_revision = init_settings.init_kwargs.get(
+        cls.config_tree_revision = init_settings.init_kwargs.get(
             "config_tree_version", rio_config_tree.config_tree_revision
         )
 
         _client_config = Configuration(
-            auth_token=rio_auth_token,
-            project_guid=rio_project_id,
-            organization_guid=rio_organization_id,
-            environment=rio_environment
+            auth_token=cls.rio_auth_token,
+            project_guid=cls.rio_project_id,
+            organization_guid=cls.rio_organization_id,
+            environment=cls.rio_environment
         )
 
         rr_config_settings_source = RRConfigSettingsSource(
             settings_cls,
             client_config=_client_config,
-            config_tree_name=config_tree_name,
-            config_tree_revision=config_tree_revision,
+            config_tree_name=cls.config_tree_name,
+            config_tree_revision=cls.config_tree_revision,
         )
         cls.__config_source__ = rr_config_settings_source
 

@@ -39,7 +39,7 @@ class RRConfigSettingsSource(PydanticBaseSettingsSource):
         current_loop = asyncio.get_event_loop()
         current_loop.run_until_complete(
             self._retrieve_config_tree()
-        )  # set self._config_tree
+        )
 
         super().__init__(
             settings_cls,

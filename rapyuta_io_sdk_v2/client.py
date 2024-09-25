@@ -17,7 +17,7 @@ from benedict import benedict
 from rapyuta_io_sdk_v2.utils import unflatten_keys
 import httpx, json
 
-from utils import handle_server_errors
+from .utils import handle_server_errors
 from rapyuta_io_sdk_v2.constants import GET_USER_PATH
 
 class Client(object):
