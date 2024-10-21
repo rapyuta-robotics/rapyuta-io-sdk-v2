@@ -12,20 +12,46 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from dataclasses import dataclass
+import json
 from typing import Optional
+
+import httpx
 
 from rapyuta_io_sdk_v2.async_client import AsyncClient
 from rapyuta_io_sdk_v2.client import Client
-from rapyuta_io_sdk_v2.constants import LOGIN_ROUTE_PATH, NAMED_ENVIRONMENTS, STAGING_ENVIRONMENT_SUBDOMAIN, PROD_ENVIRONMENT_SUBDOMAIN
-from rapyuta_io_sdk_v2.exceptions import ValidationError, AuthenticationError, LoggedOutError
-import httpx
-
+from rapyuta_io_sdk_v2.constants import (
+    LOGIN_ROUTE_PATH,
+    NAMED_ENVIRONMENTS,
+    PROD_ENVIRONMENT_SUBDOMAIN,
+    STAGING_ENVIRONMENT_SUBDOMAIN,
+)
+from rapyuta_io_sdk_v2.exceptions import (
+    AuthenticationError,
+    LoggedOutError,
+    ValidationError,
+)
 from rapyuta_io_sdk_v2.utils import validate_auth_token
 
 
+@dataclass
 class Configuration(object):
+    email: str
+    _password: str
+    auth_token: str
+    project_guid: str
+    organization_guid: str
+    environment: str = "ga"  # Default environment is prod
 
-    def __init__(self, project_guid: str, organization_guid: str, password: str=None,auth_token: str=None, environment: str=None,email: str=None):
+    def __init__(
+        self,
+        project_guid: str,
+        organization_guid: str,
+        password: str = None,
+        auth_token: str = None,
+        environment: str = None,
+        email: str = None,
+    ):
         self.email = email
         self._password = password
         self.auth_token = auth_token
@@ -35,37 +61,51 @@ class Configuration(object):
         self.hosts = {}
         self.set_environment(environment)
 
+    @staticmethod
+    def from_file(self, file_path: str) -> "Configuration":
+        with open(file_path, "r") as file:
+            data = json.load(file)
+            return Configuration(
+                email=data.get("email"),
+                password=data.get("password"),
+                project_guid=data.get("project_guid"),
+                organization_guid=data.get("organization_guid"),
+                environment=data.get("environment"),
+            )
+
     def login(self) -> None:
         _rip_host = self.hosts.get("rip_host")
 
         try:
             if self.auth_token is not None:
                 user = validate_auth_token(self)
-                self.email=user["emailID"]
+                self.email = user["emailID"]
                 return
 
-            url = '{}{}'.format(_rip_host,LOGIN_ROUTE_PATH)
-            response = httpx.post(url, json={'email': self.email, 'password': self._password}).json()
-            if response['success']:
-                self.auth_token = response['data']['token']
+            url = "{}{}".format(_rip_host, LOGIN_ROUTE_PATH)
+            response = httpx.post(
+                url, json={"email": self.email, "password": self._password}
+            ).json()
+            if response["success"]:
+                self.auth_token = response["data"]["token"]
             else:
                 raise AuthenticationError()
-        except AuthenticationError as e:
+        except AuthenticationError:
             raise
-        except Exception as e:
+        except Exception:
             raise
 
     def logout(self) -> None:
-        self.email=None
-        self.auth_token=None
-        self.project_guid=None
-        self.organization_guid=None
-        self.environment=None
+        self.email = None
+        self.auth_token = None
+        self.project_guid = None
+        self.organization_guid = None
+        self.environment = None
 
     def set_project(self, project) -> None:
         self.project_guid = project
 
-    def set_organization(self,organization_guid) -> None:
+    def set_organization(self, organization_guid) -> None:
         self.organization_guid = organization_guid
 
     def sync_client(self) -> Optional[Client]:
@@ -79,23 +119,22 @@ class Configuration(object):
         return AsyncClient(self)
 
     def set_environment(self, name: str) -> None:
-
         subdomain = PROD_ENVIRONMENT_SUBDOMAIN
         if name is not None:
-            is_valid_env = name in NAMED_ENVIRONMENTS or name.startswith('pr')
+            is_valid_env = name in NAMED_ENVIRONMENTS or name.startswith("pr")
             if not is_valid_env:
                 raise ValidationError("Invalid environment")
             subdomain = STAGING_ENVIRONMENT_SUBDOMAIN
         else:
             name = "ga"
 
-        catalog = 'https://{}catalog.{}'.format(name, subdomain)
-        core = 'https://{}apiserver.{}'.format(name, subdomain)
-        rip = 'https://{}rip.{}'.format(name, subdomain)
-        v2api = 'https://{}api.{}'.format(name, subdomain)
+        catalog = "https://{}catalog.{}".format(name, subdomain)
+        core = "https://{}apiserver.{}".format(name, subdomain)
+        rip = "https://{}rip.{}".format(name, subdomain)
+        v2api = "https://{}api.{}".format(name, subdomain)
 
-        self.hosts['environment'] = name
-        self.hosts['catalog_host'] = catalog
-        self.hosts['core_api_host'] = core
-        self.hosts['rip_host'] = rip
-        self.hosts['v2api_host'] = v2api
+        self.hosts["environment"] = name
+        self.hosts["catalog_host"] = catalog
+        self.hosts["core_api_host"] = core
+        self.hosts["rip_host"] = rip
+        self.hosts["v2api_host"] = v2api

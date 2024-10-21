@@ -13,9 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # from rapyuta_io_sdk_v2.config import Configuration
-from typing import Any,Dict
-import http, httpx, json
-from rapyuta_io_sdk_v2.exceptions import HttpNotFoundError, HttpAlreadyExistsError
+import http
+import json
+from typing import Any, Dict
+
+import httpx
+
+from rapyuta_io_sdk_v2.exceptions import HttpAlreadyExistsError, HttpNotFoundError
+
 
 def validate_auth_token(config: Any) -> Dict:
     try:
@@ -25,15 +30,16 @@ def validate_auth_token(config: Any) -> Dict:
     except Exception as e:
         raise
 
+
 def handle_server_errors(response: httpx.Response):
     status_code = response.status_code
 
     if status_code < 400:
         return
 
-    err = ''
+    err = ""
     try:
-        err = response.json().get('error')
+        err = response.json().get("error")
     except json.JSONDecodeError:
         err = response.text
 
@@ -45,23 +51,23 @@ def handle_server_errors(response: httpx.Response):
         raise HttpAlreadyExistsError()
     # 500 Internal Server Error
     if status_code == http.HTTPStatus.INTERNAL_SERVER_ERROR:
-        raise Exception('internal server error')
+        raise Exception("internal server error")
     # 501 Not Implemented
     if status_code == http.HTTPStatus.NOT_IMPLEMENTED:
-        raise Exception('not implemented')
+        raise Exception("not implemented")
     # 502 Bad Gateway
     if status_code == http.HTTPStatus.BAD_GATEWAY:
-        raise Exception('bad gateway')
+        raise Exception("bad gateway")
     # 503 Service Unavailable
     if status_code == http.HTTPStatus.SERVICE_UNAVAILABLE:
-        raise Exception('service unavailable')
+        raise Exception("service unavailable")
     # 504 Gateway Timeout
     if status_code == http.HTTPStatus.GATEWAY_TIMEOUT:
-        raise Exception('gateway timeout')
+        raise Exception("gateway timeout")
     # 401 UnAuthorize Access
     if status_code == http.HTTPStatus.UNAUTHORIZED:
-        raise Exception('unauthorized permission access')
+        raise Exception("unauthorized permission access")
 
     # Anything else that is not known
     if status_code > 504:
-        raise Exception('unknown server error')
+        raise Exception("unknown server error")

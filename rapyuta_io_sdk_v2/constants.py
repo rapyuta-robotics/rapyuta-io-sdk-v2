@@ -13,8 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-LOGIN_ROUTE_PATH = '/user/login'
-GET_USER_PATH = '/api/user/me/get'
+LOGIN_ROUTE_PATH = "/user/login"
+GET_USER_PATH = "/api/user/me/get"
 
 
 STAGING_ENVIRONMENT_SUBDOMAIN = "apps.okd4v2.okd4beta.rapyuta.io"

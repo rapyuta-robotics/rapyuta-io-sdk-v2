@@ -13,20 +13,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from contextlib import asynccontextmanager
+from typing import Any, AsyncGenerator, Dict, List, Optional, override
 
-from rapyuta_io_sdk_v2.client import Client
-from typing import Optional, override, Any, AsyncGenerator, List, Dict
 import httpx
 
-class AsyncClient(Client):
+from rapyuta_io_sdk_v2.client import Client
 
-    def __init__(self,config):
+
+class AsyncClient(Client):
+    def __init__(self, config):
         super().__init__(config)
 
     @asynccontextmanager
-    async def _get_client(self) -> AsyncGenerator[httpx.AsyncClient,None]:
+    async def _get_client(self) -> AsyncGenerator[httpx.AsyncClient, None]:
         async with httpx.AsyncClient(
-                headers=self._get_headers(),
+            headers=self._get_headers(),
         ) as async_client:
             yield async_client
 
@@ -35,9 +36,11 @@ class AsyncClient(Client):
         url = "{}/v2/projects/".format(self.v2api_host)
         params = {}
         if organization_guid:
-            params.update({
-                "organizations": organization_guid,
-            })
+            params.update(
+                {
+                    "organizations": organization_guid,
+                }
+            )
         async with self._get_client() as client:
             response = await client.get(url=url, params=params)
             response.raise_for_status()
@@ -71,24 +74,23 @@ class AsyncClient(Client):
     @override
     async def get_config_tree(
         self,
-        tree_name: str, rev_id: Optional[str] = None,
-        include_data: bool = False, filter_content_types: Optional[List[str]] = None,
-        filter_prefixes: Optional[List[str]] = None
-    ) :
+        tree_name: str,
+        rev_id: Optional[str] = None,
+        include_data: bool = False,
+        filter_content_types: Optional[List[str]] = None,
+        filter_prefixes: Optional[List[str]] = None,
+    ):
         url = "{}/v2/configtrees/{}/".format(self.v2api_host, tree_name)
         try:
             params: Dict[str, Any] = {
-                'includeData': include_data,
-                'contentTypes': filter_content_types,
-                'keyPrefixes': filter_prefixes,
-                'revision': rev_id,
+                "includeData": include_data,
+                "contentTypes": filter_content_types,
+                "keyPrefixes": filter_prefixes,
+                "revision": rev_id,
             }
 
             async with self._get_client() as client:
-                res = await client.get(
-                    url=url,
-                    params=params
-                )
+                res = await client.get(url=url, params=params)
                 res.raise_for_status()
         except Exception as e:
             raise ValueError(f"Failed to get config tree data: {res.text}")
@@ -97,24 +99,14 @@ class AsyncClient(Client):
         return raw_config_tree
 
     @override
-    async def create_config_tree(self,tree_spec: dict):
+    async def create_config_tree(self, tree_spec: dict):
         url = "{}/v2/configtrees/".format(self.v2api_host)
         try:
             async with self._get_client() as client:
-                res = await client.post(
-                    url=url,
-                    json=tree_spec
-                )
+                res = await client.post(url=url, json=tree_spec)
                 res.raise_for_status()
         except Exception as e:
             raise ValueError(f"Failed to create config tree: {res.text}")
 
         raw_config_tree = res.json()
         return raw_config_tree
-
-
-
-
-
-
-

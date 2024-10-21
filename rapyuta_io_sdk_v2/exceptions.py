@@ -21,26 +21,26 @@ class AuthenticationError(Exception):
         self.message = message
         super().__init__(self.message)
 
-class LoggedOutError(Exception):
 
-    def __init__(self,message="Not Authenticated"):
+class LoggedOutError(Exception):
+    def __init__(self, message="Not Authenticated"):
         self.message = message
         super().__init__(self.message)
+
 
 class HttpNotFoundError(Exception):
-    def __init__(self, message='resource not found'):
+    def __init__(self, message="resource not found"):
         self.message = message
         super().__init__(self.message)
+
+
 class HttpAlreadyExistsError(Exception):
-    def __init__(self, message='resource already exists'):
+    def __init__(self, message="resource already exists"):
         self.message = message
         super().__init__(self.message)
+
 
 class ValidationError(Exception):
     def __init__(self, message=None):
         self.message = message
         super().__init__(self.message)
-
-
-
-
