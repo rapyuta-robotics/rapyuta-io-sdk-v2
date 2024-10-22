@@ -1,9 +1,9 @@
-name: "🧹 Code Lint Check"
+name: "🧹 Ruff"
 
 on: [pull_request]
 
 jobs:
-    verify:
+    lint:
         name: Lint Check
         runs-on: ubuntu-22.04
         steps:
