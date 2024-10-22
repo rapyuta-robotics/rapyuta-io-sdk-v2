@@ -4,7 +4,6 @@ version = "0.1.0"
 description = "Version:2 for Rapyuta.io SDK"
 dependencies = [
     "httpx>=0.27.2",
-    "ruff>=0.7.0",
     "tenacity>=9.0.0",
 ]
 readme = "README.md"

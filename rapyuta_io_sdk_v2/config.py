@@ -14,17 +14,13 @@
 # limitations under the License.
 import json
 from dataclasses import dataclass
-from typing import Optional
 
 from rapyuta_io_sdk_v2.constants import (
-    LOGIN_ROUTE_PATH,
     NAMED_ENVIRONMENTS,
     PROD_ENVIRONMENT_SUBDOMAIN,
     STAGING_ENVIRONMENT_SUBDOMAIN,
 )
 from rapyuta_io_sdk_v2.exceptions import (
-    AuthenticationError,
-    LoggedOutError,
     ValidationError,
 )
 

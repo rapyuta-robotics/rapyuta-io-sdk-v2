@@ -12,8 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import json
-from typing import Any, Dict, List, Optional
+from typing import Dict, Optional
 
 import httpx
 
@@ -46,7 +45,7 @@ class Client(object):
             response = httpx.get(url=url, headers=headers, timeout=10)
             handle_server_errors(response)
             return response.json()
-        except Exception as e:
+        except Exception:
             raise
 
     @staticmethod

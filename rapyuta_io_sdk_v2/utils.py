@@ -27,7 +27,7 @@ def validate_auth_token(config: Any) -> Dict:
         client = config.sync_client()
         user = client.get_authenticated_user()
         return user
-    except Exception as e:
+    except Exception:
         raise
 
 
