@@ -34,7 +34,7 @@ class AsyncClient(Client):
 
     @staticmethod
     async def get_token(self, email: str, password: str) -> str:
-        url = "{}/user/login/".format(self.v2api_host)  
+        url = "{}/user/login/".format(self.v2api_host)
         headers = {"Content-Type": "application/json"}
         data = {"email": email, "password": password}
         response = httpx.post(url=url, headers=headers, json=data, timeout=10)

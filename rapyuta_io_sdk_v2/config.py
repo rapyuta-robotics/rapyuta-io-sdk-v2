@@ -16,10 +16,6 @@ import json
 from dataclasses import dataclass
 from typing import Optional
 
-import httpx
-
-from rapyuta_io_sdk_v2.async_client import AsyncClient
-from rapyuta_io_sdk_v2.client import Client
 from rapyuta_io_sdk_v2.constants import (
     LOGIN_ROUTE_PATH,
     NAMED_ENVIRONMENTS,
@@ -31,7 +27,6 @@ from rapyuta_io_sdk_v2.exceptions import (
     LoggedOutError,
     ValidationError,
 )
-from rapyuta_io_sdk_v2.utils import validate_auth_token
 
 
 @dataclass
@@ -78,16 +73,6 @@ class Configuration(object):
 
     def set_organization(self, organization_guid) -> None:
         self.organization_guid = organization_guid
-
-    def sync_client(self) -> Optional[Client]:
-        if self.auth_token is None:
-            raise LoggedOutError("You are not logged in. Run config.login() to login.")
-        return Client(self)
-
-    def async_client(self) -> Optional[AsyncClient]:
-        if self.auth_token is None:
-            raise LoggedOutError("You are not logged in. Run config.login() to login.")
-        return AsyncClient(self)
 
     def set_environment(self, name: str) -> None:
         subdomain = PROD_ENVIRONMENT_SUBDOMAIN

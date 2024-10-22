@@ -60,7 +60,7 @@ class Client(object):
         Returns:
             str: authentication token
         """
-        url = "{}/user/login/".format(self.v2api_host)  
+        url = "{}/user/login/".format(self.v2api_host)
         headers = {"Content-Type": "application/json"}
         data = {"email": email, "password": password}
         response = httpx.post(url=url, headers=headers, json=data, timeout=10)
