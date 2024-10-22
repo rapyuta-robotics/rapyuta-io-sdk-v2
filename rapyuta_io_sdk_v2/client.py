@@ -16,7 +16,7 @@ import json
 from typing import Any, Dict, List, Optional
 
 import httpx
-from utils import handle_server_errors
+from rapyuta_io_sdk_v2.utils import handle_server_errors
 
 from rapyuta_io_sdk_v2.config import Configuration
 from rapyuta_io_sdk_v2.constants import GET_USER_PATH
@@ -51,7 +51,7 @@ class Client(object):
 
     @staticmethod
     def get_token(self, email: str, password: str) -> str:
-        url = "{}/v2/user/login/".format(self.v2api_host)  # URL not confirmed
+        url = "{}/user/login/".format(self.v2api_host)  # URL not confirmed
         headers = {"Content-Type": "application/json"}
         data = {"email": email, "password": password}
         response = httpx.post(url=url, headers=headers, json=data)
@@ -67,87 +67,3 @@ class Client(object):
     
     def set_organization(self, organization_guid: str):
         self.config.organization_guid = organization_guid
-
-    def list_projects(self, organization_guid: str = None):
-        """
-
-        :param organization_guid:
-        :return:
-        """
-        url = "{}/v2/projects/".format(self.v2api_host)
-        headers = self._get_headers(with_project=False)
-        params = {}
-        if organization_guid:
-            params.update(
-                {
-                    "organizations": organization_guid,
-                }
-            )
-        response = httpx.get(url=url, headers=headers, params=params)
-        handle_server_errors(response)
-        return response.json()
-
-    def get_project(self, project_guid: str):
-        """
-
-        :param project_guid:
-        :return:
-        """
-        url = "{}/v2/projects/{}/".format(self.v2api_host, project_guid)
-        headers = self._get_headers(with_project=False)
-        response = httpx.get(url=url, headers=headers)
-        handle_server_errors(response)
-        return response.json()
-
-    def get_config_tree(
-        self,
-        tree_name: str,
-        rev_id: Optional[str] = None,
-        include_data: bool = False,
-        filter_content_types: Optional[List[str]] = None,
-        filter_prefixes: Optional[List[str]] = None,
-    ):
-        url = "{}/v2/configtrees/{}/".format(self.v2api_host, tree_name)
-        query = {
-            "includeData": include_data,
-            "contentTypes": filter_content_types,
-            "keyPrefixes": filter_prefixes,
-            "revision": rev_id,
-        }
-        headers = self._get_headers()
-        response = httpx.get(url=url, headers=headers, params=query)
-        handle_server_errors(response)
-        return response.json()
-
-    def create_config_tree(self, tree_spec: dict):
-        url = "{}/v2/configtrees/".format(self.v2api_host)
-        headers = self._get_headers()
-        response = httpx.post(url=url, headers=headers, json=tree_spec)
-        handle_server_errors(response)
-        return response.json()
-
-    def delete_config_tree(self, tree_name: str):
-        url = "{}/v2/configtrees/{}/".format(self.v2api_host, tree_name)
-        headers = self._get_headers()
-        response = httpx.delete(url=url, headers=headers)
-        handle_server_errors(response)
-        return response.json()
-
-    def list_config_trees(self):
-        url = "{}/v2/configtrees/".format(self.v2api_host)
-        headers = self._get_headers()
-        response = httpx.get(url=url, headers=headers)
-        handle_server_errors(response)
-        return response.json()
-
-    def set_revision_config_tree(self, tree_name: str, spec: dict) -> None:
-        url = "{}/v2/configtrees/{}/".format(self.v2api_host, tree_name)
-        headers = self._get_headers()
-        response = httpx.put(url=url, headers=headers, json=spec)
-        handle_server_errors(response)
-
-        data = json.loads(response.text)
-        print(data)
-        if not data.ok:
-            err_msg = data.get("error")
-            raise Exception("configtree: {}".format(err_msg))

@@ -73,35 +73,6 @@ class Configuration(object):
                 environment=data.get("environment"),
             )
 
-    def login(self) -> None:
-        _rip_host = self.hosts.get("rip_host")
-
-        try:
-            if self.auth_token is not None:
-                user = validate_auth_token(self)
-                self.email = user["emailID"]
-                return
-
-            url = "{}{}".format(_rip_host, LOGIN_ROUTE_PATH)
-            response = httpx.post(
-                url, json={"email": self.email, "password": self._password}
-            ).json()
-            if response["success"]:
-                self.auth_token = response["data"]["token"]
-            else:
-                raise AuthenticationError()
-        except AuthenticationError:
-            raise
-        except Exception:
-            raise
-
-    def logout(self) -> None:
-        self.email = None
-        self.auth_token = None
-        self.project_guid = None
-        self.organization_guid = None
-        self.environment = None
-
     def set_project(self, project) -> None:
         self.project_guid = project
 
