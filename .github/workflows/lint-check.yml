@@ -1,0 +1,13 @@
+name: "🧹 Code Lint Check"
+
+on: [push, pull_request]
+
+jobs:
+    verify:
+        name: Lint Check
+        runs-on: ubuntu-22.04
+        steps:
+        - uses: actions/checkout@v4
+        - uses: chartboost/ruff-action@v1
+          with:
+            args: "check"
