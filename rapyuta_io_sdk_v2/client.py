@@ -16,10 +16,10 @@ import json
 from typing import Any, Dict, List, Optional
 
 import httpx
-from rapyuta_io_sdk_v2.utils import handle_server_errors
 
 from rapyuta_io_sdk_v2.config import Configuration
 from rapyuta_io_sdk_v2.constants import GET_USER_PATH
+from rapyuta_io_sdk_v2.utils import handle_server_errors
 
 
 class Client(object):
@@ -43,7 +43,7 @@ class Client(object):
             _core_api_host = self.config.hosts.get("core_api_host")
             url = "{}{}".format(_core_api_host, GET_USER_PATH)
             headers = self._get_headers()
-            response = httpx.get(url=url, headers=headers)
+            response = httpx.get(url=url, headers=headers, timeout=10)
             handle_server_errors(response)
             return response.json()
         except Exception as e:
@@ -51,19 +51,28 @@ class Client(object):
 
     @staticmethod
     def get_token(self, email: str, password: str) -> str:
-        url = "{}/user/login/".format(self.v2api_host)  # URL not confirmed
+        """Get the authentication token for the user.
+
+        Args:
+            email (str)
+            password (str)
+
+        Returns:
+            str: authentication token
+        """
+        url = "{}/user/login/".format(self.v2api_host)  
         headers = {"Content-Type": "application/json"}
         data = {"email": email, "password": password}
-        response = httpx.post(url=url, headers=headers, json=data)
+        response = httpx.post(url=url, headers=headers, json=data, timeout=10)
         handle_server_errors(response)
         return response.json().get("token")
-    
+
     @staticmethod
     def expire_token(token: str) -> None:
         pass
-    
+
     def set_project(self, project_guid: str):
         self.config.project_guid = project_guid
-    
+
     def set_organization(self, organization_guid: str):
         self.config.organization_guid = organization_guid
