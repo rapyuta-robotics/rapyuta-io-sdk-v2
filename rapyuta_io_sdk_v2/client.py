@@ -49,6 +49,25 @@ class Client(object):
         except Exception as e:
             raise
 
+    @staticmethod
+    def get_token(self, email: str, password: str) -> str:
+        url = "{}/v2/user/login/".format(self.v2api_host)  # URL not confirmed
+        headers = {"Content-Type": "application/json"}
+        data = {"email": email, "password": password}
+        response = httpx.post(url=url, headers=headers, json=data)
+        handle_server_errors(response)
+        return response.json().get("token")
+    
+    @staticmethod
+    def expire_token(token: str) -> None:
+        pass
+    
+    def set_project(self, project_guid: str):
+        self.config.project_guid = project_guid
+    
+    def set_organization(self, organization_guid: str):
+        self.config.organization_guid = organization_guid
+
     def list_projects(self, organization_guid: str = None):
         """
 
