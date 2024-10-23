@@ -80,13 +80,9 @@ class Configuration(object):
         else:
             name = "ga"
 
-        catalog = "https://{}catalog.{}".format(name, subdomain)
-        core = "https://{}apiserver.{}".format(name, subdomain)
         rip = "https://{}rip.{}".format(name, subdomain)
         v2api = "https://{}api.{}".format(name, subdomain)
 
         self.hosts["environment"] = name
-        self.hosts["catalog_host"] = catalog
-        self.hosts["core_api_host"] = core
         self.hosts["rip_host"] = rip
         self.hosts["v2api_host"] = v2api
