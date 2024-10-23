@@ -48,7 +48,8 @@ class Configuration(object):
         self.auth_token = auth_token
         self.project_guid = project_guid
         self.organization_guid = organization_guid
-        self.environment = environment
+        if (environment is not None): 
+            self.environment = environment
         self.hosts = {}
         self.set_environment(environment)
 

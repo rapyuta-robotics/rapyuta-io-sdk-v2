@@ -17,7 +17,7 @@ from typing import Dict, Optional
 import httpx
 
 from rapyuta_io_sdk_v2.config import Configuration
-from rapyuta_io_sdk_v2.constants import GET_USER_PATH
+from rapyuta_io_sdk_v2.constants import GET_USER_API_PATH
 from rapyuta_io_sdk_v2.utils import handle_server_errors
 
 
@@ -26,7 +26,9 @@ class Client(object):
 
     def __init__(self, config: Configuration = None):
         self.config = config
+        self.config.set_environment()
         self.v2api_host = config.hosts.get("v2api_host", self.PROD_V2API_URL)
+        # self.v2api_host = self.PROD_V2API_URL
 
     def _get_headers(self, with_project: bool = True) -> dict:
         headers = {
@@ -40,7 +42,7 @@ class Client(object):
     def get_authenticated_user(self) -> Optional[Dict]:
         try:
             _core_api_host = self.config.hosts.get("core_api_host")
-            url = "{}{}".format(_core_api_host, GET_USER_PATH)
+            url = "{}{}".format(_core_api_host, GET_USER_API_PATH)
             headers = self._get_headers()
             response = httpx.get(url=url, headers=headers, timeout=10)
             handle_server_errors(response)
@@ -48,7 +50,7 @@ class Client(object):
         except Exception:
             raise
 
-    @staticmethod
+    # @staticmethod
     def get_token(self, email: str, password: str) -> str:
         """Get the authentication token for the user.
 

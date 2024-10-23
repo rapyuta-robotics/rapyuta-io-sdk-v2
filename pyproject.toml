@@ -20,7 +20,6 @@ dev-dependencies = []
 
 [tool.hatch.version]
 path = "rapyuta_io_sdk_v2/__init__.py"
-pattern = "^__version__ = ['\"](?P<version>.+)['\"]"
 
 [tool.hatch.metadata]
 allow-direct-references = true
