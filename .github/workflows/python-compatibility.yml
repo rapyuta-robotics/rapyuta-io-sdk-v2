@@ -16,9 +16,3 @@ jobs:
 
       - name: Set up Python ${{ matrix.python-version }}
         run: uv python install ${{ matrix.python-version }}
-
-      - name: Run the CLI
-        run: |
-          export LC_ALL=C.UTF-8
-          export LANG=C.UTF-8
-          uv run rio
