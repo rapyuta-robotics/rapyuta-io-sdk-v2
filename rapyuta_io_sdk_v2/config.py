@@ -36,8 +36,8 @@ class Configuration(object):
 
     def __init__(
         self,
-        project_guid: str,
-        organization_guid: str,
+        project_guid: str = None,
+        organization_guid: str = None,
         password: str = None,
         auth_token: str = None,
         environment: str = None,
@@ -48,7 +48,7 @@ class Configuration(object):
         self.auth_token = auth_token
         self.project_guid = project_guid
         self.organization_guid = organization_guid
-        if (environment is not None): 
+        if environment is not None:
             self.environment = environment
         self.hosts = {}
         self.set_environment(environment)
@@ -71,7 +71,15 @@ class Configuration(object):
     def set_organization(self, organization_guid) -> None:
         self.organization_guid = organization_guid
 
-    def set_environment(self, name: str) -> None:
+    def set_environment(self, name: str = None) -> None:
+        """Set the environment for the configuration.
+
+        Args:
+            name (str): Name of the environment, default is ga.
+
+        Raises:
+            ValidationError: If the environment is invalid.
+        """
         subdomain = PROD_ENVIRONMENT_SUBDOMAIN
         if name is not None:
             is_valid_env = name in NAMED_ENVIRONMENTS or name.startswith("pr")

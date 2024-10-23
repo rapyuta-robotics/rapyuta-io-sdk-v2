@@ -46,6 +46,9 @@ def handle_server_errors(response: httpx.Response):
     # 404 Not Found
     if status_code == http.HTTPStatus.NOT_FOUND:
         raise HttpNotFoundError(err)
+    # 405 Method Not Allowed
+    if status_code == http.HTTPStatus.METHOD_NOT_ALLOWED:
+        raise Exception("method not allowed")
     # 409 Conflict
     if status_code == http.HTTPStatus.CONFLICT:
         raise HttpAlreadyExistsError()

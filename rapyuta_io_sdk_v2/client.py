@@ -26,9 +26,10 @@ class Client(object):
 
     def __init__(self, config: Configuration = None):
         self.config = config
-        self.config.set_environment()
-        self.v2api_host = config.hosts.get("v2api_host", self.PROD_V2API_URL)
-        # self.v2api_host = self.PROD_V2API_URL
+        if config is None:
+            self.v2api_host = self.PROD_V2API_URL
+        else:
+            self.v2api_host = config.hosts.get("v2api_host", self.PROD_V2API_URL)
 
     def _get_headers(self, with_project: bool = True) -> dict:
         headers = {
@@ -50,8 +51,8 @@ class Client(object):
         except Exception:
             raise
 
-    # @staticmethod
-    def get_token(self, email: str, password: str) -> str:
+    @staticmethod
+    def get_token(email: str, password: str, env: str = None) -> str:
         """Get the authentication token for the user.
 
         Args:
@@ -61,12 +62,15 @@ class Client(object):
         Returns:
             str: authentication token
         """
-        url = "{}/user/login/".format(self.v2api_host)
+        config = Configuration(email=email, password=password)
+        config.set_environment(env)
+        rip_host = config.hosts.get("rip_host")
+        url = "{}/user/login".format(rip_host)
         headers = {"Content-Type": "application/json"}
         data = {"email": email, "password": password}
         response = httpx.post(url=url, headers=headers, json=data, timeout=10)
         handle_server_errors(response)
-        return response.json().get("token")
+        return response.json()["data"].get("token")
 
     @staticmethod
     def expire_token(token: str) -> None:
