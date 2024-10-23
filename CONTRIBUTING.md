@@ -7,6 +7,8 @@ The project uses [uv](https://docs.astral.sh/uv/) for development. It needs to b
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
+> Note: In case of installation error, please refer to this [installation documentation](https://docs.astral.sh/uv/getting-started/installation/).
+
 Once `uv` is installed, a Python virtual environment can be quickly bootstrapped by running the following commands in the root of the repository:
 
 ```bash

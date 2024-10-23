@@ -1,7 +1,7 @@
 [project]
 name = "rapyuta-io-sdk-v2"
-#dynamic = ["version"]
-version = "1.0.0"
+dynamic = ["version"]
+#version = "1.0.0"
 description = "Version 2 for Rapyuta.io SDK"
 dependencies = [
     "httpx>=0.27.2",
@@ -17,6 +17,10 @@ build-backend = "hatchling.build"
 [tool.rye]
 managed = true
 dev-dependencies = []
+
+[tool.hatch.version]
+path = "rapyuta_io_sdk_v2/__init__.py"
+pattern = "^__version__ = ['\"](?P<version>.+)['\"]"
 
 [tool.hatch.metadata]
 allow-direct-references = true
