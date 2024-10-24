@@ -114,7 +114,7 @@ class Client(object):
 
     def set_organization(self, organization_guid: str):
         self.config.organization_guid = organization_guid
-        
+
     def list_projects(self, organization_guid: str):
         if organization_guid is None:
             raise ValueError("organization_guid is required")
