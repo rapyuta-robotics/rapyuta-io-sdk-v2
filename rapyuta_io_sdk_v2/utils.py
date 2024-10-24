@@ -15,20 +15,24 @@
 # from rapyuta_io_sdk_v2.config import Configuration
 import http
 import json
-from typing import Any, Dict
+import os
+import sys
 
 import httpx
+from munch import Munch
 
 from rapyuta_io_sdk_v2.exceptions import HttpAlreadyExistsError, HttpNotFoundError
 
 
-def validate_auth_token(config: Any) -> Dict:
-    try:
-        client = config.sync_client()
-        user = client.get_authenticated_user()
-        return user
-    except Exception:
-        raise
+def projects_list_munch(response: httpx.Response) -> Munch:
+    data = response.json()
+    projects = []
+    for item in data.get("items", []):
+        project = item.get("metadata", {}).get("name")
+        project_guid = item.get("metadata", {}).get("projectGUID")
+        if project and project_guid:
+            projects.append({"project": project, "project_guid": project_guid})
+    return Munch({"projects": projects})
 
 
 def handle_server_errors(response: httpx.Response):
@@ -74,3 +78,22 @@ def handle_server_errors(response: httpx.Response):
     # Anything else that is not known
     if status_code > 504:
         raise Exception("unknown server error")
+
+
+def get_default_app_dir(app_name: str) -> str:
+    """Get the default application directory based on OS."""
+    # On Windows
+    if os.name == "nt":
+        appdata = os.environ.get("APPDATA") or os.environ.get("LOCALAPPDATA")
+        if appdata:
+            return os.path.join(appdata, app_name)
+
+    # On macOS
+    if sys.platform == "darwin":
+        return os.path.join(
+            os.path.expanduser("~"), "Library", "Application Support", app_name
+        )
+
+    # On Linux and other Unix-like systems
+    xdg_config_home = os.environ.get("XDG_CONFIG_HOME", os.path.expanduser("~/.config"))
+    return os.path.join(xdg_config_home, app_name)

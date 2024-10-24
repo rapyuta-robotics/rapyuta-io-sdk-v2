@@ -1,4 +1,5 @@
 from rapyuta_io_sdk_v2.client import Client
+from rapyuta_io_sdk_v2.config import Configuration
 
 
 # Test case for a successful token retrieval
@@ -19,7 +20,10 @@ def test_get_token_success(mocker):
     mock_post.return_value = mock_response
 
     # Call the function under test
-    test_client = Client()
+    test_config = Configuration(
+        email=email, _password=password, environment="pr_mock_test"
+    )
+    test_client = Client(config=test_config)
     token = test_client.get_token(email, password, "pr_mock_test")
     # config_instance.hosts = {"rip_host": "http://mocked-rip-host.com"}
 

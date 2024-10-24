@@ -18,7 +18,7 @@ import httpx
 
 from rapyuta_io_sdk_v2.config import Configuration
 from rapyuta_io_sdk_v2.constants import GET_USER_API_PATH
-from rapyuta_io_sdk_v2.utils import handle_server_errors
+from rapyuta_io_sdk_v2.utils import handle_server_errors, projects_list_munch
 
 
 class Client(object):
@@ -115,14 +115,52 @@ class Client(object):
     def set_organization(self, organization_guid: str):
         self.config.organization_guid = organization_guid
 
+    # Projects
     def list_projects(self, organization_guid: str):
+        """List all projects in the organization
+
+        Args:
+            organization_guid (str): The organization GUID
+
+        Raises:
+            ValueError: If organization_guid is None
+
+        Returns:
+            _type_: List of projects (Munch object)
+        """
         if organization_guid is None:
             raise ValueError("organization_guid is required")
         v2api_host = self.config.hosts.get("v2api_host")
-        self.config.organization_guid = organization_guid
+        self.set_organization(organization_guid)
         headers = self._get_headers(with_project=False)
         response = httpx.get(
             url="{}/v2/projects/".format(v2api_host), headers=headers, timeout=10
+        )
+        handle_server_errors(response)
+        return projects_list_munch(response)
+
+    def get_project(self, organization_guid: str, project_guid: str):
+        """Get a project by its GUID
+
+        Args:
+            organization_guid (str): Organization GUID
+            project_guid (str): Project GUID
+
+        Raises:
+            ValueError: If organization_guid or project_guid is None
+
+        Returns:
+            _type_: Project details in json
+        """
+        if organization_guid is None or project_guid is None:
+            raise ValueError("organization_guid and project_guid are required")
+        v2api_host = self.config.hosts.get("v2api_host")
+        self.set_organization(organization_guid)
+        headers = self._get_headers(with_project=False)
+        response = httpx.get(
+            url="{}/v2/projects/{}/".format(v2api_host, project_guid),
+            headers=headers,
+            timeout=10,
         )
         handle_server_errors(response)
         return response.json()

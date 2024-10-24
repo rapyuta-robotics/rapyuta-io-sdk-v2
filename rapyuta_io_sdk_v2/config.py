@@ -14,58 +14,60 @@
 # limitations under the License.
 import json
 from dataclasses import dataclass
+import os
 
 from rapyuta_io_sdk_v2.constants import (
     NAMED_ENVIRONMENTS,
     PROD_ENVIRONMENT_SUBDOMAIN,
     STAGING_ENVIRONMENT_SUBDOMAIN,
 )
+from rapyuta_io_sdk_v2.utils import get_default_app_dir
 from rapyuta_io_sdk_v2.exceptions import ValidationError
 
 
 @dataclass
 class Configuration(object):
-    email: str
-    _password: str
-    auth_token: str
-    project_guid: str
-    organization_guid: str
+    email: str = None
+    _password: str = None
+    auth_token: str = None
+    project_guid: str = None
+    organization_guid: str = None
     environment: str = "ga"  # Default environment is prod
 
-    def __init__(
-        self,
-        project_guid: str = None,
-        organization_guid: str = None,
-        password: str = None,
-        auth_token: str = None,
-        environment: str = None,
-        email: str = None,
-    ):
-        self.email = email
-        self._password = password
-        self.auth_token = auth_token
-        self.project_guid = project_guid
-        self.organization_guid = organization_guid
-        self.environment = environment
+    def __post_init__(self):
         self.hosts = {}
-        self.set_environment(environment)
+        self.set_environment(self.environment)
 
     @staticmethod
     def from_file(file_path: str) -> "Configuration":
+        """Create a configuration object from a file.
+
+        Args:
+            file_path (str): Path to the file.
+
+        Returns:
+            Configuration: Configuration object.
+        """
+        if file_path is None:
+            app_name = "rio_cli"
+            default_dir = get_default_app_dir(app_name)
+            file_path = os.path.join(default_dir, "config.json")
+
         with open(file_path, "r") as file:
             data = json.load(file)
             return Configuration(
                 email=data.get("email"),
-                password=data.get("password"),
+                _password=data.get("password"),
                 project_guid=data.get("project_guid"),
                 organization_guid=data.get("organization_guid"),
                 environment=data.get("environment"),
+                auth_token=data.get("auth_token"),
             )
 
-    def set_project(self, project) -> None:
-        self.project_guid = project
+    def set_project(self, project_guid: str) -> None:
+        self.project_guid = project_guid
 
-    def set_organization(self, organization_guid) -> None:
+    def set_organization(self, organization_guid: str) -> None:
         self.organization_guid = organization_guid
 
     def set_environment(self, name: str = None) -> None:
@@ -81,12 +83,10 @@ class Configuration(object):
         if self.environment is not None:
             name = self.environment
         if name is not None:
-            is_valid_env = name in NAMED_ENVIRONMENTS or name.startswith("pr")
-            if not is_valid_env:
+            if not (name in NAMED_ENVIRONMENTS or name.startswith("pr")):
                 raise ValidationError("Invalid environment")
             subdomain = STAGING_ENVIRONMENT_SUBDOMAIN
-        else:
-            name = "ga"
+        name = name or "ga"
 
         rip = "https://{}rip.{}".format(name, subdomain)
         v2api = "https://{}api.{}".format(name, subdomain)
