@@ -18,6 +18,7 @@ from typing import AsyncGenerator
 import httpx
 
 from rapyuta_io_sdk_v2.client import Client
+from rapyuta_io_sdk_v2.config import Configuration
 from rapyuta_io_sdk_v2.utils import handle_server_errors
 
 
@@ -32,15 +33,54 @@ class AsyncClient(Client):
         ) as async_client:
             yield async_client
 
-    @staticmethod
-    async def get_token(self, email: str, password: str) -> str:
-        url = "{}/user/login/".format(self.v2api_host)
+    async def get_token(
+        self, email: str = None, password: str = None, env: str = "ga"
+    ) -> str:
+        """Get the authentication token for the user.
+
+        Args:
+            email (str)
+            password (str)
+
+        Returns:
+            str: authentication token
+        """
+        if email is None and password is None and self.config is None:
+            raise ValueError("email and password are required")
+
+        if self.config is None:
+            self.config = Configuration(email=email, password=password, environment=env)
+
+        data = {
+            "email": email or self.config.email,
+            "password": password or self.config._password,
+        }
+
+        rip_host = self.config.hosts.get("rip_host")
+        url = "{}/user/login".format(rip_host)
         headers = {"Content-Type": "application/json"}
-        data = {"email": email, "password": password}
-        response = httpx.post(url=url, headers=headers, json=data, timeout=10)
-        handle_server_errors(response)
-        return response.json().get("token")
+
+        async with httpx.AsyncClient() as asyncClient:
+            response = await asyncClient.post(
+                url=url, headers=headers, json=data, timeout=10
+            )
+            handle_server_errors(response)
+            return response.json()["data"].get("token")
 
     @staticmethod
     async def expire_token(token: str) -> None:
         pass
+
+    async def refresh_token(self, token: str) -> str:
+        rip_host = self.config.hosts.get("rip_host")
+        url = "{}/refreshtoken".format(rip_host)
+        headers = {"Content-Type": "application/json"}
+
+        async with httpx.AsyncClient() as asyncClient:
+            response = await asyncClient.post(
+                url=url, headers=headers, json={"token": token}, timeout=10
+            )
+            handle_server_errors(response)
+
+            data = response.json()["data"]
+            return data["Token"]

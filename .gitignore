@@ -12,3 +12,5 @@ wheels/
 .idea
 .github/workflows/release.yml
 .vscode
+main_test.py
+test_config.json

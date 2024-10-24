@@ -18,4 +18,4 @@ GET_USER_API_PATH = "/api/user/me/get"
 
 STAGING_ENVIRONMENT_SUBDOMAIN = "apps.okd4v2.okd4beta.rapyuta.io"
 PROD_ENVIRONMENT_SUBDOMAIN = "apps.okd4v2.prod.rapyuta.io"
-NAMED_ENVIRONMENTS = ["v11", "v12", "v13", "v14", "v15", "qa", "dev", "mock_test"]
+NAMED_ENVIRONMENTS = ["v11", "v12", "v13", "v14", "v15", "qa", "dev"]

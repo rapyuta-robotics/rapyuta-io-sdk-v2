@@ -20,9 +20,7 @@ from rapyuta_io_sdk_v2.constants import (
     PROD_ENVIRONMENT_SUBDOMAIN,
     STAGING_ENVIRONMENT_SUBDOMAIN,
 )
-from rapyuta_io_sdk_v2.exceptions import (
-    ValidationError,
-)
+from rapyuta_io_sdk_v2.exceptions import ValidationError
 
 
 @dataclass
@@ -48,13 +46,12 @@ class Configuration(object):
         self.auth_token = auth_token
         self.project_guid = project_guid
         self.organization_guid = organization_guid
-        if environment is not None:
-            self.environment = environment
+        self.environment = environment
         self.hosts = {}
         self.set_environment(environment)
 
     @staticmethod
-    def from_file(self, file_path: str) -> "Configuration":
+    def from_file(file_path: str) -> "Configuration":
         with open(file_path, "r") as file:
             data = json.load(file)
             return Configuration(
@@ -81,6 +78,8 @@ class Configuration(object):
             ValidationError: If the environment is invalid.
         """
         subdomain = PROD_ENVIRONMENT_SUBDOMAIN
+        if self.environment is not None:
+            name = self.environment
         if name is not None:
             is_valid_env = name in NAMED_ENVIRONMENTS or name.startswith("pr")
             if not is_valid_env:
