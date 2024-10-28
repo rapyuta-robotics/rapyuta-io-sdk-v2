@@ -15,7 +15,7 @@
 
 import httpx
 from munch import Munch, munchify
-
+import platform
 from rapyuta_io_sdk_v2.config import Configuration
 from rapyuta_io_sdk_v2.utils import handle_server_errors
 
@@ -38,6 +38,16 @@ class Client(object):
                 max_connections=5,
                 keepalive_expiry=30,
             ),
+            headers={
+                "User-Agent": (
+                    "rio-sdk-v2;N/A;{};{};{} {}".format(
+                        platform.processor() or platform.machine(),
+                        platform.system(),
+                        platform.release(),
+                        platform.version(),
+                    )
+                )
+            },
         )
 
     def login(
@@ -173,5 +183,7 @@ class Client(object):
         )
 
         handle_server_errors(response)
+
+        print(response.headers)
 
         return munchify(response.json())

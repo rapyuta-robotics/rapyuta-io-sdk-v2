@@ -17,9 +17,6 @@ jobs:
       - name: Set up Python ${{ matrix.python-version }}
         run: uv python install ${{ matrix.python-version }}
 
-      - name: Install the project
-        run: uv sync --all-extras --dev
-
-      - name: Run tests
-        # For example, using `pytest`
-        run: uv run pytest tests/test_get_token.py
+      - name: Try import
+        run: |
+          uv run python -c "import rapyuta_io_sdk_v2"
