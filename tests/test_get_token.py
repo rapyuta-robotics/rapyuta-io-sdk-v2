@@ -21,10 +21,10 @@ def test_get_token_success(mocker):
 
     # Call the function under test
     test_config = Configuration(
-        email=email, _password=password, environment="pr_mock_test"
+        email=email, password=password, environment="pr_mock_test"
     )
     test_client = Client(config=test_config)
-    token = test_client.get_token(email, password, "pr_mock_test")
+    token = test_client.login(email, password, "pr_mock_test")
     # config_instance.hosts = {"rip_host": "http://mocked-rip-host.com"}
 
     # Assertions
