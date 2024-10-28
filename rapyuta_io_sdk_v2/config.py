@@ -80,9 +80,10 @@ class Configuration(object):
         """
         headers = dict(Authorization=f"Bearer {self.auth_token}")
 
-        headers["organizationguid"] = self.organization_guid
+        if self.organization_guid:
+            headers["organizationguid"] = self.organization_guid
 
-        if with_project and self is not None:
+        if with_project and self.project_guid is not None:
             headers["project"] = self.project_guid
 
         custom_client_request_id = os.getenv("REQUEST_ID")

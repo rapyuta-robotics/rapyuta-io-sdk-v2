@@ -21,16 +21,10 @@ from rapyuta_io_sdk_v2.utils import handle_server_errors
 
 
 class Client(object):
-    PROD_V2API_URL = "https://api.rapyuta.io"
-
     def __init__(self, config: Configuration = None):
-        self.config = config
-        if config is None:
-            self.v2api_host = self.PROD_V2API_URL
-        else:
-            self.v2api_host = config.hosts.get("v2api_host", self.PROD_V2API_URL)
+        self.config = config or Configuration()
 
-    def get_token(
+    def login(
         self,
         email: str = None,
         password: str = None,
@@ -71,11 +65,28 @@ class Client(object):
 
         return self.config.auth_token
 
-    @staticmethod
-    def expire_token(token: str) -> None:
-        pass
+    def logout(self, token: str = None) -> None:
+        """Expire the authentication token.
 
-    def refresh_token(self, token: str) -> str:
+        Args:
+            token (str): The token to expire.
+        """
+        rip_host = self.config.hosts.get("rip_host")
+        url = f"{rip_host}/user/logout"
+        headers = {"Content-Type": "application/json"}
+
+        if token is None:
+            token = self.config.auth_token
+
+        response = httpx.post(
+            url=url, headers=headers, json={"token": token}, timeout=10
+        )
+
+        handle_server_errors(response)
+
+        return
+
+    def refresh_token(self, token: str = None) -> str:
         """Refresh the authentication token.
 
         Args:
@@ -88,6 +99,9 @@ class Client(object):
         url = f"{rip_host}/refreshtoken"
         headers = {"Content-Type": "application/json"}
 
+        if token is None:
+            token = self.config.auth_token
+
         response = httpx.post(
             url=url, headers=headers, json={"token": token}, timeout=10
         )
@@ -98,6 +112,22 @@ class Client(object):
         self.config.auth_token = data["Token"]
 
         return self.config.auth_token
+
+    def set_organization(self, organization_guid: str) -> None:
+        """Set the organization GUID.
+
+        Args:
+            organization_guid (str): Organization GUID
+        """
+        self.config.set_organization(organization_guid)
+
+    def set_project(self, project_guid: str) -> None:
+        """Set the project GUID.
+
+        Args:
+            project_guid (str): Project GUID
+        """
+        self.config.set_project(project_guid)
 
     def get_project(self, project_guid: str = None) -> Munch:
         """Get a project by its GUID.
