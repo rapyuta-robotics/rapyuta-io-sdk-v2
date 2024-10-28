@@ -12,13 +12,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Dict, Optional
 
 import httpx
+from munch import Munch, munchify
 
 from rapyuta_io_sdk_v2.config import Configuration
-from rapyuta_io_sdk_v2.constants import GET_USER_API_PATH
-from rapyuta_io_sdk_v2.utils import handle_server_errors, projects_list_munch
+from rapyuta_io_sdk_v2.utils import handle_server_errors
 
 
 class Client(object):
@@ -31,35 +30,18 @@ class Client(object):
         else:
             self.v2api_host = config.hosts.get("v2api_host", self.PROD_V2API_URL)
 
-    def _get_headers(self, with_project: bool = True) -> dict:
-        headers = {
-            "Authorization": "Bearer " + self.config.auth_token,
-            "Content-Type": "application/json",
-            "organizationguid": self.config.organization_guid,
-        }
-        if with_project:
-            headers["project"] = self.config.project_guid
-        return headers
-
-    def get_authenticated_user(self) -> Optional[Dict]:
-        try:
-            _core_api_host = self.config.hosts.get("core_api_host")
-            url = "{}{}".format(_core_api_host, GET_USER_API_PATH)
-            headers = self._get_headers()
-            response = httpx.get(url=url, headers=headers, timeout=10)
-            handle_server_errors(response)
-            return response.json()
-        except Exception:
-            raise
-
     def get_token(
-        self, email: str = None, password: str = None, env: str = "ga"
+        self,
+        email: str = None,
+        password: str = None,
+        environment: str = "ga",
     ) -> str:
         """Get the authentication token for the user.
 
         Args:
             email (str)
             password (str)
+            environment (str)
 
         Returns:
             str: authentication token
@@ -68,19 +50,25 @@ class Client(object):
             raise ValueError("email and password are required")
 
         if self.config is None:
-            self.config = Configuration(email=email, password=password, environment=env)
+            self.config = Configuration(
+                email=email, password=password, environment=environment
+            )
 
-        data = {
+        payload = {
             "email": email or self.config.email,
-            "password": password or self.config._password,
+            "password": password or self.config.password,
         }
 
         rip_host = self.config.hosts.get("rip_host")
-        url = "{}/user/login".format(rip_host)
+        url = f"{rip_host}/user/login"
         headers = {"Content-Type": "application/json"}
-        response = httpx.post(url=url, headers=headers, json=data, timeout=10)
+
+        response = httpx.post(url=url, headers=headers, json=payload, timeout=10)
+
         handle_server_errors(response)
+
         self.config.auth_token = response.json()["data"].get("token")
+
         return self.config.auth_token
 
     @staticmethod
@@ -97,70 +85,52 @@ class Client(object):
             str: The refreshed token.
         """
         rip_host = self.config.hosts.get("rip_host")
-        url = "{}/refreshtoken".format(rip_host)
+        url = f"{rip_host}/refreshtoken"
         headers = {"Content-Type": "application/json"}
 
         response = httpx.post(
             url=url, headers=headers, json={"token": token}, timeout=10
         )
+
         handle_server_errors(response)
 
         data = response.json()["data"]
         self.config.auth_token = data["Token"]
+
         return self.config.auth_token
 
-    def set_project(self, project_guid: str):
-        self.config.project_guid = project_guid
+    def get_project(self, project_guid: str = None) -> Munch:
+        """Get a project by its GUID.
 
-    def set_organization(self, organization_guid: str):
-        self.config.organization_guid = organization_guid
-
-    # Projects
-    def list_projects(self, organization_guid: str):
-        """List all projects in the organization
+        If no project or organization GUID is provided,
+        the default project and organization GUIDs will
+        be picked from the current configuration.
 
         Args:
-            organization_guid (str): The organization GUID
-
-        Raises:
-            ValueError: If organization_guid is None
-
-        Returns:
-            _type_: List of projects (Munch object)
-        """
-        if organization_guid is None:
-            raise ValueError("organization_guid is required")
-        v2api_host = self.config.hosts.get("v2api_host")
-        self.set_organization(organization_guid)
-        headers = self._get_headers(with_project=False)
-        response = httpx.get(
-            url="{}/v2/projects/".format(v2api_host), headers=headers, timeout=10
-        )
-        handle_server_errors(response)
-        return projects_list_munch(response)
-
-    def get_project(self, organization_guid: str, project_guid: str):
-        """Get a project by its GUID
-
-        Args:
-            organization_guid (str): Organization GUID
             project_guid (str): Project GUID
 
         Raises:
             ValueError: If organization_guid or project_guid is None
 
         Returns:
-            _type_: Project details in json
+            Munch: Project details as a Munch object.
         """
-        if organization_guid is None or project_guid is None:
-            raise ValueError("organization_guid and project_guid are required")
+        headers = self.config.get_headers(with_project=False)
+
+        if project_guid is None:
+            project_guid = self.config.project_guid
+
+        if not project_guid:
+            raise ValueError("project_guid is required")
+
         v2api_host = self.config.hosts.get("v2api_host")
-        self.set_organization(organization_guid)
-        headers = self._get_headers(with_project=False)
+
         response = httpx.get(
-            url="{}/v2/projects/{}/".format(v2api_host, project_guid),
+            url=f"{v2api_host}/v2/projects/{project_guid}/",
             headers=headers,
             timeout=10,
         )
+
         handle_server_errors(response)
-        return response.json()
+
+        return munchify(response.json())

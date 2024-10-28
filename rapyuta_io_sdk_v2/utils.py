@@ -19,20 +19,8 @@ import os
 import sys
 
 import httpx
-from munch import Munch
 
 from rapyuta_io_sdk_v2.exceptions import HttpAlreadyExistsError, HttpNotFoundError
-
-
-def projects_list_munch(response: httpx.Response) -> Munch:
-    data = response.json()
-    projects = []
-    for item in data.get("items", []):
-        project = item.get("metadata", {}).get("name")
-        project_guid = item.get("metadata", {}).get("projectGUID")
-        if project and project_guid:
-            projects.append({"project": project, "project_guid": project_guid})
-    return Munch({"projects": projects})
 
 
 def handle_server_errors(response: httpx.Response):

@@ -13,3 +13,5 @@ wheels/
 .vscode
 main_test.py
 test_config.json
+
+ignore/

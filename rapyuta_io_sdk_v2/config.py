@@ -17,8 +17,8 @@ from dataclasses import dataclass
 import os
 
 from rapyuta_io_sdk_v2.constants import (
+    APP_NAME,
     NAMED_ENVIRONMENTS,
-    PROD_ENVIRONMENT_SUBDOMAIN,
     STAGING_ENVIRONMENT_SUBDOMAIN,
 )
 from rapyuta_io_sdk_v2.utils import get_default_app_dir
@@ -27,8 +27,10 @@ from rapyuta_io_sdk_v2.exceptions import ValidationError
 
 @dataclass
 class Configuration(object):
+    """Configuration class for the SDK."""
+
     email: str = None
-    _password: str = None
+    password: str = None
     auth_token: str = None
     project_guid: str = None
     organization_guid: str = None
@@ -38,8 +40,12 @@ class Configuration(object):
         self.hosts = {}
         self.set_environment(self.environment)
 
-    @staticmethod
-    def from_file(file_path: str) -> "Configuration":
+    @classmethod
+    def from_env(cls) -> "Configuration":
+        raise NotImplementedError
+
+    @classmethod
+    def from_file(cls, file_path: str = None) -> "Configuration":
         """Create a configuration object from a file.
 
         Args:
@@ -49,25 +55,56 @@ class Configuration(object):
             Configuration: Configuration object.
         """
         if file_path is None:
-            app_name = "rio_cli"
-            default_dir = get_default_app_dir(app_name)
+            default_dir = get_default_app_dir(APP_NAME)
             file_path = os.path.join(default_dir, "config.json")
 
         with open(file_path, "r") as file:
             data = json.load(file)
-            return Configuration(
+            return cls(
                 email=data.get("email"),
-                _password=data.get("password"),
-                project_guid=data.get("project_guid"),
-                organization_guid=data.get("organization_guid"),
+                password=data.get("password"),
+                project_guid=data.get("project_id"),
+                organization_guid=data.get("organization_id"),
                 environment=data.get("environment"),
                 auth_token=data.get("auth_token"),
             )
 
+    def get_headers(self, with_project: bool = True) -> dict:
+        """Get the headers for the configuration.
+
+        Args:
+            with_project (bool): Include project guid in headers. Default is True.
+
+        Returns:
+            dict: Headers for the configuration.
+        """
+        headers = dict(Authorization=f"Bearer {self.auth_token}")
+
+        headers["organizationguid"] = self.organization_guid
+
+        if with_project and self is not None:
+            headers["project"] = self.project_guid
+
+        custom_client_request_id = os.getenv("REQUEST_ID")
+        if custom_client_request_id:
+            headers["X-Request-ID"] = custom_client_request_id
+
+        return headers
+
     def set_project(self, project_guid: str) -> None:
+        """Set the project for the configuration.
+
+        Args:
+            project_guid (str): The project guid to be set.
+        """
         self.project_guid = project_guid
 
     def set_organization(self, organization_guid: str) -> None:
+        """Set the organization for the configuration.
+
+        Args:
+            organization_guid (str): The organization guid to be set.
+        """
         self.organization_guid = organization_guid
 
     def set_environment(self, name: str = None) -> None:
@@ -79,18 +116,17 @@ class Configuration(object):
         Raises:
             ValidationError: If the environment is invalid.
         """
-        subdomain = PROD_ENVIRONMENT_SUBDOMAIN
-        if self.environment is not None:
-            name = self.environment
-        if name is not None:
-            if not (name in NAMED_ENVIRONMENTS or name.startswith("pr")):
-                raise ValidationError("Invalid environment")
-            subdomain = STAGING_ENVIRONMENT_SUBDOMAIN
-        name = name or "ga"
+        name = name or "ga"  # Default to prod.
 
-        rip = "https://{}rip.{}".format(name, subdomain)
-        v2api = "https://{}api.{}".format(name, subdomain)
+        if name == "ga":
+            self.hosts["environment"] = "ga"
+            self.hosts["rip_host"] = "https://garip.apps.okd4v2.prod.rapyuta.io"
+            self.hosts["v2api_host"] = "https://api.rapyuta.io"
+            return
+
+        if not (name in NAMED_ENVIRONMENTS or name.startswith("pr")):
+            raise ValidationError("invalid environment")
 
         self.hosts["environment"] = name
-        self.hosts["rip_host"] = rip
-        self.hosts["v2api_host"] = v2api
+        self.hosts["rip_host"] = f"https://{name}rip.{STAGING_ENVIRONMENT_SUBDOMAIN}"
+        self.hosts["v2api_host"] = f"https://{name}api.{STAGING_ENVIRONMENT_SUBDOMAIN}"

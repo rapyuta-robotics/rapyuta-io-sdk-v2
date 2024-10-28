@@ -13,9 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Setting the name to "rio-cli" as the app name
+# in order to keep the configuration file name
+# consistent. The app name for the CLI as well
+# as the SDK can be changed to "rio" in the future.
+APP_NAME = "rio-cli"
+
 LOGIN_API_PATH = "/user/login"
 GET_USER_API_PATH = "/api/user/me/get"
 
 STAGING_ENVIRONMENT_SUBDOMAIN = "apps.okd4v2.okd4beta.rapyuta.io"
-PROD_ENVIRONMENT_SUBDOMAIN = "apps.okd4v2.prod.rapyuta.io"
+
 NAMED_ENVIRONMENTS = ["ga", "qa", "dev"]

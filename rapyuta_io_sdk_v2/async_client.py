@@ -12,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+# TODO: Make this client in-line with the sync client.
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
@@ -19,7 +20,7 @@ import httpx
 
 from rapyuta_io_sdk_v2.client import Client
 from rapyuta_io_sdk_v2.config import Configuration
-from rapyuta_io_sdk_v2.utils import handle_server_errors, projects_list_munch
+from rapyuta_io_sdk_v2.utils import handle_server_errors
 
 
 class AsyncClient(Client):
@@ -84,20 +85,6 @@ class AsyncClient(Client):
 
             data = response.json()["data"]
             return data["Token"]
-
-    async def list_projects(self, organization_guid: str):
-        if organization_guid is None:
-            raise ValueError("organization_guid is required")
-        v2api_host = self.config.hosts.get("v2api_host")
-        self.config.organization_guid = organization_guid
-        headers = self._get_headers(with_project=False)
-
-        async with httpx.AsyncClient() as asyncClient:
-            response = await asyncClient.get(
-                url="{}/v2/projects/".format(v2api_host), headers=headers, timeout=10
-            )
-            handle_server_errors(response)
-            return projects_list_munch(response)
 
     async def get_project(self, organization_guid: str, project_guid: str):
         """Get a project by its GUID
