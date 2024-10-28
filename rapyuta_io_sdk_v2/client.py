@@ -21,8 +21,24 @@ from rapyuta_io_sdk_v2.utils import handle_server_errors
 
 
 class Client(object):
-    def __init__(self, config: Configuration = None):
+    """Client class offers sync client for the v2 APIs.
+
+    Args:
+        config (Configuration): Configuration object.
+        **kwargs: Additional keyword arguments.
+    """
+
+    def __init__(self, config: Configuration = None, **kwargs):
         self.config = config or Configuration()
+        timeout = kwargs.get("timeout", 10)
+        self.c = httpx.Client(
+            timeout=timeout,
+            limits=httpx.Limits(
+                max_keepalive_connections=5,
+                max_connections=5,
+                keepalive_expiry=30,
+            ),
+        )
 
     def login(
         self,
@@ -57,7 +73,7 @@ class Client(object):
         url = f"{rip_host}/user/login"
         headers = {"Content-Type": "application/json"}
 
-        response = httpx.post(url=url, headers=headers, json=payload, timeout=10)
+        response = self.c.post(url=url, headers=headers, json=payload)
 
         handle_server_errors(response)
 
@@ -78,9 +94,7 @@ class Client(object):
         if token is None:
             token = self.config.auth_token
 
-        response = httpx.post(
-            url=url, headers=headers, json={"token": token}, timeout=10
-        )
+        response = self.c.post(url=url, headers=headers, json={"token": token})
 
         handle_server_errors(response)
 
@@ -102,9 +116,7 @@ class Client(object):
         if token is None:
             token = self.config.auth_token
 
-        response = httpx.post(
-            url=url, headers=headers, json={"token": token}, timeout=10
-        )
+        response = self.c.post(url=url, headers=headers, json={"token": token})
 
         handle_server_errors(response)
 
@@ -155,10 +167,9 @@ class Client(object):
 
         v2api_host = self.config.hosts.get("v2api_host")
 
-        response = httpx.get(
+        response = self.c.get(
             url=f"{v2api_host}/v2/projects/{project_guid}/",
             headers=headers,
-            timeout=10,
         )
 
         handle_server_errors(response)
