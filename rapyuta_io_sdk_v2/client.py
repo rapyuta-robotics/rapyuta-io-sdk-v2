@@ -303,7 +303,7 @@ class Client(object):
         Returns:
             Munch: List of packages as a Munch object.
         """
-        headers = self.config.get_headers()
+        headers = self.config.get_headers(with_project=True)
         if project_guid:
             headers["project"] = project_guid
 
