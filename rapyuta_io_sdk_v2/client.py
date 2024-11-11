@@ -1105,3 +1105,94 @@ class Client(object):
         handle_server_errors(response)
 
         return munchify(response.json())
+    
+    def list_networks(self, project_guid: str = None) -> Munch:
+        """List all networks in a project.
+
+        Returns:
+            Munch: List of networks as a Munch object.
+        """
+        headers = self.config.get_headers()
+        if project_guid:
+            headers["project"] = project_guid
+
+        v2api_host = self.config.hosts.get("v2api_host")
+
+        response = self.c.get(
+            url=f"{v2api_host}/v2/networks/",
+            headers=headers,
+        )
+
+        handle_server_errors(response)
+
+        return munchify(response.json())
+    
+    def create_network(self, project_guid: str, body: dict) -> Munch:
+        """Create a new network.
+
+        Returns:
+            Munch: Network details as a Munch object.
+        """
+        headers = self.config.get_headers()
+        if project_guid:
+            headers["project"] = project_guid
+
+        v2api_host = self.config.hosts.get("v2api_host")
+
+        response = self.c.post(
+            url=f"{v2api_host}/v2/networks/",
+            headers=headers,
+            json=body,
+        )
+
+        handle_server_errors(response)
+
+        return munchify(response.json())
+    
+    def get_network(self, project_guid: str, name: str) -> Munch:
+        """Get a network by its name.
+
+        Args:
+            name (str): Network name
+
+        Returns:
+            Munch: Network details as a Munch object.
+        """
+        headers = self.config.get_headers()
+        if project_guid:
+            headers["project"] = project_guid
+
+        v2api_host = self.config.hosts.get("v2api_host")
+
+        response = self.c.get(
+            url=f"{v2api_host}/v2/networks/{name}/",
+            headers=headers,
+        )
+
+        handle_server_errors(response)
+
+        return munchify(response.json())
+    
+    def delete_network(self, project_guid: str, name: str) -> Munch:
+        """Delete a network by its name.
+
+        Args:
+            name (str): Network name
+
+        Returns:
+            Munch: Network details as a Munch object.
+        """
+        headers = self.config.get_headers()
+        if project_guid:
+            headers["project"] = project_guid
+
+        v2api_host = self.config.hosts.get("v2api_host")
+
+        response = self.c.delete(
+            url=f"{v2api_host}/v2/networks/{name}/",
+            headers=headers,
+        )
+
+        handle_server_errors(response)
+
+        return munchify(response.json())
