@@ -21,6 +21,7 @@ import sys
 import httpx
 
 from rapyuta_io_sdk_v2.exceptions import HttpAlreadyExistsError, HttpNotFoundError
+from munch import munchify
 
 
 def handle_server_errors(response: httpx.Response):
@@ -85,3 +86,9 @@ def get_default_app_dir(app_name: str) -> str:
     # On Linux and other Unix-like systems
     xdg_config_home = os.environ.get("XDG_CONFIG_HOME", os.path.expanduser("~/.config"))
     return os.path.join(xdg_config_home, app_name)
+
+
+# Handle server errors and mucnhify response
+def handle_and_munchify_response(response):
+    handle_server_errors(response)
+    return munchify(response.json())

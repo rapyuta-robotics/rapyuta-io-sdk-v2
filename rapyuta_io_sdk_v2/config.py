@@ -69,22 +69,25 @@ class Configuration(object):
                 auth_token=data.get("auth_token"),
             )
 
-    def get_headers(self, with_project: bool = True) -> dict:
+    def get_headers(self, **kwargs) -> dict:
         """Get the headers for the configuration.
 
         Args:
-            with_project (bool): Include project guid in headers. Default is True.
+            **kwargs: Arbitrary keyword arguments.
 
         Returns:
             dict: Headers for the configuration.
         """
+        with_project = kwargs.get("with_project", True)
         headers = dict(Authorization=f"Bearer {self.auth_token}")
 
-        if self.organization_guid:
-            headers["organizationguid"] = self.organization_guid
+        organization_guid = kwargs.get("organization_guid", self.organization_guid)
+        if organization_guid:
+            headers["organizationguid"] = organization_guid
 
-        if with_project and self.project_guid is not None:
-            headers["project"] = self.project_guid
+        project_guid = kwargs.get("project_guid", self.project_guid)
+        if with_project and project_guid is not None:
+            headers["project"] = project_guid
 
         custom_client_request_id = os.getenv("REQUEST_ID")
         if custom_client_request_id:

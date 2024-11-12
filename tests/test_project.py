@@ -28,12 +28,13 @@ def test_list_projects_success(client, mock_response, mocker: MockerFixture):  #
     }
 
     # Call the list_projects method
-    response = client.list_projects()
+    response = client.list_projects(with_project=True)
 
     # Validate the response
     assert isinstance(response, Munch)
     assert response.name == "test_project"
-    
+
+
 def test_list_projects_unauthorized(client, mocker: MockerFixture):  # noqa: F811
     # Mock the httpx.Client.get method
     mock_get = mocker.patch("httpx.Client.get")
@@ -57,11 +58,12 @@ def test_list_projects_unauthorized(client, mocker: MockerFixture):  # noqa: F81
 
     # Call the list_projects method
     with pytest.raises(Exception) as exc:
-        client.list_projects()
+        client.list_projects(with_project=True)
 
     # Validate the exception message
     assert str(exc.value) == "unauthorized permission access"
-    
+
+
 def test_list_projects_not_found(client, mocker: MockerFixture):  # noqa: F811
     # Mock the httpx.Client.get method
     mock_get = mocker.patch("httpx.Client.get")
@@ -85,11 +87,12 @@ def test_list_projects_not_found(client, mocker: MockerFixture):  # noqa: F811
 
     # Call the list_projects method
     with pytest.raises(Exception) as exc:
-        client.list_projects()
+        client.list_projects(with_project=True)
 
     # Validate the exception message
     assert str(exc.value) == "not found"
-    
+
+
 def test_list_packages_success(client, mocker: MockerFixture):  # noqa: F811
     # Mock the httpx.Client.get method
     mock_get = mocker.patch("httpx.Client.get")
@@ -112,12 +115,13 @@ def test_list_packages_success(client, mocker: MockerFixture):  # noqa: F811
     }
 
     # Call the list_packages method
-    response = client.list_packages("mock_project_guid")
+    response = client.list_packages(with_project=True)
 
     # Validate the response
     assert isinstance(response, Munch)
     assert response.metadata.name == "test_package"
-    
+
+
 def test_list_packages_not_found(client, mocker: MockerFixture):  # noqa: F811
     # Mock the httpx.Client.get method
     mock_get = mocker.patch("httpx.Client.get")
@@ -141,7 +145,7 @@ def test_list_packages_not_found(client, mocker: MockerFixture):  # noqa: F811
 
     # Call the list_packages method
     with pytest.raises(Exception) as exc:
-        client.list_packages("mock_project_guid")
+        client.list_packages(with_project=True)
 
     # Validate the exception message
     assert str(exc.value) == "not found"
