@@ -151,6 +151,8 @@ class Client(object):
         """
         self.config.set_project(project_guid)
 
+    # -------------------Project-------------------
+    @handle_and_munchify_response
     def get_project(self, **kwargs) -> Munch:
         """Get a project by its GUID.
 
@@ -176,11 +178,9 @@ class Client(object):
 
         v2api_host = self.config.hosts.get("v2api_host")
 
-        return handle_and_munchify_response(
-            self.c.get(
-                url=f"{v2api_host}/v2/projects/{project_guid}/",
-                headers=self.config.get_headers(with_project=False, **kwargs),
-            )
+        return self.c.get(
+            url=f"{v2api_host}/v2/projects/{project_guid}/",
+            headers=self.config.get_headers(with_project=False, **kwargs),
         )
 
     @handle_and_munchify_response
@@ -261,6 +261,7 @@ class Client(object):
             json=body,
         )
 
+    # -------------------Package-------------------
     @handle_and_munchify_response
     def list_packages(self, **kwargs) -> Munch:
         """List all packages in a project.
@@ -269,15 +270,10 @@ class Client(object):
             Munch: List of packages as a Munch object.
         """
         v2api_host = self.config.hosts.get("v2api_host")
-        headers = self.config.get_headers(**kwargs)
-        project_guid = kwargs.get("project_guid")
-
-        if project_guid:
-            headers["project"] = project_guid
 
         return self.c.get(
             url=f"{v2api_host}/v2/packages/",
-            headers=headers,
+            headers=self.config.get_headers(**kwargs),
         )
 
     @handle_and_munchify_response
@@ -306,10 +302,9 @@ class Client(object):
             Munch: Package details as a Munch object.
         """
         v2api_host = self.config.hosts.get("v2api_host")
-        name = kwargs.get("name")
 
         return self.c.get(
-            url=f"{v2api_host}/v2/packages/{name}/",
+            url=f"{v2api_host}/v2/packages/{kwargs.get("name")}/",
             headers=self.config.get_headers(**kwargs),
         )
 
@@ -321,13 +316,13 @@ class Client(object):
             Munch: Package details as a Munch object.
         """
         v2api_host = self.config.hosts.get("v2api_host")
-        name = kwargs.get("name")
 
         return self.c.delete(
-            url=f"{v2api_host}/v2/packages/{name}/",
+            url=f"{v2api_host}/v2/packages/{kwargs.get("name")}/",
             headers=self.config.get_headers(**kwargs),
         )
 
+    # -------------------Deployment-------------------
     @handle_and_munchify_response
     def list_deployments(self, **kwargs) -> Munch:
         """List all deployments in a project.
@@ -336,15 +331,10 @@ class Client(object):
             Munch: List of deployments as a Munch object.
         """
         v2api_host = self.config.hosts.get("v2api_host")
-        headers = self.config.get_headers(**kwargs)
-        project_guid = kwargs.get("project_guid")
-
-        if project_guid:
-            headers["project"] = project_guid
 
         return self.c.get(
             url=f"{v2api_host}/v2/deployments/",
-            headers=headers,
+            headers=self.config.get_headers(**kwargs),
         )
 
     @handle_and_munchify_response
@@ -355,15 +345,10 @@ class Client(object):
             Munch: Deployment details as a Munch object.
         """
         v2api_host = self.config.hosts.get("v2api_host")
-        headers = self.config.get_headers(**kwargs)
-        project_guid = kwargs.get("project_guid")
-
-        if project_guid:
-            headers["project"] = project_guid
 
         return self.c.post(
             url=f"{v2api_host}/v2/deployments/",
-            headers=headers,
+            headers=self.config.get_headers(**kwargs),
             json=kwargs.get("body"),
         )
 
@@ -375,16 +360,10 @@ class Client(object):
             Munch: Deployment details as a Munch object.
         """
         v2api_host = self.config.hosts.get("v2api_host")
-        headers = self.config.get_headers(**kwargs)
-        project_guid = kwargs.get("project_guid")
-        name = kwargs.get("name")
-
-        if project_guid:
-            headers["project"] = project_guid
 
         return self.c.get(
-            url=f"{v2api_host}/v2/deployments/{name}/",
-            headers=headers,
+            url=f"{v2api_host}/v2/deployments/{kwargs.get("name")}/",
+            headers=self.config.get_headers(**kwargs),
         )
 
     @handle_and_munchify_response
@@ -395,16 +374,10 @@ class Client(object):
             Munch: Deployment details as a Munch object.
         """
         v2api_host = self.config.hosts.get("v2api_host")
-        headers = self.config.get_headers(**kwargs)
-        project_guid = kwargs.get("project_guid")
-        name = kwargs.get("name")
-
-        if project_guid:
-            headers["project"] = project_guid
 
         return self.c.put(
-            url=f"{v2api_host}/v2/deployments/{name}/",
-            headers=headers,
+            url=f"{v2api_host}/v2/deployments/{kwargs.get("name")}/",
+            headers=self.config.get_headers(**kwargs),
             json=kwargs.get("body"),
         )
 
@@ -416,18 +389,13 @@ class Client(object):
             Munch: Deployment details as a Munch object.
         """
         v2api_host = self.config.hosts.get("v2api_host")
-        headers = self.config.get_headers(**kwargs)
-        project_guid = kwargs.get("project_guid")
-        name = kwargs.get("name")
-
-        if project_guid:
-            headers["project"] = project_guid
 
         return self.c.delete(
-            url=f"{v2api_host}/v2/deployments/{name}/",
-            headers=headers,
+            url=f"{v2api_host}/v2/deployments/{kwargs.get("name")}/",
+            headers=self.config.get_headers(**kwargs),
         )
 
+    # -------------------Disks-------------------
     @handle_and_munchify_response
     def list_disks(self, **kwargs) -> Munch:
         """List all disks in a project.
@@ -491,6 +459,7 @@ class Client(object):
             headers=self.config.get_headers(**kwargs),
         )
 
+    # -------------------Static Routes-------------------
     @handle_and_munchify_response
     def list_staticroutes(self, **kwargs) -> Munch:
         """List all static routes in a project.
@@ -498,16 +467,11 @@ class Client(object):
         Returns:
             Munch: List of static routes as a Munch object.
         """
-        headers = self.config.get_headers(**kwargs)
-        project_guid = kwargs.get("project_guid")
-        if project_guid:
-            headers["project"] = project_guid
-
         v2api_host = self.config.hosts.get("v2api_host")
 
         return self.c.get(
             url=f"{v2api_host}/v2/staticroutes/",
-            headers=headers,
+            headers=self.config.get_headers(**kwargs),
         )
 
     @handle_and_munchify_response
@@ -517,18 +481,12 @@ class Client(object):
         Returns:
             Munch: Static route details as a Munch object.
         """
-        headers = self.config.get_headers(**kwargs)
-        project_guid = kwargs.get("project_guid")
-        if project_guid:
-            headers["project"] = project_guid
-        body = kwargs.get("body")
-
         v2api_host = self.config.hosts.get("v2api_host")
 
         return self.c.post(
             url=f"{v2api_host}/v2/staticroutes/",
-            headers=headers,
-            json=body,
+            headers=self.config.get_headers(**kwargs),
+            json=kwargs.get("body"),
         )
 
     @handle_and_munchify_response
@@ -541,16 +499,11 @@ class Client(object):
         Returns:
             Munch: Static route details as a Munch object.
         """
-        headers = self.config.get_headers(**kwargs)
-        project_guid = kwargs.get("project_guid")
-        if project_guid:
-            headers["project"] = project_guid
-
         v2api_host = self.config.hosts.get("v2api_host")
 
         return self.c.get(
             url=f"{v2api_host}/v2/staticroutes/{kwargs.get('name')}/",
-            headers=headers,
+            headers=self.config.get_headers(**kwargs),
         )
 
     @handle_and_munchify_response
@@ -589,6 +542,7 @@ class Client(object):
             headers=self.config.get_headers(**kwargs),
         )
 
+    # -------------------Networks-------------------
     @handle_and_munchify_response
     def list_networks(self, **kwargs) -> Munch:
         """List all networks in a project.
@@ -596,16 +550,11 @@ class Client(object):
         Returns:
             Munch: List of networks as a Munch object.
         """
-        headers = self.config.get_headers(**kwargs)
-        project_guid = kwargs.get("project_guid")
-        if project_guid:
-            headers["project"] = project_guid
-
         v2api_host = self.config.hosts.get("v2api_host")
 
         return self.c.get(
             url=f"{v2api_host}/v2/networks/",
-            headers=headers,
+            headers=self.config.get_headers(**kwargs),
         )
 
     @handle_and_munchify_response
@@ -615,16 +564,11 @@ class Client(object):
         Returns:
             Munch: Network details as a Munch object.
         """
-        headers = self.config.get_headers()
-        project_guid = kwargs.get("project_guid")
-        if project_guid:
-            headers["project"] = project_guid
-
         v2api_host = self.config.hosts.get("v2api_host")
 
         return self.c.post(
             url=f"{v2api_host}/v2/networks/",
-            headers=headers,
+            headers=self.config.get_headers(),
             json=kwargs.get("body"),
         )
 
@@ -638,16 +582,11 @@ class Client(object):
         Returns:
             Munch: Network details as a Munch object.
         """
-        headers = self.config.get_headers()
-        project_guid = kwargs.get("project_guid")
-        if project_guid:
-            headers["project"] = project_guid
-
         v2api_host = self.config.hosts.get("v2api_host")
 
         return self.c.get(
             url=f"{v2api_host}/v2/networks/{kwargs.get('name')}/",
-            headers=headers,
+            headers=self.config.get_headers(),
         )
 
     @handle_and_munchify_response
@@ -660,18 +599,14 @@ class Client(object):
         Returns:
             Munch: Network details as a Munch object.
         """
-        headers = self.config.get_headers()
-        project_guid = kwargs.get("project_guid")
-        if project_guid:
-            headers["project"] = project_guid
-
         v2api_host = self.config.hosts.get("v2api_host")
 
         return self.c.delete(
             url=f"{v2api_host}/v2/networks/{kwargs.get('name')}/",
-            headers=headers,
+            headers=self.config.get_headers(),
         )
 
+    # -------------------Secrets-------------------
     @handle_and_munchify_response
     def list_secrets(self, **kwargs) -> Munch:
         """List all secrets in a project.
@@ -680,12 +615,10 @@ class Client(object):
             Munch: List of secrets as a Munch object.
         """
         v2api_host = self.config.hosts.get("v2api_host")
-        headers = self.config.get_headers(**kwargs)
 
-        if kwargs.get("project_guid"):
-            headers["project"] = kwargs["project_guid"]
-
-        return self.c.get(url=f"{v2api_host}/v2/secrets/", headers=headers)
+        return self.c.get(
+            url=f"{v2api_host}/v2/secrets/", headers=self.config.get_headers()
+        )
 
     @handle_and_munchify_response
     def create_secret(self, **kwargs) -> Munch:
@@ -695,14 +628,10 @@ class Client(object):
             Munch: Secret details as a Munch object.
         """
         v2api_host = self.config.hosts.get("v2api_host")
-        headers = self.config.get_headers(**kwargs)
-
-        if kwargs.get("project_guid"):
-            headers["project"] = kwargs["project_guid"]
 
         return self.c.post(
             url=f"{v2api_host}/v2/secrets/",
-            headers=headers,
+            headers=self.config.get_headers(),
             json=kwargs.get("body"),
         )
 
@@ -717,13 +646,10 @@ class Client(object):
             Munch: Secret details as a Munch object.
         """
         v2api_host = self.config.hosts.get("v2api_host")
-        headers = self.config.get_headers(**kwargs)
-
-        if kwargs.get("project_guid"):
-            headers["project"] = kwargs["project_guid"]
 
         return self.c.get(
-            url=f"{v2api_host}/v2/secrets/{kwargs['name']}/", headers=headers
+            url=f"{v2api_host}/v2/secrets/{kwargs.get('name')}/",
+            headers=self.config.get_headers(**kwargs),
         )
 
     @handle_and_munchify_response
@@ -738,14 +664,10 @@ class Client(object):
             Munch: Secret details as a Munch object.
         """
         v2api_host = self.config.hosts.get("v2api_host")
-        headers = self.config.get_headers(**kwargs)
-
-        if kwargs.get("project_guid"):
-            headers["project"] = kwargs["project_guid"]
 
         return self.c.put(
-            url=f"{v2api_host}/v2/secrets/{kwargs['name']}/",
-            headers=headers,
+            url=f"{v2api_host}/v2/secrets/{kwargs.get('name')}/",
+            headers=self.config.get_headers(**kwargs),
             json=kwargs.get("body"),
         )
 
@@ -760,15 +682,13 @@ class Client(object):
             Munch: Secret details as a Munch object.
         """
         v2api_host = self.config.hosts.get("v2api_host")
-        headers = self.config.get_headers(**kwargs)
-
-        if kwargs.get("project_guid"):
-            headers["project"] = kwargs["project_guid"]
 
         return self.c.delete(
-            url=f"{v2api_host}/v2/secrets/{kwargs['name']}/", headers=headers
+            url=f"{v2api_host}/v2/secrets/{kwargs.get('name')}/",
+            headers=self.config.get_headers(**kwargs),
         )
 
+    # -------------------Config Trees-------------------
     @handle_and_munchify_response
     def list_configtrees(self, **kwargs) -> Munch:
         """List all config trees in a project.
@@ -777,14 +697,11 @@ class Client(object):
             Munch: List of config trees as a Munch object.
         """
         v2api_host = self.config.hosts.get("v2api_host")
-        headers = self.config.get_headers(**kwargs)
 
-        if kwargs.get("organization_guid"):
-            headers["organizationguid"] = kwargs["organization_guid"]
-        if kwargs.get("project_guid"):
-            headers["project"] = kwargs["project_guid"]
-
-        return self.c.get(url=f"{v2api_host}/v2/configtrees/", headers=headers)
+        return self.c.get(
+            url=f"{v2api_host}/v2/configtrees/",
+            headers=self.config.get_headers(**kwargs),
+        )
 
     @handle_and_munchify_response
     def create_configtree(self, **kwargs) -> Munch:
@@ -794,16 +711,10 @@ class Client(object):
             Munch: Config tree details as a Munch object.
         """
         v2api_host = self.config.hosts.get("v2api_host")
-        headers = self.config.get_headers(**kwargs)
-
-        if kwargs.get("organization_guid"):
-            headers["organizationguid"] = kwargs["organization_guid"]
-        if kwargs.get("project_guid"):
-            headers["project"] = kwargs["project_guid"]
 
         return self.c.post(
             url=f"{v2api_host}/v2/configtrees/",
-            headers=headers,
+            headers=self.config.get_headers(**kwargs),
             json=kwargs.get("body"),
         )
 
@@ -818,15 +729,10 @@ class Client(object):
             Munch: Config tree details as a Munch object.
         """
         v2api_host = self.config.hosts.get("v2api_host")
-        headers = self.config.get_headers(**kwargs)
-
-        if kwargs.get("organization_guid"):
-            headers["organizationguid"] = kwargs["organization_guid"]
-        if kwargs.get("project_guid"):
-            headers["project"] = kwargs["project_guid"]
 
         return self.c.get(
-            url=f"{v2api_host}/v2/configtrees/{kwargs['name']}/", headers=headers
+            url=f"{v2api_host}/v2/configtrees/{kwargs.get('name')}/",
+            headers=self.config.get_headers(**kwargs),
         )
 
     @handle_and_munchify_response
@@ -841,16 +747,10 @@ class Client(object):
             Munch: Config tree details as a Munch object.
         """
         v2api_host = self.config.hosts.get("v2api_host")
-        headers = self.config.get_headers(**kwargs)
-
-        if kwargs.get("organization_guid"):
-            headers["organizationguid"] = kwargs["organization_guid"]
-        if kwargs.get("project_guid"):
-            headers["project"] = kwargs["project_guid"]
 
         return self.c.put(
-            url=f"{v2api_host}/v2/configtrees/{kwargs['name']}/",
-            headers=headers,
+            url=f"{v2api_host}/v2/configtrees/{kwargs.get('name')}/",
+            headers=self.config.get_headers(**kwargs),
             json=kwargs.get("body"),
         )
 
@@ -865,15 +765,10 @@ class Client(object):
             Munch: Config tree details as a Munch object.
         """
         v2api_host = self.config.hosts.get("v2api_host")
-        headers = self.config.get_headers(**kwargs)
-
-        if kwargs.get("organization_guid"):
-            headers["organizationguid"] = kwargs["organization_guid"]
-        if kwargs.get("project_guid"):
-            headers["project"] = kwargs["project_guid"]
 
         return self.c.delete(
-            url=f"{v2api_host}/v2/configtrees/{kwargs['name']}/", headers=headers
+            url=f"{v2api_host}/v2/configtrees/{kwargs.get('name')}/",
+            headers=self.config.get_headers(**kwargs),
         )
 
     @handle_and_munchify_response
@@ -884,18 +779,10 @@ class Client(object):
             Munch: List of revisions as a Munch object.
         """
         v2api_host = self.config.hosts.get("v2api_host")
-        headers = self.config.get_headers(**kwargs)
-
-        if kwargs.get("organization_guid"):
-            headers["organizationguid"] = kwargs["organization_guid"]
-        if kwargs.get("project_guid"):
-            headers["project"] = kwargs["project_guid"]
-        if kwargs.get("name"):
-            headers["name"] = kwargs["name"]
 
         return self.c.get(
-            url=f"{v2api_host}/v2/configtrees/{kwargs['name']}/revisions/",
-            headers=headers,
+            url=f"{v2api_host}/v2/configtrees/{kwargs.get('name')}/revisions/",
+            headers=self.config.get_headers(**kwargs),
         )
 
     @handle_and_munchify_response
@@ -906,18 +793,10 @@ class Client(object):
             Munch: Revision details as a Munch object.
         """
         v2api_host = self.config.hosts.get("v2api_host")
-        headers = self.config.get_headers(**kwargs)
-
-        if kwargs.get("organization_guid"):
-            headers["organizationguid"] = kwargs["organization_guid"]
-        if kwargs.get("project_guid"):
-            headers["project"] = kwargs["project_guid"]
-        if kwargs.get("name"):
-            headers["name"] = kwargs["name"]
 
         return self.c.post(
-            url=f"{v2api_host}/v2/configtrees/{kwargs['name']}/revisions/",
-            headers=headers,
+            url=f"{v2api_host}/v2/configtrees/{kwargs.get('name')}/revisions/",
+            headers=self.config.get_headers(**kwargs),
             json=kwargs.get("body"),
         )
 
@@ -929,18 +808,10 @@ class Client(object):
             Munch: Revision details as a Munch object.
         """
         v2api_host = self.config.hosts.get("v2api_host")
-        headers = self.config.get_headers(**kwargs)
-
-        if kwargs.get("organization_guid"):
-            headers["organizationguid"] = kwargs["organization_guid"]
-        if kwargs.get("project_guid"):
-            headers["project"] = kwargs["project_guid"]
-        if kwargs.get("name"):
-            headers["name"] = kwargs["name"]
 
         return self.c.put(
-            url=f"{v2api_host}/v2/configtrees/{kwargs['name']}/revisions/{kwargs['revision_id']}/keys/",
-            headers=headers,
+            url=f"{v2api_host}/v2/configtrees/{kwargs.get('name')}/revisions/{kwargs.get('revision_id')}/keys/",
+            headers=self.config.get_headers(**kwargs),
         )
 
     @handle_and_munchify_response
@@ -951,16 +822,8 @@ class Client(object):
             Munch: Revision details as a Munch object.
         """
         v2api_host = self.config.hosts.get("v2api_host")
-        headers = self.config.get_headers(**kwargs)
-
-        if kwargs.get("organization_guid"):
-            headers["organizationguid"] = kwargs["organization_guid"]
-        if kwargs.get("project_guid"):
-            headers["project"] = kwargs["project_guid"]
-        if kwargs.get("name"):
-            headers["name"] = kwargs["name"]
 
         return self.c.patch(
-            url=f"{v2api_host}/v2/configtrees/{kwargs['name']}/revisions/{kwargs['revision_id']}/commit/",
-            headers=headers,
+            url=f"{v2api_host}/v2/configtrees/{kwargs.get('name')}/revisions/{kwargs.get('revision_id')}/commit/",
+            headers=self.config.get_headers(**kwargs),
         )
