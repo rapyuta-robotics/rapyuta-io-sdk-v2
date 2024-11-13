@@ -1,7 +1,7 @@
 from pytest_mock import MockerFixture
 from munch import Munch
 import httpx
-from tests.utils.test_util import client, mock_response  # noqa: F401
+from tests.utils.test_util import client, mock_response, project_body  # noqa: F401
 import pytest
 
 
@@ -32,7 +32,7 @@ def test_list_projects_success(client, mock_response, mocker: MockerFixture):  #
 
     # Validate the response
     assert isinstance(response, Munch)
-    assert response.name == "test_project"
+    assert response["metadata"]["name"] == "test-project"
 
 
 def test_list_projects_unauthorized(client, mocker: MockerFixture):  # noqa: F811
@@ -46,7 +46,7 @@ def test_list_projects_unauthorized(client, mocker: MockerFixture):  # noqa: F81
     )
 
     # Override get_headers to return the mocked headers without None values
-    client.config.get_headers = lambda with_project: {
+    client.config.get_headers = lambda with_project=False, **kwargs: {
         k: v
         for k, v in {
             "Authorization": f"Bearer {client.auth_token}",
@@ -75,7 +75,7 @@ def test_list_projects_not_found(client, mocker: MockerFixture):  # noqa: F811
     )
 
     # Override get_headers to return the mocked headers without None values
-    client.config.get_headers = lambda with_project: {
+    client.config.get_headers = lambda with_project=False, **kwargs: {
         k: v
         for k, v in {
             "Authorization": f"Bearer {client.auth_token}",
@@ -93,56 +93,176 @@ def test_list_projects_not_found(client, mocker: MockerFixture):  # noqa: F811
     assert str(exc.value) == "not found"
 
 
-def test_list_packages_success(client, mocker: MockerFixture):  # noqa: F811
+def test_get_project_success(client, mock_response, mocker: MockerFixture):  # noqa: F811
     # Mock the httpx.Client.get method
     mock_get = mocker.patch("httpx.Client.get")
 
     # Set up the mock response
     mock_get.return_value = httpx.Response(
         status_code=200,
-        json={"metadata": {"name": "test_package", "guid": "mock_package_guid"}},
+        json={
+            "kind": "Project",
+            "metadata": {"guid": "test_project_guid", "name": "test_project"},
+        },
     )
 
     # Override get_headers to return the mocked headers without None values
-    client.config.get_headers = lambda with_project=True: {
+    client.config.get_headers = lambda with_project=False, **kwargs: {
         k: v
         for k, v in {
             "Authorization": f"Bearer {client.auth_token}",
             "organizationguid": client.organization_guid,
-            "project": "mock_project_guid" if with_project else None,
+            "project": kwargs.get("project_guid") if with_project else None,
         }.items()
         if v is not None
     }
 
-    # Call the list_packages method
-    response = client.list_packages()
+    # Call the get_project method
+    response = client.get_project(project_guid="mock_project_guid")
 
     # Validate the response
     assert isinstance(response, Munch)
-    assert response.metadata.name == "test_package"
+    assert response["metadata"]["guid"] == "test_project_guid"
 
 
-def test_list_packages_not_found(client, mocker: MockerFixture):  # noqa: F811
+def test_get_project_not_found(client, mocker: MockerFixture):  # noqa: F811
     # Mock the httpx.Client.get method
     mock_get = mocker.patch("httpx.Client.get")
 
     # Set up the mock response
     mock_get.return_value = httpx.Response(
         status_code=404,
-        json={"error": "not found"},
+        json={"error": "project not found"},
     )
 
     # Override get_headers to return the mocked headers without None values
-    client.config.get_headers = lambda with_project=True: {
-        "Authorization": f"Bearer {client.auth_token}",
-        "organizationguid": client.organization_guid,
-        "project": "mock_project_guid" if with_project else None,
+    client.config.get_headers = lambda with_project=False, **kwargs: {
+        k: v
+        for k, v in {
+            "Authorization": f"Bearer {client.auth_token}",
+            "organizationguid": client.organization_guid,
+            "project": kwargs.get("project_guid") if with_project else None,
+        }.items()
+        if v is not None
     }
 
-    # Call the list_packages method
+    # Call the get_project method
     with pytest.raises(Exception) as exc:
-        client.list_packages()
+        client.get_project(project_guid="mock_project_guid")
 
     # Validate the exception message
-    assert str(exc.value) == "not found"
-    # assert response. == "not found"
+    assert str(exc.value) == "project not found"
+
+
+def test_create_project_success(client, mock_response, mocker: MockerFixture):  # noqa: F811
+    # Mock the httpx.Client.post method
+    mock_post = mocker.patch("httpx.Client.post")
+
+    # Set up the mock response
+    mock_post.return_value = httpx.Response(
+        status_code=201,
+        json=mock_response,
+    )
+
+    # Override get_headers to return the mocked headers without None values
+    client.config.get_headers = lambda with_project=False, **kwargs: {
+        k: v
+        for k, v in {
+            "Authorization": f"Bearer {client.auth_token}",
+            "organizationguid": client.organization_guid,
+            "project": kwargs.get("project_guid") if with_project else None,
+        }.items()
+        if v is not None
+    }
+
+    # Call the create_project method
+    response = client.create_project(project_body=project_body)
+
+    # Validate the response
+    assert isinstance(response, Munch)
+    assert response["metadata"]["guid"] == "mock_project_guid"
+
+
+def test_create_project_unauthorized(client, mocker: MockerFixture):  # noqa: F811
+    # Mock the httpx.Client.post method
+    mock_post = mocker.patch("httpx.Client.post")
+
+    # Set up the mock response
+    mock_post.return_value = httpx.Response(
+        status_code=401,
+        json={"error": "unauthorized permission access"},
+    )
+
+    # Override get_headers to return the mocked headers without None values
+    client.config.get_headers = lambda with_project=False, **kwargs: {
+        k: v
+        for k, v in {
+            "Authorization": f"Bearer {client.auth_token}",
+            "organizationguid": client.organization_guid,
+            "project": kwargs.get("project_guid") if with_project else None,
+        }.items()
+        if v is not None
+    }
+
+    # Call the create_project method
+    with pytest.raises(Exception) as exc:
+        client.create_project(project_body=project_body)
+
+    # Validate the exception message
+    assert str(exc.value) == "unauthorized permission access"
+
+
+def test_update_project_success(client, mock_response, mocker: MockerFixture):  # noqa: F811
+    # Mock the httpx.Client.put method
+    mock_put = mocker.patch("httpx.Client.put")
+
+    # Set up the mock response
+    mock_put.return_value = httpx.Response(
+        status_code=200,
+        json=mock_response,
+    )
+
+    # Override get_headers to return the mocked headers without None values
+    client.config.get_headers = lambda with_project=False, **kwargs: {
+        k: v
+        for k, v in {
+            "Authorization": f"Bearer {client.auth_token}",
+            "organizationguid": client.organization_guid,
+            "project": kwargs.get("project_guid") if with_project else None,
+        }.items()
+        if v is not None
+    }
+
+    # Call the update_project method
+    response = client.update_project(
+        project_guid="mock_project_guid", project_body=project_body
+    )
+
+    # Validate the response
+    assert isinstance(response, Munch)
+    assert response["metadata"]["guid"] == "mock_project_guid"
+
+
+def test_delete_project_success(client, mock_response, mocker: MockerFixture):  # noqa: F811
+    # Mock the httpx.Client.delete method
+    mock_delete = mocker.patch("httpx.Client.delete")
+
+    # Set up the mock response
+    mock_delete.return_value = httpx.Response(status_code=200, json={"success": True})
+
+    # Override get_headers to return the mocked headers without None values
+    client.config.get_headers = lambda with_project=False, **kwargs: {
+        k: v
+        for k, v in {
+            "Authorization": f"Bearer {client.auth_token}",
+            "organizationguid": client.organization_guid,
+            "project": kwargs.get("project_guid") if with_project else None,
+        }.items()
+        if v is not None
+    }
+
+    # Call the delete_project method
+    response = client.delete_project(project_guid="mock_project_guid")
+
+    # Validate the response
+    assert response["success"] is True

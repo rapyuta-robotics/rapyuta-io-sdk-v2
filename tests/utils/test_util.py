@@ -16,6 +16,27 @@ def client():
 @pytest.fixture
 def mock_response():
     return {
-        "name": "test_project",
-        "organization": "mock_org_guid",
+        "kind": "Project",
+        "metadata": {"name": "test-project", "guid": "mock_project_guid"},
+        "spec": {
+            "users": [
+                {"userGUID": "mock_user_guid", "emailID": "test.user@example.com"}
+            ]
+        },
+    }
+
+
+@pytest.fixture
+def project_body():
+    return {
+        "apiVersion": "api.rapyuta.io/v2",
+        "kind": "Project",
+        "metadata": {
+            "name": "test-project",
+            "labels": {"purpose": "testing", "version": "1.0"},
+        },
+        "spec": {
+            "users": [{"emailID": "test.user@example.com", "role": "admin"}],
+            "features": {"vpn": {"enabled": False}},
+        },
     }
