@@ -28,7 +28,7 @@ def test_list_projects_success(client, mock_response, mocker: MockerFixture):  #
     }
 
     # Call the list_projects method
-    response = client.list_projects(with_project=True)
+    response = client.list_projects()
 
     # Validate the response
     assert isinstance(response, Munch)
@@ -58,7 +58,7 @@ def test_list_projects_unauthorized(client, mocker: MockerFixture):  # noqa: F81
 
     # Call the list_projects method
     with pytest.raises(Exception) as exc:
-        client.list_projects(with_project=True)
+        client.list_projects()
 
     # Validate the exception message
     assert str(exc.value) == "unauthorized permission access"
@@ -87,7 +87,7 @@ def test_list_projects_not_found(client, mocker: MockerFixture):  # noqa: F811
 
     # Call the list_projects method
     with pytest.raises(Exception) as exc:
-        client.list_projects(with_project=True)
+        client.list_projects()
 
     # Validate the exception message
     assert str(exc.value) == "not found"
@@ -104,7 +104,7 @@ def test_list_packages_success(client, mocker: MockerFixture):  # noqa: F811
     )
 
     # Override get_headers to return the mocked headers without None values
-    client.config.get_headers = lambda with_project: {
+    client.config.get_headers = lambda with_project=True: {
         k: v
         for k, v in {
             "Authorization": f"Bearer {client.auth_token}",
@@ -115,7 +115,7 @@ def test_list_packages_success(client, mocker: MockerFixture):  # noqa: F811
     }
 
     # Call the list_packages method
-    response = client.list_packages(with_project=True)
+    response = client.list_packages()
 
     # Validate the response
     assert isinstance(response, Munch)
@@ -133,19 +133,16 @@ def test_list_packages_not_found(client, mocker: MockerFixture):  # noqa: F811
     )
 
     # Override get_headers to return the mocked headers without None values
-    client.config.get_headers = lambda with_project: {
-        k: v
-        for k, v in {
-            "Authorization": f"Bearer {client.auth_token}",
-            "organizationguid": client.organization_guid,
-            "project": "mock_project_guid" if with_project else None,
-        }.items()
-        if v is not None
+    client.config.get_headers = lambda with_project=True: {
+        "Authorization": f"Bearer {client.auth_token}",
+        "organizationguid": client.organization_guid,
+        "project": "mock_project_guid" if with_project else None,
     }
 
     # Call the list_packages method
     with pytest.raises(Exception) as exc:
-        client.list_packages(with_project=True)
+        client.list_packages()
 
     # Validate the exception message
     assert str(exc.value) == "not found"
+    # assert response. == "not found"

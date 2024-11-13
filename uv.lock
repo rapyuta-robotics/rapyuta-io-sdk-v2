@@ -267,7 +267,6 @@ version = "0.0.1"
 source = { editable = "." }
 dependencies = [
     { name = "httpx" },
-    { name = "mock" },
     { name = "munch" },
     { name = "tenacity" },
 ]
@@ -275,6 +274,7 @@ dependencies = [
 [package.dev-dependencies]
 dev = [
     { name = "coverage" },
+    { name = "mock" },
     { name = "pytest" },
     { name = "pytest-cov" },
     { name = "pytest-mock" },
@@ -283,7 +283,6 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "httpx", specifier = ">=0.27.2" },
-    { name = "mock", specifier = ">=5.1.0" },
     { name = "munch", specifier = ">=4.0.0" },
     { name = "tenacity", specifier = ">=9.0.0" },
 ]
@@ -291,6 +290,7 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "coverage", specifier = ">=7.6.1" },
+    { name = "mock", specifier = ">=5.1.0" },
     { name = "pytest", specifier = ">=8.3.3" },
     { name = "pytest-cov", specifier = ">=5.0.0" },
     { name = "pytest-mock", specifier = ">=3.14.0" },

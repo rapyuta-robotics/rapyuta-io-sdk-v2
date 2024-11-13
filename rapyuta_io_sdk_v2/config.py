@@ -69,16 +69,16 @@ class Configuration(object):
                 auth_token=data.get("auth_token"),
             )
 
-    def get_headers(self, **kwargs) -> dict:
+    def get_headers(self, with_project: bool = True, **kwargs) -> dict:
         """Get the headers for the configuration.
 
         Args:
+            with_project (bool): Whether to include the project headers.
             **kwargs: Arbitrary keyword arguments.
 
         Returns:
             dict: Headers for the configuration.
         """
-        with_project = kwargs.get("with_project", True)
         headers = dict(Authorization=f"Bearer {self.auth_token}")
 
         organization_guid = kwargs.get("organization_guid", self.organization_guid)

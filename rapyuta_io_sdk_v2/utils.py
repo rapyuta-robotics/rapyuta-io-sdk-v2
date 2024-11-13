@@ -88,7 +88,11 @@ def get_default_app_dir(app_name: str) -> str:
     return os.path.join(xdg_config_home, app_name)
 
 
-# Handle server errors and mucnhify response
-def handle_and_munchify_response(response):
-    handle_server_errors(response)
-    return munchify(response.json())
+# Decorator to handle server errors and munchify response
+def handle_and_munchify_response(func):
+    def wrapper(*args, **kwargs):
+        response = func(*args, **kwargs)
+        handle_server_errors(response)
+        return munchify(response.json())
+
+    return wrapper
