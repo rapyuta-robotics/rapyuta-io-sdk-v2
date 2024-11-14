@@ -40,3 +40,19 @@ def project_body():
             "features": {"vpn": {"enabled": False}},
         },
     }
+
+
+@pytest.fixture
+def package_body():
+    return {
+        "apiVersion": "apiextensions.rapyuta.io/v1",
+        "kind": "Package",
+        "metadata": {
+            "name": "test-package",
+            "version": "v1.0.0",
+            "description": "Test package for demo",
+            "labels": {"app": "test"},
+            "projectguid": "mock_project_guid",
+        },
+        "spec": {"runtime": "cloud", "cloud": {"enabled": True}},
+    }

@@ -195,6 +195,7 @@ class Client(object):
         return self.c.get(
             url=f"{v2api_host}/v2/projects/",
             headers=self.config.get_headers(with_project=False, **kwargs),
+            params={"continue": kwargs.get("cont"), "limit": kwargs.get("limit")},
         )
 
     @handle_and_munchify_response
@@ -274,6 +275,7 @@ class Client(object):
         return self.c.get(
             url=f"{v2api_host}/v2/packages/",
             headers=self.config.get_headers(**kwargs),
+            params={"continue": kwargs.get("cont"), "limit": kwargs.get("limit")},
         )
 
     @handle_and_munchify_response
@@ -335,6 +337,7 @@ class Client(object):
         return self.c.get(
             url=f"{v2api_host}/v2/deployments/",
             headers=self.config.get_headers(**kwargs),
+            params={"continue": kwargs.get("cont"), "limit": kwargs.get("limit")},
         )
 
     @handle_and_munchify_response
@@ -408,6 +411,7 @@ class Client(object):
         return self.c.get(
             url=f"{v2api_host}/v2/disks/",
             headers=self.config.get_headers(**kwargs),
+            params={"continue": kwargs.get("cont"), "limit": kwargs.get("limit")},
         )
 
     @handle_and_munchify_response
@@ -472,6 +476,7 @@ class Client(object):
         return self.c.get(
             url=f"{v2api_host}/v2/staticroutes/",
             headers=self.config.get_headers(**kwargs),
+            params={"continue": kwargs.get("cont"), "limit": kwargs.get("limit")},
         )
 
     @handle_and_munchify_response
@@ -555,6 +560,7 @@ class Client(object):
         return self.c.get(
             url=f"{v2api_host}/v2/networks/",
             headers=self.config.get_headers(**kwargs),
+            params={"continue": kwargs.get("cont"), "limit": kwargs.get("limit")},
         )
 
     @handle_and_munchify_response
@@ -617,7 +623,9 @@ class Client(object):
         v2api_host = self.config.hosts.get("v2api_host")
 
         return self.c.get(
-            url=f"{v2api_host}/v2/secrets/", headers=self.config.get_headers()
+            url=f"{v2api_host}/v2/secrets/",
+            headers=self.config.get_headers(),
+            params={"continue": kwargs.get("cont"), "limit": kwargs.get("limit")},
         )
 
     @handle_and_munchify_response
@@ -701,6 +709,7 @@ class Client(object):
         return self.c.get(
             url=f"{v2api_host}/v2/configtrees/",
             headers=self.config.get_headers(**kwargs),
+            params={"continue": kwargs.get("cont"), "limit": kwargs.get("limit")},
         )
 
     @handle_and_munchify_response
@@ -783,6 +792,11 @@ class Client(object):
         return self.c.get(
             url=f"{v2api_host}/v2/configtrees/{kwargs.get('name')}/revisions/",
             headers=self.config.get_headers(**kwargs),
+            params={
+                "continue": kwargs.get("cont"),
+                "limit": kwargs.get("limit"),
+                "committed": kwargs.get("committed"),
+            },
         )
 
     @handle_and_munchify_response
