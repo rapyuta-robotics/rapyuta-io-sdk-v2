@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # from rapyuta_io_sdk_v2.config import Configuration
-import http
 import json
 import os
 import sys
@@ -37,31 +36,31 @@ def handle_server_errors(response: httpx.Response):
         err = response.text
 
     # 404 Not Found
-    if status_code == http.HTTPStatus.NOT_FOUND:
+    if status_code == httpx.codes.NOT_FOUND:
         raise HttpNotFoundError(err)
     # 405 Method Not Allowed
-    if status_code == http.HTTPStatus.METHOD_NOT_ALLOWED:
+    if status_code == httpx.codes.METHOD_NOT_ALLOWED:
         raise Exception("method not allowed")
     # 409 Conflict
-    if status_code == http.HTTPStatus.CONFLICT:
+    if status_code == httpx.codes.CONFLICT:
         raise HttpAlreadyExistsError()
     # 500 Internal Server Error
-    if status_code == http.HTTPStatus.INTERNAL_SERVER_ERROR:
+    if status_code == httpx.codes.INTERNAL_SERVER_ERROR:
         raise Exception("internal server error")
     # 501 Not Implemented
-    if status_code == http.HTTPStatus.NOT_IMPLEMENTED:
+    if status_code == httpx.codes.NOT_IMPLEMENTED:
         raise Exception("not implemented")
     # 502 Bad Gateway
-    if status_code == http.HTTPStatus.BAD_GATEWAY:
+    if status_code == httpx.codes.BAD_GATEWAY:
         raise Exception("bad gateway")
     # 503 Service Unavailable
-    if status_code == http.HTTPStatus.SERVICE_UNAVAILABLE:
+    if status_code == httpx.codes.SERVICE_UNAVAILABLE:
         raise Exception("service unavailable")
     # 504 Gateway Timeout
-    if status_code == http.HTTPStatus.GATEWAY_TIMEOUT:
+    if status_code == httpx.codes.GATEWAY_TIMEOUT:
         raise Exception("gateway timeout")
     # 401 UnAuthorize Access
-    if status_code == http.HTTPStatus.UNAUTHORIZED:
+    if status_code == httpx.codes.UNAUTHORIZED:
         raise Exception("unauthorized permission access")
 
     # Anything else that is not known
