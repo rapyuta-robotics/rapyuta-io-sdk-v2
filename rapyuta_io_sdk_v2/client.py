@@ -17,7 +17,10 @@ import httpx
 from munch import Munch
 import platform
 from rapyuta_io_sdk_v2.config import Configuration
-from rapyuta_io_sdk_v2.utils import handle_server_errors, handle_and_munchify_response
+from rapyuta_io_sdk_v2.utils import (
+    handle_and_munchify_response,
+    handle_auth_token,
+)
 
 
 class Client(object):
@@ -50,6 +53,7 @@ class Client(object):
             },
         )
 
+    @handle_auth_token
     def login(
         self,
         email: str = None,
@@ -74,23 +78,18 @@ class Client(object):
                 email=email, password=password, environment=environment
             )
 
-        payload = {
-            "email": email or self.config.email,
-            "password": password or self.config.password,
-        }
-
         rip_host = self.config.hosts.get("rip_host")
-        url = f"{rip_host}/user/login"
-        headers = {"Content-Type": "application/json"}
 
-        response = self.c.post(url=url, headers=headers, json=payload)
+        return self.c.post(
+            url=f"{rip_host}/user/login",
+            headers={"Content-Type": "application/json"},
+            json={
+                "email": email or self.config.email,
+                "password": password or self.config.password,
+            },
+        )
 
-        handle_server_errors(response)
-
-        self.config.auth_token = response.json()["data"].get("token")
-
-        return self.config.auth_token
-
+    @handle_and_munchify_response
     def logout(self, token: str = None) -> None:
         """Expire the authentication token.
 
@@ -98,18 +97,17 @@ class Client(object):
             token (str): The token to expire.
         """
         rip_host = self.config.hosts.get("rip_host")
-        url = f"{rip_host}/user/logout"
-        headers = {"Content-Type": "application/json"}
 
         if token is None:
             token = self.config.auth_token
 
-        response = self.c.post(url=url, headers=headers, json={"token": token})
+        return self.c.post(
+            url=f"{rip_host}/user/logout",
+            headers={"Content-Type": "application/json"},
+            json={"token": token},
+        )
 
-        handle_server_errors(response)
-
-        return
-
+    @handle_auth_token
     def refresh_token(self, token: str = None) -> str:
         """Refresh the authentication token.
 
@@ -120,20 +118,15 @@ class Client(object):
             str: The refreshed token.
         """
         rip_host = self.config.hosts.get("rip_host")
-        url = f"{rip_host}/refreshtoken"
-        headers = {"Content-Type": "application/json"}
 
         if token is None:
             token = self.config.auth_token
 
-        response = self.c.post(url=url, headers=headers, json={"token": token})
-
-        handle_server_errors(response)
-
-        data = response.json()["data"]
-        self.config.auth_token = data["Token"]
-
-        return self.config.auth_token
+        return self.c.post(
+            url=f"{rip_host}/refreshtoken",
+            headers={"Content-Type": "application/json"},
+            json={"token": token},
+        )
 
     def set_organization(self, organization_guid: str) -> None:
         """Set the organization GUID.

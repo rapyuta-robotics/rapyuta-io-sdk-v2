@@ -96,3 +96,13 @@ def handle_and_munchify_response(func):
         return munchify(response.json())
 
     return wrapper
+
+
+def handle_auth_token(func):
+    def wrapper(self, *args, **kwargs):
+        response = func(self, *args, **kwargs)
+        handle_server_errors(response)
+        self.config.auth_token = response.json()["data"].get("token")
+        return self.config.auth_token
+
+    return wrapper
