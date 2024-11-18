@@ -84,7 +84,7 @@ def test_get_package_success(client, mock_response, mocker: MockerFixture):  # n
     }
 
     # Call the get_package method
-    response = client.get_package(package_guid="mock_package_guid")
+    response = client.get_package(name="mock_package_name")
 
     # Validate the response
     assert isinstance(response, Munch)
@@ -111,7 +111,7 @@ def test_get_package_not_found(client, mocker: MockerFixture):  # noqa: F811
 
     # Call the get_package method
     with pytest.raises(Exception) as exc:
-        client.get_package(package_guid="mock_package_guid")
+        client.get_package(name="mock_package_name")
 
     # Validate the exception message
     assert str(exc.value) == "not found"
@@ -141,7 +141,7 @@ def test_create_package_success(client, package_body, mocker: MockerFixture):  #
     }
 
     # Call the create_package method
-    response = client.create_package(package_body={"name": "test_package"})
+    response = client.create_package(body={"name": "test_package"})
 
     # Validate the response
     assert isinstance(response, Munch)

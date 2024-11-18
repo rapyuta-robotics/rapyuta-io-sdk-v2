@@ -176,7 +176,7 @@ def test_create_project_success(client, mock_response, mocker: MockerFixture):  
     }
 
     # Call the create_project method
-    response = client.create_project(project_body=project_body)
+    response = client.create_project(body=project_body)
 
     # Validate the response
     assert isinstance(response, Munch)
@@ -206,7 +206,7 @@ def test_create_project_unauthorized(client, mocker: MockerFixture):  # noqa: F8
 
     # Call the create_project method
     with pytest.raises(Exception) as exc:
-        client.create_project(project_body=project_body)
+        client.create_project(body=project_body)
 
     # Validate the exception message
     assert str(exc.value) == "unauthorized permission access"
@@ -235,7 +235,7 @@ def test_update_project_success(client, mock_response, mocker: MockerFixture):  
 
     # Call the update_project method
     response = client.update_project(
-        project_guid="mock_project_guid", project_body=project_body
+        project_guid="mock_project_guid", body=project_body
     )
 
     # Validate the response

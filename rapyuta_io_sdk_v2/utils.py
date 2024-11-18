@@ -21,6 +21,7 @@ import httpx
 
 from rapyuta_io_sdk_v2.exceptions import HttpAlreadyExistsError, HttpNotFoundError
 from munch import munchify
+from asyncer import asyncify
 
 
 def handle_server_errors(response: httpx.Response):
@@ -88,13 +89,41 @@ def get_default_app_dir(app_name: str) -> str:
 
 
 # Decorator to handle server errors and munchify response
+# def handle_and_munchify_response(func):
+#     def wrapper(*args, **kwargs):
+#         response = func(*args, **kwargs)
+#         handle_server_errors(response)
+#         return munchify(response.json())
+
+#     return wrapper
+
+
 def handle_and_munchify_response(func):
     def wrapper(*args, **kwargs):
+        # Call the synchronous function
         response = func(*args, **kwargs)
         handle_server_errors(response)
         return munchify(response.json())
 
-    return wrapper
+    async def async_wrapper(*args, **kwargs):
+        # Call the function asynchronously
+        response = await asyncify(func)(*args, **kwargs)
+        # handle_server_errors(response)
+        # return munchify(response.json())
+        return response
+
+    def wrapper_selector(*args, **kwargs):
+        # Determine if the first argument is an httpx.AsyncClient
+        if (
+            args
+            and hasattr(args[0], "__class__")
+            and "AsyncClient" in args[0].__class__.__name__
+        ):
+            # if asyncio.iscoroutinefunction(func):
+            return async_wrapper(*args, **kwargs)  # Use async wrapper
+        return wrapper(*args, **kwargs)  # Use sync wrapper
+
+    return wrapper_selector
 
 
 def handle_auth_token(func):

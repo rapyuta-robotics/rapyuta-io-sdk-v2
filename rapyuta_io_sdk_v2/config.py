@@ -69,7 +69,12 @@ class Configuration(object):
                 auth_token=data.get("auth_token"),
             )
 
-    def get_headers(self, with_project: bool = True, **kwargs) -> dict:
+    def get_headers(
+        self,
+        organization_guid: str = None,
+        with_project: bool = True,
+        project_guid: str = None,
+    ) -> dict:
         """Get the headers for the configuration.
 
         Args:
@@ -81,11 +86,11 @@ class Configuration(object):
         """
         headers = dict(Authorization=f"Bearer {self.auth_token}")
 
-        organization_guid = kwargs.get("organization_guid", self.organization_guid)
+        organization_guid = organization_guid or self.organization_guid
         if organization_guid:
             headers["organizationguid"] = organization_guid
 
-        project_guid = kwargs.get("project_guid", self.project_guid)
+        project_guid = project_guid or self.project_guid
         if with_project and project_guid is not None:
             headers["project"] = project_guid
 
