@@ -19,9 +19,8 @@ import sys
 
 import httpx
 
-from rapyuta_io_sdk_v2.exceptions import HttpAlreadyExistsError, HttpNotFoundError
+import rapyuta_io_sdk_v2.exceptions as exceptions
 from munch import munchify
-from asyncer import asyncify
 
 
 def handle_server_errors(response: httpx.Response):
@@ -38,35 +37,35 @@ def handle_server_errors(response: httpx.Response):
 
     # 404 Not Found
     if status_code == httpx.codes.NOT_FOUND:
-        raise HttpNotFoundError(err)
+        raise exceptions.HttpNotFoundError(err)
     # 405 Method Not Allowed
     if status_code == httpx.codes.METHOD_NOT_ALLOWED:
-        raise Exception("method not allowed")
+        raise exceptions.MethodNotAllowedError(err)
     # 409 Conflict
     if status_code == httpx.codes.CONFLICT:
-        raise HttpAlreadyExistsError()
+        raise exceptions.HttpAlreadyExistsError(err)
     # 500 Internal Server Error
     if status_code == httpx.codes.INTERNAL_SERVER_ERROR:
-        raise Exception("internal server error")
+        raise exceptions.InternalServerError(err)
     # 501 Not Implemented
     if status_code == httpx.codes.NOT_IMPLEMENTED:
-        raise Exception("not implemented")
+        raise exceptions.NotImplementedError(err)
     # 502 Bad Gateway
     if status_code == httpx.codes.BAD_GATEWAY:
-        raise Exception("bad gateway")
+        raise exceptions.BadGatewayError(err)
     # 503 Service Unavailable
     if status_code == httpx.codes.SERVICE_UNAVAILABLE:
-        raise Exception("service unavailable")
+        raise exceptions.ServiceUnavailableError(err)
     # 504 Gateway Timeout
     if status_code == httpx.codes.GATEWAY_TIMEOUT:
-        raise Exception("gateway timeout")
+        raise exceptions.GatewayTimeoutError(err)
     # 401 UnAuthorize Access
     if status_code == httpx.codes.UNAUTHORIZED:
-        raise Exception("unauthorized permission access")
+        raise exceptions.UnAuthorizedAccessError(err)
 
     # Anything else that is not known
     if status_code > 504:
-        raise Exception("unknown server error")
+        raise exceptions.UnknownError(err)
 
 
 def get_default_app_dir(app_name: str) -> str:
@@ -89,41 +88,13 @@ def get_default_app_dir(app_name: str) -> str:
 
 
 # Decorator to handle server errors and munchify response
-# def handle_and_munchify_response(func):
-#     def wrapper(*args, **kwargs):
-#         response = func(*args, **kwargs)
-#         handle_server_errors(response)
-#         return munchify(response.json())
-
-#     return wrapper
-
-
 def handle_and_munchify_response(func):
     def wrapper(*args, **kwargs):
-        # Call the synchronous function
         response = func(*args, **kwargs)
         handle_server_errors(response)
         return munchify(response.json())
 
-    async def async_wrapper(*args, **kwargs):
-        # Call the function asynchronously
-        response = await asyncify(func)(*args, **kwargs)
-        # handle_server_errors(response)
-        # return munchify(response.json())
-        return response
-
-    def wrapper_selector(*args, **kwargs):
-        # Determine if the first argument is an httpx.AsyncClient
-        if (
-            args
-            and hasattr(args[0], "__class__")
-            and "AsyncClient" in args[0].__class__.__name__
-        ):
-            # if asyncio.iscoroutinefunction(func):
-            return async_wrapper(*args, **kwargs)  # Use async wrapper
-        return wrapper(*args, **kwargs)  # Use sync wrapper
-
-    return wrapper_selector
+    return wrapper
 
 
 def handle_auth_token(func):
