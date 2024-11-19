@@ -724,6 +724,9 @@ class Client(object):
     def create_configtree(self, body: object, **kwargs) -> Munch:
         """Create a new config tree.
 
+        Args:
+            body (object): Config tree details
+
         Returns:
             Munch: Config tree details as a Munch object.
         """
@@ -750,6 +753,28 @@ class Client(object):
         return self.c.get(
             url=f"{v2api_host}/v2/configtrees/{name}/",
             headers=self.config.get_headers(**kwargs),
+        )
+
+    @handle_and_munchify_response
+    def set_configtree_revision(
+        self, name: str, configtree: object, project_guid: str = None, **kwargs
+    ) -> Munch:
+        """Set a config tree revision.
+
+        Args:
+            name (str): Config tree name
+            configtree (object): Config tree details
+            project_guid (str, optional): Project GUID. Defaults to None.
+
+        Returns:
+            Munch: Config tree details as a Munch object.
+        """
+        v2api_host = self.config.hosts.get("v2api_host")
+
+        return self.c.put(
+            url=f"{v2api_host}/v2/configtrees/{name}/",
+            headers=self.config.get_headers(project_guid=project_guid, **kwargs),
+            json=configtree,
         )
 
     @handle_and_munchify_response
@@ -797,7 +822,13 @@ class Client(object):
         committed: bool = False,
         **kwargs,
     ) -> Munch:
-        """List all revisions in a project.
+        """List all revisions of a config tree.
+
+        Args:
+            name (str): Config tree name
+            cont (int, optional): Continue param . Defaults to 0.
+            limit (int, optional): Limit param . Defaults to 50.
+            committed (bool, optional): Committed. Defaults to False.
 
         Returns:
             Munch: List of revisions as a Munch object.
@@ -815,8 +846,15 @@ class Client(object):
         )
 
     @handle_and_munchify_response
-    def create_revision(self, name: str, body: object, **kwargs) -> Munch:
+    def create_revision(
+        self, name: str, body: object, project_guid: str = None, **kwargs
+    ) -> Munch:
         """Create a new revision.
+
+        Args:
+            name (str): Config tree name
+            body (object): Revision details
+            project_guid (str): Project GUID (optional)
 
         Returns:
             Munch: Revision details as a Munch object.
@@ -825,12 +863,14 @@ class Client(object):
 
         return self.c.post(
             url=f"{v2api_host}/v2/configtrees/{name}/revisions/",
-            headers=self.config.get_headers(**kwargs),
+            headers=self.config.get_headers(project_guid=project_guid, **kwargs),
             json=body,
         )
 
     @handle_and_munchify_response
-    def put_keys_in_revision(self, name: str, revision_id: str, **kwargs) -> Munch:
+    def put_keys_in_revision(
+        self, name: str, revision_id: str, configValues: list[(object)], **kwargs
+    ) -> Munch:
         """Put keys in a revision.
 
         Returns:
@@ -841,10 +881,18 @@ class Client(object):
         return self.c.put(
             url=f"{v2api_host}/v2/configtrees/{name}/revisions/{revision_id}/keys/",
             headers=self.config.get_headers(**kwargs),
+            json=configValues,
         )
 
     @handle_and_munchify_response
-    def commit_revision(self, name: str, revision_id: str, **kwargs) -> Munch:
+    def commit_revision(
+        self,
+        name: str,
+        revision_id: str,
+        configTreeRevision: object,
+        project_guid: str = None,
+        **kwargs,
+    ) -> Munch:
         """Commit a revision.
 
         Returns:
@@ -854,28 +902,102 @@ class Client(object):
 
         return self.c.patch(
             url=f"{v2api_host}/v2/configtrees/{name}/revisions/{revision_id}/commit/",
-            headers=self.config.get_headers(**kwargs),
+            headers=self.config.get_headers(project_guid=project_guid, **kwargs),
+            json=configTreeRevision,
         )
 
+    @handle_and_munchify_response
+    def get_key_in_revision(
+        self, name: str, revision_id: str, key: str, project_guid: str = None, **kwargs
+    ) -> Munch:
+        """Get a key in a revision.
 
-# class AsyncClient(Client):
-#     def __init__(self, config=None, **kwargs):
-#         super().__init__(config, **kwargs)
-#         self.c = httpx.AsyncClient(
-#             timeout=kwargs.get("timeout", 10),
-#             limits=httpx.Limits(
-#                 max_keepalive_connections=5,
-#                 max_connections=5,
-#                 keepalive_expiry=30,
-#             ),
-#             headers={
-#                 "User-Agent": (
-#                     "rio-sdk-v2;N/A;{};{};{} {}".format(
-#                         platform.processor() or platform.machine(),
-#                         platform.system(),
-#                         platform.release(),
-#                         platform.version(),
-#                     )
-#                 )
-#             },
-#         )
+        Args:
+            name (str): Config tree name
+            revision_id (str): Config tree revision ID
+            key (str): Key
+            project_guid (str, optional): Project GUID. Defaults to None.
+
+        Returns:
+            Munch: Key details as a Munch object.
+        """
+        v2api_host = self.config.hosts.get("v2api_host")
+
+        return self.c.get(
+            url=f"{v2api_host}/v2/configtrees/{name}/revisions/{revision_id}/{key}/",
+            headers=self.config.get_headers(project_guid=project_guid, **kwargs),
+        )
+
+    @handle_and_munchify_response
+    def put_key_in_revision(
+        self, name: str, revision_id: str, key: str, project_guid: str = None, **kwargs
+    ) -> Munch:
+        """Put a key in a revision.
+
+        Args:
+            name (str): Config tree name
+            revision_id (str): Config tree revision ID
+            key (str): Key
+            project_guid (str, optional): Project GUID. Defaults to None.
+
+        Returns:
+            Munch: Key details as a Munch object.
+        """
+        v2api_host = self.config.hosts.get("v2api_host")
+
+        return self.c.put(
+            url=f"{v2api_host}/v2/configtrees/{name}/revisions/{revision_id}/{key}/",
+            headers=self.config.get_headers(project_guid=project_guid, **kwargs),
+        )
+
+    @handle_and_munchify_response
+    def delete_key_in_revision(
+        self, name: str, revision_id: str, key: str, project_guid: str = None, **kwargs
+    ) -> Munch:
+        """Delete a key in a revision.
+
+        Args:
+            name (str): Config tree name
+            revision_id (str): Config tree revision ID
+            key (str): Key
+            project_guid (str, optional): Project GUID. Defaults to None.
+
+        Returns:
+            Munch: Key details as a Munch object.
+        """
+        v2api_host = self.config.hosts.get("v2api_host")
+
+        return self.c.delete(
+            url=f"{v2api_host}/v2/configtrees/{name}/revisions/{revision_id}/{key}/",
+            headers=self.config.get_headers(project_guid=project_guid, **kwargs),
+        )
+
+    @handle_and_munchify_response
+    def rename_key_in_revision(
+        self,
+        name: str,
+        revision_id: str,
+        key: str,
+        configKeyRename: object,
+        project_guid: str = None,
+        **kwargs,
+    ) -> Munch:
+        """Rename a key in a revision.
+
+        Args:
+            name (str): Config tree name
+            revision_id (str): Config tree revision ID
+            key (str): Key
+            configKeyRename (object): Key rename details
+            project_guid (str, optional): Project GUID. Defaults to None.
+
+        Returns:
+            Munch: Key details as a Munch object.
+        """
+        v2api_host = self.config.hosts.get("v2api_host")
+
+        return self.c.patch(
+            url=f"{v2api_host}/v2/configtrees/{name}/revisions/{revision_id}/{key}/",
+            headers=self.config.get_headers(project_guid=project_guid, **kwargs),
+            json=configKeyRename,
+        )
