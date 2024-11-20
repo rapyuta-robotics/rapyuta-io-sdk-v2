@@ -70,7 +70,7 @@ class BadGatewayError(Exception):
         super().__init__(self.message)
 
 
-class UnAuthorizedAccessError(Exception):
+class UnauthorizedAccessError(Exception):
     def __init__(self, message="unauthorized permission access"):
         self.message = message
         super().__init__(self.message)

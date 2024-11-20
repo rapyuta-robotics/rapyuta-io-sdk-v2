@@ -18,23 +18,18 @@ from munch import Munch
 import platform
 from rapyuta_io_sdk_v2.config import Configuration
 from rapyuta_io_sdk_v2.utils import (
-    handle_and_munchify_response,
     handle_auth_token,
+    handle_and_munchify_response,
 )
 
 
-class Client(object):
-    """Client class offers sync client for the v2 APIs.
+class AsyncClient(object):
+    """AsyncClient class for the SDK."""
 
-    Args:
-        config (Configuration): Configuration object.
-        **kwargs: Additional keyword arguments.
-    """
-
-    def __init__(self, config: Configuration = None, **kwargs):
+    def __init__(self, config=None, **kwargs):
         self.config = config or Configuration()
         timeout = kwargs.get("timeout", 10)
-        self.c = httpx.Client(
+        self.c = httpx.AsyncClient(
             timeout=timeout,
             limits=httpx.Limits(
                 max_keepalive_connections=5,
@@ -55,21 +50,36 @@ class Client(object):
 
     @handle_auth_token
     def login(
-        self,
-        email: str = None,
-        password: str = None,
-        environment: str = "ga",
+        self, email: str = None, password: str = None, environment: str = "ga"
     ) -> str:
         """Get the authentication token for the user.
 
         Args:
-            email (str)
-            password (str)
-            environment (str)
+            email (str, optional): async defaults to None.
+            password (str, optional): async defaults to None.
+            environment (str, optional): async defaults to "ga".
+
 
         Returns:
-            str: authentication token
+            str: auth token
         """
+        sync_client = httpx.Client(
+            limits=httpx.Limits(
+                max_keepalive_connections=5,
+                max_connections=5,
+                keepalive_expiry=30,
+            ),
+            headers={
+                "User-Agent": (
+                    "rio-sdk-v2;N/A;{};{};{} {}".format(
+                        platform.processor() or platform.machine(),
+                        platform.system(),
+                        platform.release(),
+                        platform.version(),
+                    )
+                )
+            },
+        )
         if email is None and password is None and self.config is None:
             raise ValueError("email and password are required")
 
@@ -80,7 +90,7 @@ class Client(object):
 
         rip_host = self.config.hosts.get("rip_host")
 
-        return self.c.post(
+        return sync_client.post(
             url=f"{rip_host}/user/login",
             headers={"Content-Type": "application/json"},
             json={
@@ -89,46 +99,22 @@ class Client(object):
             },
         )
 
-    @handle_and_munchify_response
-    def logout(self, token: str = None) -> None:
-        """Expire the authentication token.
+    def logout(self, token=None):
+        pass
 
-        Args:
-            token (str): The token to expire.
-        """
+    async def refresh_token(self, token: str = None) -> str:
         rip_host = self.config.hosts.get("rip_host")
 
         if token is None:
             token = self.config.auth_token
 
-        return self.c.post(
-            url=f"{rip_host}/user/logout",
-            headers={"Content-Type": "application/json"},
-            json={"token": token},
-        )
-
-    @handle_auth_token
-    def refresh_token(self, token: str = None) -> str:
-        """Refresh the authentication token.
-
-        Args:
-            token (str): The token to refresh.
-
-        Returns:
-            str: The refreshed token.
-        """
-        rip_host = self.config.hosts.get("rip_host")
-
-        if token is None:
-            token = self.config.auth_token
-
-        return self.c.post(
+        return await self.c.post(
             url=f"{rip_host}/refreshtoken",
             headers={"Content-Type": "application/json"},
             json={"token": token},
         )
 
-    def set_organization(self, organization_guid: str) -> None:
+    async def set_organization(self, organization_guid: str) -> None:
         """Set the organization GUID.
 
         Args:
@@ -136,7 +122,7 @@ class Client(object):
         """
         self.config.set_organization(organization_guid)
 
-    def set_project(self, project_guid: str) -> None:
+    async def set_project(self, project_guid: str) -> None:
         """Set the project GUID.
 
         Args:
@@ -144,13 +130,31 @@ class Client(object):
         """
         self.config.set_project(project_guid)
 
-    # -------------------Project-------------------
+    # ----------------- Projects -----------------
+    async def list_projects(self, cont: int = 0, limit: int = 50, **kwargs) -> Munch:
+        """List all projects.
+
+        Args:
+            cont (int, optional): Continue. async defaults to 0.
+            limit (int, optional): Limit. async defaults to 50.
+
+        Returns:
+            Munch: List of projects
+        """
+        v2api_host = self.config.hosts.get("v2api_host")
+
+        return await self.c.get(
+            url=f"{v2api_host}/v2/projects/",
+            headers=self.config.get_headers(with_project=False, **kwargs),
+            params={"continue": cont, "limit": limit},
+        )
+
     @handle_and_munchify_response
-    def get_project(self, project_guid: str = None, **kwargs) -> Munch:
+    async def get_project(self, project_guid: str = None, **kwargs) -> Munch:
         """Get a project by its GUID.
 
         If no project or organization GUID is provided,
-        the default project and organization GUIDs will
+        the async default project and organization GUIDs will
         be picked from the current configuration.
 
         Args:
@@ -170,28 +174,13 @@ class Client(object):
 
         v2api_host = self.config.hosts.get("v2api_host")
 
-        return self.c.get(
+        return await self.c.get(
             url=f"{v2api_host}/v2/projects/{project_guid}/",
             headers=self.config.get_headers(with_project=False, **kwargs),
         )
 
     @handle_and_munchify_response
-    def list_projects(self, cont: int = 0, limit: int = 50, **kwargs) -> Munch:
-        """List all projects.
-
-        Returns:
-            Munch: List of projects as a Munch object.
-        """
-        v2api_host = self.config.hosts.get("v2api_host")
-
-        return self.c.get(
-            url=f"{v2api_host}/v2/projects/",
-            headers=self.config.get_headers(with_project=False, **kwargs),
-            params={"continue": cont, "limit": limit},
-        )
-
-    @handle_and_munchify_response
-    def create_project(self, body: dict, **kwargs) -> Munch:
+    async def create_project(self, body: dict, **kwargs) -> Munch:
         """Create a new project.
 
         Args:
@@ -202,14 +191,16 @@ class Client(object):
         """
         v2api_host = self.config.hosts.get("v2api_host")
 
-        return self.c.post(
+        return await self.c.post(
             url=f"{v2api_host}/v2/projects/",
             headers=self.config.get_headers(with_project=False, **kwargs),
             json=body,
         )
 
     @handle_and_munchify_response
-    def update_project(self, body: dict, project_guid: str = None, **kwargs) -> Munch:
+    async def update_project(
+        self, body: dict, project_guid: str = None, **kwargs
+    ) -> Munch:
         """Update a project by its GUID.
 
         Returns:
@@ -217,14 +208,14 @@ class Client(object):
         """
         v2api_host = self.config.hosts.get("v2api_host")
 
-        return self.c.put(
+        return await self.c.put(
             url=f"{v2api_host}/v2/projects/{project_guid}/",
             headers=self.config.get_headers(with_project=False, **kwargs),
             json=body,
         )
 
     @handle_and_munchify_response
-    def delete_project(self, project_guid: str, **kwargs) -> Munch:
+    async def delete_project(self, project_guid: str, **kwargs) -> Munch:
         """Delete a project by its GUID.
 
         Args:
@@ -235,13 +226,13 @@ class Client(object):
         """
         v2api_host = self.config.hosts.get("v2api_host")
 
-        return self.c.delete(
+        return await self.c.delete(
             url=f"{v2api_host}/v2/projects/{project_guid}/",
             headers=self.config.get_headers(with_project=False, **kwargs),
         )
 
     @handle_and_munchify_response
-    def update_project_owner(
+    async def update_project_owner(
         self, body: dict, project_guid: str = None, **kwargs
     ) -> Munch:
         """Update the owner of a project by its GUID.
@@ -252,7 +243,7 @@ class Client(object):
         v2api_host = self.config.hosts.get("v2api_host")
         project_guid = project_guid or self.config.project_guid
 
-        return self.c.put(
+        return await self.c.put(
             url=f"{v2api_host}/v2/projects/{project_guid}/owner/",
             headers=self.config.get_headers(**kwargs),
             json=body,
@@ -260,7 +251,7 @@ class Client(object):
 
     # -------------------Package-------------------
     @handle_and_munchify_response
-    def list_packages(self, cont: int = 0, limit: int = 10, **kwargs) -> Munch:
+    async def list_packages(self, cont: int = 0, limit: int = 10, **kwargs) -> Munch:
         """List all packages in a project.
 
         Returns:
@@ -268,14 +259,14 @@ class Client(object):
         """
         v2api_host = self.config.hosts.get("v2api_host")
 
-        return self.c.get(
+        return await self.c.get(
             url=f"{v2api_host}/v2/packages/",
             headers=self.config.get_headers(**kwargs),
             params={"continue": cont, "limit": limit},
         )
 
     @handle_and_munchify_response
-    def create_package(self, body: dict, **kwargs) -> Munch:
+    async def create_package(self, body: dict, **kwargs) -> Munch:
         """Create a new package.
 
         The Payload is the JSON format of the Package Manifest.
@@ -286,14 +277,14 @@ class Client(object):
         """
         v2api_host = self.config.hosts.get("v2api_host")
 
-        return self.c.post(
+        return await self.c.post(
             url=f"{v2api_host}/v2/packages/",
             headers=self.config.get_headers(**kwargs),
             json=body,
         )
 
     @handle_and_munchify_response
-    def get_package(
+    async def get_package(
         self, name: str, project_guid: str = None, version: str = None, **kwargs
     ) -> Munch:
         """Get a package by its name.
@@ -303,14 +294,14 @@ class Client(object):
         """
         v2api_host = self.config.hosts.get("v2api_host")
 
-        return self.c.get(
+        return await self.c.get(
             url=f"{v2api_host}/v2/packages/{name}/",
             headers=self.config.get_headers(project_guid=project_guid, **kwargs),
             params={"version": version},
         )
 
     @handle_and_munchify_response
-    def delete_package(self, name: str, **kwargs) -> Munch:
+    async def delete_package(self, name: str, **kwargs) -> Munch:
         """Delete a package by its name.
 
         Returns:
@@ -318,14 +309,14 @@ class Client(object):
         """
         v2api_host = self.config.hosts.get("v2api_host")
 
-        return self.c.delete(
+        return await self.c.delete(
             url=f"{v2api_host}/v2/packages/{name}/",
             headers=self.config.get_headers(**kwargs),
         )
 
     # -------------------Deployment-------------------
     @handle_and_munchify_response
-    def list_deployments(self, cont: int = 0, limit: int = 50, **kwargs) -> Munch:
+    async def list_deployments(self, cont: int = 0, limit: int = 50, **kwargs) -> Munch:
         """List all deployments in a project.
 
         Args:
@@ -337,14 +328,14 @@ class Client(object):
         """
         v2api_host = self.config.hosts.get("v2api_host")
 
-        return self.c.get(
+        return await self.c.get(
             url=f"{v2api_host}/v2/deployments/",
             headers=self.config.get_headers(**kwargs),
             params={"continue": cont, "limit": limit},
         )
 
     @handle_and_munchify_response
-    def create_deployment(self, body: dict, **kwargs) -> Munch:
+    async def create_deployment(self, body: dict, **kwargs) -> Munch:
         """Create a new deployment.
 
         Args:
@@ -355,14 +346,14 @@ class Client(object):
         """
         v2api_host = self.config.hosts.get("v2api_host")
 
-        return self.c.post(
+        return await self.c.post(
             url=f"{v2api_host}/v2/deployments/",
             headers=self.config.get_headers(**kwargs),
             json=body,
         )
 
     @handle_and_munchify_response
-    def get_deployment(self, name: str, **kwargs) -> Munch:
+    async def get_deployment(self, name: str, **kwargs) -> Munch:
         """Get a deployment by its name.
 
         Returns:
@@ -370,13 +361,13 @@ class Client(object):
         """
         v2api_host = self.config.hosts.get("v2api_host")
 
-        return self.c.get(
+        return await self.c.get(
             url=f"{v2api_host}/v2/deployments/{name}/",
             headers=self.config.get_headers(**kwargs),
         )
 
     @handle_and_munchify_response
-    def update_deployment(self, name: str, body: dict, **kwargs) -> Munch:
+    async def update_deployment(self, name: str, body: dict, **kwargs) -> Munch:
         """Update a deployment by its name.
 
         Returns:
@@ -384,14 +375,14 @@ class Client(object):
         """
         v2api_host = self.config.hosts.get("v2api_host")
 
-        return self.c.put(
+        return await self.c.put(
             url=f"{v2api_host}/v2/deployments/{name}/",
             headers=self.config.get_headers(**kwargs),
             json=body,
         )
 
     @handle_and_munchify_response
-    def delete_deployment(self, name: str, **kwargs) -> Munch:
+    async def delete_deployment(self, name: str, **kwargs) -> Munch:
         """Delete a deployment by its name.
 
         Returns:
@@ -399,14 +390,14 @@ class Client(object):
         """
         v2api_host = self.config.hosts.get("v2api_host")
 
-        return self.c.delete(
+        return await self.c.delete(
             url=f"{v2api_host}/v2/deployments/{name}/",
             headers=self.config.get_headers(**kwargs),
         )
 
     # -------------------Disks-------------------
     @handle_and_munchify_response
-    def list_disks(self, cont: int = 0, limit: int = 50, **kwargs) -> Munch:
+    async def list_disks(self, cont: int = 0, limit: int = 50, **kwargs) -> Munch:
         """List all disks in a project.
 
         Returns:
@@ -414,14 +405,14 @@ class Client(object):
         """
         v2api_host = self.config.hosts.get("v2api_host")
 
-        return self.c.get(
+        return await self.c.get(
             url=f"{v2api_host}/v2/disks/",
             headers=self.config.get_headers(**kwargs),
             params={"continue": cont, "limit": limit},
         )
 
     @handle_and_munchify_response
-    def get_disk(self, name: str, **kwargs) -> Munch:
+    async def get_disk(self, name: str, **kwargs) -> Munch:
         """Get a disk by its name.
 
         Args:
@@ -432,13 +423,13 @@ class Client(object):
         """
         v2api_host = self.config.hosts.get("v2api_host")
 
-        return self.c.get(
+        return await self.c.get(
             url=f"{v2api_host}/v2/disks/{name}/",
             headers=self.config.get_headers(**kwargs),
         )
 
     @handle_and_munchify_response
-    def create_disk(self, body: str, **kwargs) -> Munch:
+    async def create_disk(self, body: str, **kwargs) -> Munch:
         """Create a new disk.
 
         Returns:
@@ -446,14 +437,14 @@ class Client(object):
         """
         v2api_host = self.config.hosts.get("v2api_host")
 
-        return self.c.post(
+        return await self.c.post(
             url=f"{v2api_host}/v2/disks/",
             headers=self.config.get_headers(**kwargs),
             json=body,
         )
 
     @handle_and_munchify_response
-    def delete_disk(self, name: str, **kwargs) -> Munch:
+    async def delete_disk(self, name: str, **kwargs) -> Munch:
         """Delete a disk by its name.
 
         Args:
@@ -464,14 +455,14 @@ class Client(object):
         """
         v2api_host = self.config.hosts.get("v2api_host")
 
-        return self.c.delete(
+        return await self.c.delete(
             url=f"{v2api_host}/v2/disks/{name}/",
             headers=self.config.get_headers(**kwargs),
         )
 
     # -------------------Static Routes-------------------
     @handle_and_munchify_response
-    def list_staticroutes(self, cont: int = 0, limit: int = 0, **kwargs) -> Munch:
+    async def list_staticroutes(self, cont: int = 0, limit: int = 0, **kwargs) -> Munch:
         """List all static routes in a project.
 
         Returns:
@@ -479,14 +470,14 @@ class Client(object):
         """
         v2api_host = self.config.hosts.get("v2api_host")
 
-        return self.c.get(
+        return await self.c.get(
             url=f"{v2api_host}/v2/staticroutes/",
             headers=self.config.get_headers(**kwargs),
             params={"continue": cont, "limit": limit},
         )
 
     @handle_and_munchify_response
-    def create_staticroute(self, body: dict, **kwargs) -> Munch:
+    async def create_staticroute(self, body: dict, **kwargs) -> Munch:
         """Create a new static route.
 
         Returns:
@@ -494,14 +485,14 @@ class Client(object):
         """
         v2api_host = self.config.hosts.get("v2api_host")
 
-        return self.c.post(
+        return await self.c.post(
             url=f"{v2api_host}/v2/staticroutes/",
             headers=self.config.get_headers(**kwargs),
             json=body,
         )
 
     @handle_and_munchify_response
-    def get_staticroute(self, name: str, **kwargs) -> Munch:
+    async def get_staticroute(self, name: str, **kwargs) -> Munch:
         """Get a static route by its name.
 
         Args:
@@ -512,13 +503,13 @@ class Client(object):
         """
         v2api_host = self.config.hosts.get("v2api_host")
 
-        return self.c.get(
+        return await self.c.get(
             url=f"{v2api_host}/v2/staticroutes/{name}/",
             headers=self.config.get_headers(**kwargs),
         )
 
     @handle_and_munchify_response
-    def update_staticroute(self, name: str, body: dict, **kwargs) -> Munch:
+    async def update_staticroute(self, name: str, body: dict, **kwargs) -> Munch:
         """Update a static route by its name.
 
         Args:
@@ -530,14 +521,14 @@ class Client(object):
         """
         v2api_host = self.config.hosts.get("v2api_host")
 
-        return self.c.put(
+        return await self.c.put(
             url=f"{v2api_host}/v2/staticroutes/{name}/",
             headers=self.config.get_headers(**kwargs),
             json=body,
         )
 
     @handle_and_munchify_response
-    def delete_staticroute(self, name: str, **kwargs) -> Munch:
+    async def delete_staticroute(self, name: str, **kwargs) -> Munch:
         """Delete a static route by its name.
 
         Args:
@@ -548,14 +539,14 @@ class Client(object):
         """
         v2api_host = self.config.hosts.get("v2api_host")
 
-        return self.c.delete(
+        return await self.c.delete(
             url=f"{v2api_host}/v2/staticroutes/{name}/",
             headers=self.config.get_headers(**kwargs),
         )
 
     # -------------------Networks-------------------
     @handle_and_munchify_response
-    def list_networks(self, cont: int = 0, limit: int = 0, **kwargs) -> Munch:
+    async def list_networks(self, cont: int = 0, limit: int = 0, **kwargs) -> Munch:
         """List all networks in a project.
 
         Returns:
@@ -563,14 +554,14 @@ class Client(object):
         """
         v2api_host = self.config.hosts.get("v2api_host")
 
-        return self.c.get(
+        return await self.c.get(
             url=f"{v2api_host}/v2/networks/",
             headers=self.config.get_headers(**kwargs),
             params={"continue": cont, "limit": limit},
         )
 
     @handle_and_munchify_response
-    def create_network(self, body: dict, **kwargs) -> Munch:
+    async def create_network(self, body: dict, **kwargs) -> Munch:
         """Create a new network.
 
         Returns:
@@ -578,14 +569,14 @@ class Client(object):
         """
         v2api_host = self.config.hosts.get("v2api_host")
 
-        return self.c.post(
+        return await self.c.post(
             url=f"{v2api_host}/v2/networks/",
             headers=self.config.get_headers(**kwargs),
             json=body,
         )
 
     @handle_and_munchify_response
-    def get_network(self, name: str, **kwargs) -> Munch:
+    async def get_network(self, name: str, **kwargs) -> Munch:
         """Get a network by its name.
 
         Args:
@@ -596,13 +587,13 @@ class Client(object):
         """
         v2api_host = self.config.hosts.get("v2api_host")
 
-        return self.c.get(
+        return await self.c.get(
             url=f"{v2api_host}/v2/networks/{name}/",
             headers=self.config.get_headers(**kwargs),
         )
 
     @handle_and_munchify_response
-    def delete_network(self, name: str, **kwargs) -> Munch:
+    async def delete_network(self, name: str, **kwargs) -> Munch:
         """Delete a network by its name.
 
         Args:
@@ -613,14 +604,14 @@ class Client(object):
         """
         v2api_host = self.config.hosts.get("v2api_host")
 
-        return self.c.delete(
+        return await self.c.delete(
             url=f"{v2api_host}/v2/networks/{name}/",
             headers=self.config.get_headers(**kwargs),
         )
 
     # -------------------Secrets-------------------
     @handle_and_munchify_response
-    def list_secrets(self, cont: int = 0, limit: int = 50, **kwargs) -> Munch:
+    async def list_secrets(self, cont: int = 0, limit: int = 50, **kwargs) -> Munch:
         """List all secrets in a project.
 
         Returns:
@@ -628,14 +619,14 @@ class Client(object):
         """
         v2api_host = self.config.hosts.get("v2api_host")
 
-        return self.c.get(
+        return await self.c.get(
             url=f"{v2api_host}/v2/secrets/",
             headers=self.config.get_headers(**kwargs),
             params={"continue": cont, "limit": limit},
         )
 
     @handle_and_munchify_response
-    def create_secret(self, body: dict, **kwargs) -> Munch:
+    async def create_secret(self, body: dict, **kwargs) -> Munch:
         """Create a new secret.
 
         Returns:
@@ -643,14 +634,14 @@ class Client(object):
         """
         v2api_host = self.config.hosts.get("v2api_host")
 
-        return self.c.post(
+        return await self.c.post(
             url=f"{v2api_host}/v2/secrets/",
             headers=self.config.get_headers(*kwargs),
             json=body,
         )
 
     @handle_and_munchify_response
-    def get_secret(self, name: str, **kwargs) -> Munch:
+    async def get_secret(self, name: str, **kwargs) -> Munch:
         """Get a secret by its name.
 
         Args:
@@ -661,13 +652,13 @@ class Client(object):
         """
         v2api_host = self.config.hosts.get("v2api_host")
 
-        return self.c.get(
+        return await self.c.get(
             url=f"{v2api_host}/v2/secrets/{name}/",
             headers=self.config.get_headers(**kwargs),
         )
 
     @handle_and_munchify_response
-    def update_secret(self, name: str, body: dict, **kwargs) -> Munch:
+    async def update_secret(self, name: str, body: dict, **kwargs) -> Munch:
         """Update a secret by its name.
 
         Args:
@@ -679,14 +670,14 @@ class Client(object):
         """
         v2api_host = self.config.hosts.get("v2api_host")
 
-        return self.c.put(
+        return await self.c.put(
             url=f"{v2api_host}/v2/secrets/{name}/",
             headers=self.config.get_headers(**kwargs),
             json=body,
         )
 
     @handle_and_munchify_response
-    def delete_secret(self, name: str, **kwargs) -> Munch:
+    async def delete_secret(self, name: str, **kwargs) -> Munch:
         """Delete a secret by its name.
 
         Args:
@@ -697,14 +688,14 @@ class Client(object):
         """
         v2api_host = self.config.hosts.get("v2api_host")
 
-        return self.c.delete(
+        return await self.c.delete(
             url=f"{v2api_host}/v2/secrets/{name}/",
             headers=self.config.get_headers(**kwargs),
         )
 
     # -------------------Config Trees-------------------
     @handle_and_munchify_response
-    def list_configtrees(self, cont: int = 0, limit: int = 50, **kwargs) -> Munch:
+    async def list_configtrees(self, cont: int = 0, limit: int = 50, **kwargs) -> Munch:
         """List all config trees in a project.
 
         Returns:
@@ -712,14 +703,14 @@ class Client(object):
         """
         v2api_host = self.config.hosts.get("v2api_host")
 
-        return self.c.get(
+        return await self.c.get(
             url=f"{v2api_host}/v2/configtrees/",
             headers=self.config.get_headers(**kwargs),
             params={"continue": cont, "limit": limit},
         )
 
     @handle_and_munchify_response
-    def create_configtree(self, body: dict, **kwargs) -> Munch:
+    async def create_configtree(self, body: dict, **kwargs) -> Munch:
         """Create a new config tree.
 
         Args:
@@ -730,14 +721,14 @@ class Client(object):
         """
         v2api_host = self.config.hosts.get("v2api_host")
 
-        return self.c.post(
+        return await self.c.post(
             url=f"{v2api_host}/v2/configtrees/",
             headers=self.config.get_headers(**kwargs),
             json=body,
         )
 
     @handle_and_munchify_response
-    def get_configtree(self, name: str, **kwargs) -> Munch:
+    async def get_configtree(self, name: str, **kwargs) -> Munch:
         """Get a config tree by its name.
 
         Args:
@@ -748,13 +739,13 @@ class Client(object):
         """
         v2api_host = self.config.hosts.get("v2api_host")
 
-        return self.c.get(
+        return await self.c.get(
             url=f"{v2api_host}/v2/configtrees/{name}/",
             headers=self.config.get_headers(**kwargs),
         )
 
     @handle_and_munchify_response
-    def set_configtree_revision(
+    async def set_configtree_revision(
         self, name: str, configtree: object, project_guid: str = None, **kwargs
     ) -> Munch:
         """Set a config tree revision.
@@ -762,21 +753,21 @@ class Client(object):
         Args:
             name (str): Config tree name
             configtree (object): Config tree details
-            project_guid (str, optional): Project GUID. Defaults to None.
+            project_guid (str, optional): Project GUID. async defaults to None.
 
         Returns:
             Munch: Config tree details as a Munch object.
         """
         v2api_host = self.config.hosts.get("v2api_host")
 
-        return self.c.put(
+        return await self.c.put(
             url=f"{v2api_host}/v2/configtrees/{name}/",
             headers=self.config.get_headers(project_guid=project_guid, **kwargs),
             json=configtree,
         )
 
     @handle_and_munchify_response
-    def update_configtree(self, name: str, body: dict, **kwargs) -> Munch:
+    async def update_configtree(self, name: str, body: dict, **kwargs) -> Munch:
         """Update a config tree by its name.
 
         Args:
@@ -788,14 +779,14 @@ class Client(object):
         """
         v2api_host = self.config.hosts.get("v2api_host")
 
-        return self.c.put(
+        return await self.c.put(
             url=f"{v2api_host}/v2/configtrees/{name}/",
             headers=self.config.get_headers(**kwargs),
             json=body,
         )
 
     @handle_and_munchify_response
-    def delete_configtree(self, name: str, **kwargs) -> Munch:
+    async def delete_configtree(self, name: str, **kwargs) -> Munch:
         """Delete a config tree by its name.
 
         Args:
@@ -806,13 +797,13 @@ class Client(object):
         """
         v2api_host = self.config.hosts.get("v2api_host")
 
-        return self.c.delete(
+        return await self.c.delete(
             url=f"{v2api_host}/v2/configtrees/{name}/",
             headers=self.config.get_headers(**kwargs),
         )
 
     @handle_and_munchify_response
-    def list_revisions(
+    async def list_revisions(
         self,
         name: str,
         cont: int = 0,
@@ -824,16 +815,16 @@ class Client(object):
 
         Args:
             name (str): Config tree name
-            cont (int, optional): Continue param . Defaults to 0.
-            limit (int, optional): Limit param . Defaults to 50.
-            committed (bool, optional): Committed. Defaults to False.
+            cont (int, optional): Continue param . async defaults to 0.
+            limit (int, optional): Limit param . async defaults to 50.
+            committed (bool, optional): Committed. async defaults to False.
 
         Returns:
             Munch: List of revisions as a Munch object.
         """
         v2api_host = self.config.hosts.get("v2api_host")
 
-        return self.c.get(
+        return await self.c.get(
             url=f"{v2api_host}/v2/configtrees/{name}/revisions/",
             headers=self.config.get_headers(**kwargs),
             params={
@@ -844,7 +835,7 @@ class Client(object):
         )
 
     @handle_and_munchify_response
-    def create_revision(
+    async def create_revision(
         self, name: str, body: dict, project_guid: str = None, **kwargs
     ) -> Munch:
         """Create a new revision.
@@ -859,14 +850,14 @@ class Client(object):
         """
         v2api_host = self.config.hosts.get("v2api_host")
 
-        return self.c.post(
+        return await self.c.post(
             url=f"{v2api_host}/v2/configtrees/{name}/revisions/",
             headers=self.config.get_headers(project_guid=project_guid, **kwargs),
             json=body,
         )
 
     @handle_and_munchify_response
-    def put_keys_in_revision(
+    async def put_keys_in_revision(
         self, name: str, revision_id: str, configValues: list[(object)], **kwargs
     ) -> Munch:
         """Put keys in a revision.
@@ -876,14 +867,14 @@ class Client(object):
         """
         v2api_host = self.config.hosts.get("v2api_host")
 
-        return self.c.put(
+        return await self.c.put(
             url=f"{v2api_host}/v2/configtrees/{name}/revisions/{revision_id}/keys/",
             headers=self.config.get_headers(**kwargs),
             json=configValues,
         )
 
     @handle_and_munchify_response
-    def commit_revision(
+    async def commit_revision(
         self,
         name: str,
         revision_id: str,
@@ -898,14 +889,14 @@ class Client(object):
         """
         v2api_host = self.config.hosts.get("v2api_host")
 
-        return self.c.patch(
+        return await self.c.patch(
             url=f"{v2api_host}/v2/configtrees/{name}/revisions/{revision_id}/commit/",
             headers=self.config.get_headers(project_guid=project_guid, **kwargs),
             json=configTreeRevision,
         )
 
     @handle_and_munchify_response
-    def get_key_in_revision(
+    async def get_key_in_revision(
         self, name: str, revision_id: str, key: str, project_guid: str = None, **kwargs
     ) -> Munch:
         """Get a key in a revision.
@@ -914,20 +905,20 @@ class Client(object):
             name (str): Config tree name
             revision_id (str): Config tree revision ID
             key (str): Key
-            project_guid (str, optional): Project GUID. Defaults to None.
+            project_guid (str, optional): Project GUID. async defaults to None.
 
         Returns:
             Munch: Key details as a Munch object.
         """
         v2api_host = self.config.hosts.get("v2api_host")
 
-        return self.c.get(
+        return await self.c.get(
             url=f"{v2api_host}/v2/configtrees/{name}/revisions/{revision_id}/{key}/",
             headers=self.config.get_headers(project_guid=project_guid, **kwargs),
         )
 
     @handle_and_munchify_response
-    def put_key_in_revision(
+    async def put_key_in_revision(
         self, name: str, revision_id: str, key: str, project_guid: str = None, **kwargs
     ) -> Munch:
         """Put a key in a revision.
@@ -936,20 +927,20 @@ class Client(object):
             name (str): Config tree name
             revision_id (str): Config tree revision ID
             key (str): Key
-            project_guid (str, optional): Project GUID. Defaults to None.
+            project_guid (str, optional): Project GUID. async defaults to None.
 
         Returns:
             Munch: Key details as a Munch object.
         """
         v2api_host = self.config.hosts.get("v2api_host")
 
-        return self.c.put(
+        return await self.c.put(
             url=f"{v2api_host}/v2/configtrees/{name}/revisions/{revision_id}/{key}/",
             headers=self.config.get_headers(project_guid=project_guid, **kwargs),
         )
 
     @handle_and_munchify_response
-    def delete_key_in_revision(
+    async def delete_key_in_revision(
         self, name: str, revision_id: str, key: str, project_guid: str = None, **kwargs
     ) -> Munch:
         """Delete a key in a revision.
@@ -958,20 +949,20 @@ class Client(object):
             name (str): Config tree name
             revision_id (str): Config tree revision ID
             key (str): Key
-            project_guid (str, optional): Project GUID. Defaults to None.
+            project_guid (str, optional): Project GUID. async defaults to None.
 
         Returns:
             Munch: Key details as a Munch object.
         """
         v2api_host = self.config.hosts.get("v2api_host")
 
-        return self.c.delete(
+        return await self.c.delete(
             url=f"{v2api_host}/v2/configtrees/{name}/revisions/{revision_id}/{key}/",
             headers=self.config.get_headers(project_guid=project_guid, **kwargs),
         )
 
     @handle_and_munchify_response
-    def rename_key_in_revision(
+    async def rename_key_in_revision(
         self,
         name: str,
         revision_id: str,
@@ -987,14 +978,14 @@ class Client(object):
             revision_id (str): Config tree revision ID
             key (str): Key
             configKeyRename (object): Key rename details
-            project_guid (str, optional): Project GUID. Defaults to None.
+            project_guid (str, optional): Project GUID. async defaults to None.
 
         Returns:
             Munch: Key details as a Munch object.
         """
         v2api_host = self.config.hosts.get("v2api_host")
 
-        return self.c.patch(
+        return await self.c.patch(
             url=f"{v2api_host}/v2/configtrees/{name}/revisions/{revision_id}/{key}/",
             headers=self.config.get_headers(project_guid=project_guid, **kwargs),
             json=configKeyRename,

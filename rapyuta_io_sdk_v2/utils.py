@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # from rapyuta_io_sdk_v2.config import Configuration
+import asyncio
 import json
 import os
 import sys
@@ -61,7 +62,7 @@ def handle_server_errors(response: httpx.Response):
         raise exceptions.GatewayTimeoutError(err)
     # 401 UnAuthorize Access
     if status_code == httpx.codes.UNAUTHORIZED:
-        raise exceptions.UnAuthorizedAccessError(err)
+        raise exceptions.UnauthorizedAccessError(err)
 
     # Anything else that is not known
     if status_code > 504:
@@ -89,19 +90,37 @@ def get_default_app_dir(app_name: str) -> str:
 
 # Decorator to handle server errors and munchify response
 def handle_and_munchify_response(func):
-    def wrapper(*args, **kwargs):
+    
+    async def async_wrapper(*args, **kwargs):
+        response = await func(*args, **kwargs)
+        handle_server_errors(response)
+        return munchify(response.json())
+    
+    def sync_wrapper(*args, **kwargs):
         response = func(*args, **kwargs)
         handle_server_errors(response)
         return munchify(response.json())
 
-    return wrapper
-
+    if asyncio.iscoroutinefunction(func):
+        return async_wrapper
+    else:
+        return sync_wrapper
+    
 
 def handle_auth_token(func):
-    def wrapper(self, *args, **kwargs):
+    async def async_wrapper(self, *args, **kwargs):
+        response = await func(self, *args, **kwargs)
+        handle_server_errors(response)
+        self.config.auth_token = response.json()["data"].get("token")
+        return self.config.auth_token
+
+    def sync_wrapper(self, *args, **kwargs):
         response = func(self, *args, **kwargs)
         handle_server_errors(response)
         self.config.auth_token = response.json()["data"].get("token")
         return self.config.auth_token
 
-    return wrapper
+    if asyncio.iscoroutinefunction(func):
+        return async_wrapper
+    else:
+        return sync_wrapper
