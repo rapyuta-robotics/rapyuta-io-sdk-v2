@@ -90,12 +90,11 @@ def get_default_app_dir(app_name: str) -> str:
 
 # Decorator to handle server errors and munchify response
 def handle_and_munchify_response(func):
-    
     async def async_wrapper(*args, **kwargs):
         response = await func(*args, **kwargs)
         handle_server_errors(response)
         return munchify(response.json())
-    
+
     def sync_wrapper(*args, **kwargs):
         response = func(*args, **kwargs)
         handle_server_errors(response)
@@ -105,7 +104,7 @@ def handle_and_munchify_response(func):
         return async_wrapper
     else:
         return sync_wrapper
-    
+
 
 def handle_auth_token(func):
     async def async_wrapper(self, *args, **kwargs):

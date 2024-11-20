@@ -47,6 +47,8 @@ class AsyncClient(object):
                 )
             },
         )
+        self.rip_host = self.config.hosts.get("rip_host")
+        self.v2api_host = self.config.hosts.get("v2api_host")
 
     @handle_auth_token
     def login(
@@ -88,10 +90,8 @@ class AsyncClient(object):
                 email=email, password=password, environment=environment
             )
 
-        rip_host = self.config.hosts.get("rip_host")
-
         return sync_client.post(
-            url=f"{rip_host}/user/login",
+            url=f"{self.rip_host}/user/login",
             headers={"Content-Type": "application/json"},
             json={
                 "email": email or self.config.email,
@@ -103,18 +103,16 @@ class AsyncClient(object):
         pass
 
     async def refresh_token(self, token: str = None) -> str:
-        rip_host = self.config.hosts.get("rip_host")
-
         if token is None:
             token = self.config.auth_token
 
         return await self.c.post(
-            url=f"{rip_host}/refreshtoken",
+            url=f"{self.rip_host}/refreshtoken",
             headers={"Content-Type": "application/json"},
             json={"token": token},
         )
 
-    async def set_organization(self, organization_guid: str) -> None:
+    def set_organization(self, organization_guid: str) -> None:
         """Set the organization GUID.
 
         Args:
@@ -122,7 +120,7 @@ class AsyncClient(object):
         """
         self.config.set_organization(organization_guid)
 
-    async def set_project(self, project_guid: str) -> None:
+    def set_project(self, project_guid: str) -> None:
         """Set the project GUID.
 
         Args:
@@ -131,6 +129,7 @@ class AsyncClient(object):
         self.config.set_project(project_guid)
 
     # ----------------- Projects -----------------
+    @handle_and_munchify_response
     async def list_projects(self, cont: int = 0, limit: int = 50, **kwargs) -> Munch:
         """List all projects.
 
@@ -141,10 +140,9 @@ class AsyncClient(object):
         Returns:
             Munch: List of projects
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return await self.c.get(
-            url=f"{v2api_host}/v2/projects/",
+            url=f"{self.v2api_host}/v2/projects/",
             headers=self.config.get_headers(with_project=False, **kwargs),
             params={"continue": cont, "limit": limit},
         )
@@ -172,10 +170,8 @@ class AsyncClient(object):
         if not project_guid:
             raise ValueError("project_guid is required")
 
-        v2api_host = self.config.hosts.get("v2api_host")
-
         return await self.c.get(
-            url=f"{v2api_host}/v2/projects/{project_guid}/",
+            url=f"{self.v2api_host}/v2/projects/{project_guid}/",
             headers=self.config.get_headers(with_project=False, **kwargs),
         )
 
@@ -189,10 +185,9 @@ class AsyncClient(object):
         Returns:
             Munch: Project details as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return await self.c.post(
-            url=f"{v2api_host}/v2/projects/",
+            url=f"{self.v2api_host}/v2/projects/",
             headers=self.config.get_headers(with_project=False, **kwargs),
             json=body,
         )
@@ -206,10 +201,9 @@ class AsyncClient(object):
         Returns:
             Munch: Project details as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return await self.c.put(
-            url=f"{v2api_host}/v2/projects/{project_guid}/",
+            url=f"{self.v2api_host}/v2/projects/{project_guid}/",
             headers=self.config.get_headers(with_project=False, **kwargs),
             json=body,
         )
@@ -224,10 +218,9 @@ class AsyncClient(object):
         Returns:
             Munch: Project details as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return await self.c.delete(
-            url=f"{v2api_host}/v2/projects/{project_guid}/",
+            url=f"{self.v2api_host}/v2/projects/{project_guid}/",
             headers=self.config.get_headers(with_project=False, **kwargs),
         )
 
@@ -240,11 +233,10 @@ class AsyncClient(object):
         Returns:
             Munch: Project details as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
         project_guid = project_guid or self.config.project_guid
 
         return await self.c.put(
-            url=f"{v2api_host}/v2/projects/{project_guid}/owner/",
+            url=f"{self.v2api_host}/v2/projects/{project_guid}/owner/",
             headers=self.config.get_headers(**kwargs),
             json=body,
         )
@@ -257,10 +249,9 @@ class AsyncClient(object):
         Returns:
             Munch: List of packages as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return await self.c.get(
-            url=f"{v2api_host}/v2/packages/",
+            url=f"{self.v2api_host}/v2/packages/",
             headers=self.config.get_headers(**kwargs),
             params={"continue": cont, "limit": limit},
         )
@@ -275,10 +266,9 @@ class AsyncClient(object):
         Returns:
             Munch: Package details as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return await self.c.post(
-            url=f"{v2api_host}/v2/packages/",
+            url=f"{self.v2api_host}/v2/packages/",
             headers=self.config.get_headers(**kwargs),
             json=body,
         )
@@ -292,10 +282,9 @@ class AsyncClient(object):
         Returns:
             Munch: Package details as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return await self.c.get(
-            url=f"{v2api_host}/v2/packages/{name}/",
+            url=f"{self.v2api_host}/v2/packages/{name}/",
             headers=self.config.get_headers(project_guid=project_guid, **kwargs),
             params={"version": version},
         )
@@ -307,10 +296,9 @@ class AsyncClient(object):
         Returns:
             Munch: Package details as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return await self.c.delete(
-            url=f"{v2api_host}/v2/packages/{name}/",
+            url=f"{self.v2api_host}/v2/packages/{name}/",
             headers=self.config.get_headers(**kwargs),
         )
 
@@ -326,10 +314,9 @@ class AsyncClient(object):
         Returns:
             Munch: List of deployments as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return await self.c.get(
-            url=f"{v2api_host}/v2/deployments/",
+            url=f"{self.v2api_host}/v2/deployments/",
             headers=self.config.get_headers(**kwargs),
             params={"continue": cont, "limit": limit},
         )
@@ -344,10 +331,9 @@ class AsyncClient(object):
         Returns:
             Munch: Deployment details as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return await self.c.post(
-            url=f"{v2api_host}/v2/deployments/",
+            url=f"{self.v2api_host}/v2/deployments/",
             headers=self.config.get_headers(**kwargs),
             json=body,
         )
@@ -359,10 +345,9 @@ class AsyncClient(object):
         Returns:
             Munch: Deployment details as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return await self.c.get(
-            url=f"{v2api_host}/v2/deployments/{name}/",
+            url=f"{self.v2api_host}/v2/deployments/{name}/",
             headers=self.config.get_headers(**kwargs),
         )
 
@@ -373,10 +358,9 @@ class AsyncClient(object):
         Returns:
             Munch: Deployment details as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return await self.c.put(
-            url=f"{v2api_host}/v2/deployments/{name}/",
+            url=f"{self.v2api_host}/v2/deployments/{name}/",
             headers=self.config.get_headers(**kwargs),
             json=body,
         )
@@ -388,10 +372,9 @@ class AsyncClient(object):
         Returns:
             Munch: Deployment details as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return await self.c.delete(
-            url=f"{v2api_host}/v2/deployments/{name}/",
+            url=f"{self.v2api_host}/v2/deployments/{name}/",
             headers=self.config.get_headers(**kwargs),
         )
 
@@ -403,10 +386,9 @@ class AsyncClient(object):
         Returns:
             Munch: List of disks as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return await self.c.get(
-            url=f"{v2api_host}/v2/disks/",
+            url=f"{self.v2api_host}/v2/disks/",
             headers=self.config.get_headers(**kwargs),
             params={"continue": cont, "limit": limit},
         )
@@ -421,10 +403,9 @@ class AsyncClient(object):
         Returns:
             Munch: Disk details as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return await self.c.get(
-            url=f"{v2api_host}/v2/disks/{name}/",
+            url=f"{self.v2api_host}/v2/disks/{name}/",
             headers=self.config.get_headers(**kwargs),
         )
 
@@ -435,10 +416,9 @@ class AsyncClient(object):
         Returns:
             Munch: Disk details as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return await self.c.post(
-            url=f"{v2api_host}/v2/disks/",
+            url=f"{self.v2api_host}/v2/disks/",
             headers=self.config.get_headers(**kwargs),
             json=body,
         )
@@ -453,10 +433,9 @@ class AsyncClient(object):
         Returns:
             Munch: Disk details as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return await self.c.delete(
-            url=f"{v2api_host}/v2/disks/{name}/",
+            url=f"{self.v2api_host}/v2/disks/{name}/",
             headers=self.config.get_headers(**kwargs),
         )
 
@@ -468,10 +447,9 @@ class AsyncClient(object):
         Returns:
             Munch: List of static routes as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return await self.c.get(
-            url=f"{v2api_host}/v2/staticroutes/",
+            url=f"{self.v2api_host}/v2/staticroutes/",
             headers=self.config.get_headers(**kwargs),
             params={"continue": cont, "limit": limit},
         )
@@ -483,10 +461,9 @@ class AsyncClient(object):
         Returns:
             Munch: Static route details as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return await self.c.post(
-            url=f"{v2api_host}/v2/staticroutes/",
+            url=f"{self.v2api_host}/v2/staticroutes/",
             headers=self.config.get_headers(**kwargs),
             json=body,
         )
@@ -501,10 +478,9 @@ class AsyncClient(object):
         Returns:
             Munch: Static route details as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return await self.c.get(
-            url=f"{v2api_host}/v2/staticroutes/{name}/",
+            url=f"{self.v2api_host}/v2/staticroutes/{name}/",
             headers=self.config.get_headers(**kwargs),
         )
 
@@ -519,10 +495,9 @@ class AsyncClient(object):
         Returns:
             Munch: Static route details as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return await self.c.put(
-            url=f"{v2api_host}/v2/staticroutes/{name}/",
+            url=f"{self.v2api_host}/v2/staticroutes/{name}/",
             headers=self.config.get_headers(**kwargs),
             json=body,
         )
@@ -537,10 +512,9 @@ class AsyncClient(object):
         Returns:
             Munch: Static route details as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return await self.c.delete(
-            url=f"{v2api_host}/v2/staticroutes/{name}/",
+            url=f"{self.v2api_host}/v2/staticroutes/{name}/",
             headers=self.config.get_headers(**kwargs),
         )
 
@@ -552,10 +526,9 @@ class AsyncClient(object):
         Returns:
             Munch: List of networks as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return await self.c.get(
-            url=f"{v2api_host}/v2/networks/",
+            url=f"{self.v2api_host}/v2/networks/",
             headers=self.config.get_headers(**kwargs),
             params={"continue": cont, "limit": limit},
         )
@@ -567,10 +540,9 @@ class AsyncClient(object):
         Returns:
             Munch: Network details as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return await self.c.post(
-            url=f"{v2api_host}/v2/networks/",
+            url=f"{self.v2api_host}/v2/networks/",
             headers=self.config.get_headers(**kwargs),
             json=body,
         )
@@ -585,10 +557,9 @@ class AsyncClient(object):
         Returns:
             Munch: Network details as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return await self.c.get(
-            url=f"{v2api_host}/v2/networks/{name}/",
+            url=f"{self.v2api_host}/v2/networks/{name}/",
             headers=self.config.get_headers(**kwargs),
         )
 
@@ -602,10 +573,9 @@ class AsyncClient(object):
         Returns:
             Munch: Network details as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return await self.c.delete(
-            url=f"{v2api_host}/v2/networks/{name}/",
+            url=f"{self.v2api_host}/v2/networks/{name}/",
             headers=self.config.get_headers(**kwargs),
         )
 
@@ -617,10 +587,9 @@ class AsyncClient(object):
         Returns:
             Munch: List of secrets as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return await self.c.get(
-            url=f"{v2api_host}/v2/secrets/",
+            url=f"{self.v2api_host}/v2/secrets/",
             headers=self.config.get_headers(**kwargs),
             params={"continue": cont, "limit": limit},
         )
@@ -632,10 +601,9 @@ class AsyncClient(object):
         Returns:
             Munch: Secret details as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return await self.c.post(
-            url=f"{v2api_host}/v2/secrets/",
+            url=f"{self.v2api_host}/v2/secrets/",
             headers=self.config.get_headers(*kwargs),
             json=body,
         )
@@ -650,10 +618,9 @@ class AsyncClient(object):
         Returns:
             Munch: Secret details as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return await self.c.get(
-            url=f"{v2api_host}/v2/secrets/{name}/",
+            url=f"{self.v2api_host}/v2/secrets/{name}/",
             headers=self.config.get_headers(**kwargs),
         )
 
@@ -668,10 +635,9 @@ class AsyncClient(object):
         Returns:
             Munch: Secret details as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return await self.c.put(
-            url=f"{v2api_host}/v2/secrets/{name}/",
+            url=f"{self.v2api_host}/v2/secrets/{name}/",
             headers=self.config.get_headers(**kwargs),
             json=body,
         )
@@ -686,10 +652,9 @@ class AsyncClient(object):
         Returns:
             Munch: Secret details as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return await self.c.delete(
-            url=f"{v2api_host}/v2/secrets/{name}/",
+            url=f"{self.v2api_host}/v2/secrets/{name}/",
             headers=self.config.get_headers(**kwargs),
         )
 
@@ -701,10 +666,9 @@ class AsyncClient(object):
         Returns:
             Munch: List of config trees as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return await self.c.get(
-            url=f"{v2api_host}/v2/configtrees/",
+            url=f"{self.v2api_host}/v2/configtrees/",
             headers=self.config.get_headers(**kwargs),
             params={"continue": cont, "limit": limit},
         )
@@ -719,10 +683,9 @@ class AsyncClient(object):
         Returns:
             Munch: Config tree details as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return await self.c.post(
-            url=f"{v2api_host}/v2/configtrees/",
+            url=f"{self.v2api_host}/v2/configtrees/",
             headers=self.config.get_headers(**kwargs),
             json=body,
         )
@@ -737,10 +700,9 @@ class AsyncClient(object):
         Returns:
             Munch: Config tree details as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return await self.c.get(
-            url=f"{v2api_host}/v2/configtrees/{name}/",
+            url=f"{self.v2api_host}/v2/configtrees/{name}/",
             headers=self.config.get_headers(**kwargs),
         )
 
@@ -758,10 +720,9 @@ class AsyncClient(object):
         Returns:
             Munch: Config tree details as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return await self.c.put(
-            url=f"{v2api_host}/v2/configtrees/{name}/",
+            url=f"{self.v2api_host}/v2/configtrees/{name}/",
             headers=self.config.get_headers(project_guid=project_guid, **kwargs),
             json=configtree,
         )
@@ -777,10 +738,9 @@ class AsyncClient(object):
         Returns:
             Munch: Config tree details as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return await self.c.put(
-            url=f"{v2api_host}/v2/configtrees/{name}/",
+            url=f"{self.v2api_host}/v2/configtrees/{name}/",
             headers=self.config.get_headers(**kwargs),
             json=body,
         )
@@ -795,10 +755,9 @@ class AsyncClient(object):
         Returns:
             Munch: Config tree details as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return await self.c.delete(
-            url=f"{v2api_host}/v2/configtrees/{name}/",
+            url=f"{self.v2api_host}/v2/configtrees/{name}/",
             headers=self.config.get_headers(**kwargs),
         )
 
@@ -822,10 +781,9 @@ class AsyncClient(object):
         Returns:
             Munch: List of revisions as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return await self.c.get(
-            url=f"{v2api_host}/v2/configtrees/{name}/revisions/",
+            url=f"{self.v2api_host}/v2/configtrees/{name}/revisions/",
             headers=self.config.get_headers(**kwargs),
             params={
                 "continue": cont,
@@ -848,10 +806,9 @@ class AsyncClient(object):
         Returns:
             Munch: Revision details as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return await self.c.post(
-            url=f"{v2api_host}/v2/configtrees/{name}/revisions/",
+            url=f"{self.v2api_host}/v2/configtrees/{name}/revisions/",
             headers=self.config.get_headers(project_guid=project_guid, **kwargs),
             json=body,
         )
@@ -865,10 +822,9 @@ class AsyncClient(object):
         Returns:
             Munch: Revision details as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return await self.c.put(
-            url=f"{v2api_host}/v2/configtrees/{name}/revisions/{revision_id}/keys/",
+            url=f"{self.v2api_host}/v2/configtrees/{name}/revisions/{revision_id}/keys/",
             headers=self.config.get_headers(**kwargs),
             json=configValues,
         )
@@ -887,10 +843,9 @@ class AsyncClient(object):
         Returns:
             Munch: Revision details as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return await self.c.patch(
-            url=f"{v2api_host}/v2/configtrees/{name}/revisions/{revision_id}/commit/",
+            url=f"{self.v2api_host}/v2/configtrees/{name}/revisions/{revision_id}/commit/",
             headers=self.config.get_headers(project_guid=project_guid, **kwargs),
             json=configTreeRevision,
         )
@@ -910,10 +865,9 @@ class AsyncClient(object):
         Returns:
             Munch: Key details as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return await self.c.get(
-            url=f"{v2api_host}/v2/configtrees/{name}/revisions/{revision_id}/{key}/",
+            url=f"{self.v2api_host}/v2/configtrees/{name}/revisions/{revision_id}/{key}/",
             headers=self.config.get_headers(project_guid=project_guid, **kwargs),
         )
 
@@ -932,10 +886,9 @@ class AsyncClient(object):
         Returns:
             Munch: Key details as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return await self.c.put(
-            url=f"{v2api_host}/v2/configtrees/{name}/revisions/{revision_id}/{key}/",
+            url=f"{self.v2api_host}/v2/configtrees/{name}/revisions/{revision_id}/{key}/",
             headers=self.config.get_headers(project_guid=project_guid, **kwargs),
         )
 
@@ -954,10 +907,9 @@ class AsyncClient(object):
         Returns:
             Munch: Key details as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return await self.c.delete(
-            url=f"{v2api_host}/v2/configtrees/{name}/revisions/{revision_id}/{key}/",
+            url=f"{self.v2api_host}/v2/configtrees/{name}/revisions/{revision_id}/{key}/",
             headers=self.config.get_headers(project_guid=project_guid, **kwargs),
         )
 
@@ -983,10 +935,9 @@ class AsyncClient(object):
         Returns:
             Munch: Key details as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return await self.c.patch(
-            url=f"{v2api_host}/v2/configtrees/{name}/revisions/{revision_id}/{key}/",
+            url=f"{self.v2api_host}/v2/configtrees/{name}/revisions/{revision_id}/{key}/",
             headers=self.config.get_headers(project_guid=project_guid, **kwargs),
             json=configKeyRename,
         )

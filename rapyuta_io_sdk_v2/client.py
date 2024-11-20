@@ -52,6 +52,8 @@ class Client(object):
                 )
             },
         )
+        self.v2api_host = self.config.hosts.get("v2api_host")
+        self.rip_host = self.config.hosts.get("rip_host")
 
     @handle_auth_token
     def login(
@@ -78,10 +80,8 @@ class Client(object):
                 email=email, password=password, environment=environment
             )
 
-        rip_host = self.config.hosts.get("rip_host")
-
         return self.c.post(
-            url=f"{rip_host}/user/login",
+            url=f"{self.rip_host}/user/login",
             headers={"Content-Type": "application/json"},
             json={
                 "email": email or self.config.email,
@@ -96,13 +96,12 @@ class Client(object):
         Args:
             token (str): The token to expire.
         """
-        rip_host = self.config.hosts.get("rip_host")
 
         if token is None:
             token = self.config.auth_token
 
         return self.c.post(
-            url=f"{rip_host}/user/logout",
+            url=f"{self.rip_host}/user/logout",
             headers={"Content-Type": "application/json"},
             json={"token": token},
         )
@@ -117,13 +116,12 @@ class Client(object):
         Returns:
             str: The refreshed token.
         """
-        rip_host = self.config.hosts.get("rip_host")
 
         if token is None:
             token = self.config.auth_token
 
         return self.c.post(
-            url=f"{rip_host}/refreshtoken",
+            url=f"{self.rip_host}/refreshtoken",
             headers={"Content-Type": "application/json"},
             json={"token": token},
         )
@@ -168,10 +166,8 @@ class Client(object):
         if not project_guid:
             raise ValueError("project_guid is required")
 
-        v2api_host = self.config.hosts.get("v2api_host")
-
         return self.c.get(
-            url=f"{v2api_host}/v2/projects/{project_guid}/",
+            url=f"{self.v2api_host}/v2/projects/{project_guid}/",
             headers=self.config.get_headers(with_project=False, **kwargs),
         )
 
@@ -182,10 +178,9 @@ class Client(object):
         Returns:
             Munch: List of projects as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return self.c.get(
-            url=f"{v2api_host}/v2/projects/",
+            url=f"{self.v2api_host}/v2/projects/",
             headers=self.config.get_headers(with_project=False, **kwargs),
             params={"continue": cont, "limit": limit},
         )
@@ -200,10 +195,9 @@ class Client(object):
         Returns:
             Munch: Project details as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return self.c.post(
-            url=f"{v2api_host}/v2/projects/",
+            url=f"{self.v2api_host}/v2/projects/",
             headers=self.config.get_headers(with_project=False, **kwargs),
             json=body,
         )
@@ -215,10 +209,9 @@ class Client(object):
         Returns:
             Munch: Project details as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return self.c.put(
-            url=f"{v2api_host}/v2/projects/{project_guid}/",
+            url=f"{self.v2api_host}/v2/projects/{project_guid}/",
             headers=self.config.get_headers(with_project=False, **kwargs),
             json=body,
         )
@@ -233,10 +226,9 @@ class Client(object):
         Returns:
             Munch: Project details as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return self.c.delete(
-            url=f"{v2api_host}/v2/projects/{project_guid}/",
+            url=f"{self.v2api_host}/v2/projects/{project_guid}/",
             headers=self.config.get_headers(with_project=False, **kwargs),
         )
 
@@ -249,11 +241,10 @@ class Client(object):
         Returns:
             Munch: Project details as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
         project_guid = project_guid or self.config.project_guid
 
         return self.c.put(
-            url=f"{v2api_host}/v2/projects/{project_guid}/owner/",
+            url=f"{self.v2api_host}/v2/projects/{project_guid}/owner/",
             headers=self.config.get_headers(**kwargs),
             json=body,
         )
@@ -266,10 +257,9 @@ class Client(object):
         Returns:
             Munch: List of packages as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return self.c.get(
-            url=f"{v2api_host}/v2/packages/",
+            url=f"{self.v2api_host}/v2/packages/",
             headers=self.config.get_headers(**kwargs),
             params={"continue": cont, "limit": limit},
         )
@@ -284,10 +274,9 @@ class Client(object):
         Returns:
             Munch: Package details as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return self.c.post(
-            url=f"{v2api_host}/v2/packages/",
+            url=f"{self.v2api_host}/v2/packages/",
             headers=self.config.get_headers(**kwargs),
             json=body,
         )
@@ -301,10 +290,9 @@ class Client(object):
         Returns:
             Munch: Package details as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return self.c.get(
-            url=f"{v2api_host}/v2/packages/{name}/",
+            url=f"{self.v2api_host}/v2/packages/{name}/",
             headers=self.config.get_headers(project_guid=project_guid, **kwargs),
             params={"version": version},
         )
@@ -316,10 +304,9 @@ class Client(object):
         Returns:
             Munch: Package details as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return self.c.delete(
-            url=f"{v2api_host}/v2/packages/{name}/",
+            url=f"{self.v2api_host}/v2/packages/{name}/",
             headers=self.config.get_headers(**kwargs),
         )
 
@@ -335,10 +322,9 @@ class Client(object):
         Returns:
             Munch: List of deployments as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return self.c.get(
-            url=f"{v2api_host}/v2/deployments/",
+            url=f"{self.v2api_host}/v2/deployments/",
             headers=self.config.get_headers(**kwargs),
             params={"continue": cont, "limit": limit},
         )
@@ -353,10 +339,9 @@ class Client(object):
         Returns:
             Munch: Deployment details as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return self.c.post(
-            url=f"{v2api_host}/v2/deployments/",
+            url=f"{self.v2api_host}/v2/deployments/",
             headers=self.config.get_headers(**kwargs),
             json=body,
         )
@@ -368,10 +353,9 @@ class Client(object):
         Returns:
             Munch: Deployment details as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return self.c.get(
-            url=f"{v2api_host}/v2/deployments/{name}/",
+            url=f"{self.v2api_host}/v2/deployments/{name}/",
             headers=self.config.get_headers(**kwargs),
         )
 
@@ -382,10 +366,9 @@ class Client(object):
         Returns:
             Munch: Deployment details as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return self.c.put(
-            url=f"{v2api_host}/v2/deployments/{name}/",
+            url=f"{self.v2api_host}/v2/deployments/{name}/",
             headers=self.config.get_headers(**kwargs),
             json=body,
         )
@@ -397,10 +380,9 @@ class Client(object):
         Returns:
             Munch: Deployment details as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return self.c.delete(
-            url=f"{v2api_host}/v2/deployments/{name}/",
+            url=f"{self.v2api_host}/v2/deployments/{name}/",
             headers=self.config.get_headers(**kwargs),
         )
 
@@ -412,10 +394,9 @@ class Client(object):
         Returns:
             Munch: List of disks as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return self.c.get(
-            url=f"{v2api_host}/v2/disks/",
+            url=f"{self.v2api_host}/v2/disks/",
             headers=self.config.get_headers(**kwargs),
             params={"continue": cont, "limit": limit},
         )
@@ -430,10 +411,9 @@ class Client(object):
         Returns:
             Munch: Disk details as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return self.c.get(
-            url=f"{v2api_host}/v2/disks/{name}/",
+            url=f"{self.v2api_host}/v2/disks/{name}/",
             headers=self.config.get_headers(**kwargs),
         )
 
@@ -444,10 +424,9 @@ class Client(object):
         Returns:
             Munch: Disk details as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return self.c.post(
-            url=f"{v2api_host}/v2/disks/",
+            url=f"{self.v2api_host}/v2/disks/",
             headers=self.config.get_headers(**kwargs),
             json=body,
         )
@@ -462,10 +441,9 @@ class Client(object):
         Returns:
             Munch: Disk details as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return self.c.delete(
-            url=f"{v2api_host}/v2/disks/{name}/",
+            url=f"{self.v2api_host}/v2/disks/{name}/",
             headers=self.config.get_headers(**kwargs),
         )
 
@@ -477,10 +455,9 @@ class Client(object):
         Returns:
             Munch: List of static routes as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return self.c.get(
-            url=f"{v2api_host}/v2/staticroutes/",
+            url=f"{self.v2api_host}/v2/staticroutes/",
             headers=self.config.get_headers(**kwargs),
             params={"continue": cont, "limit": limit},
         )
@@ -492,10 +469,9 @@ class Client(object):
         Returns:
             Munch: Static route details as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return self.c.post(
-            url=f"{v2api_host}/v2/staticroutes/",
+            url=f"{self.v2api_host}/v2/staticroutes/",
             headers=self.config.get_headers(**kwargs),
             json=body,
         )
@@ -510,10 +486,9 @@ class Client(object):
         Returns:
             Munch: Static route details as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return self.c.get(
-            url=f"{v2api_host}/v2/staticroutes/{name}/",
+            url=f"{self.v2api_host}/v2/staticroutes/{name}/",
             headers=self.config.get_headers(**kwargs),
         )
 
@@ -528,10 +503,9 @@ class Client(object):
         Returns:
             Munch: Static route details as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return self.c.put(
-            url=f"{v2api_host}/v2/staticroutes/{name}/",
+            url=f"{self.v2api_host}/v2/staticroutes/{name}/",
             headers=self.config.get_headers(**kwargs),
             json=body,
         )
@@ -546,10 +520,9 @@ class Client(object):
         Returns:
             Munch: Static route details as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return self.c.delete(
-            url=f"{v2api_host}/v2/staticroutes/{name}/",
+            url=f"{self.v2api_host}/v2/staticroutes/{name}/",
             headers=self.config.get_headers(**kwargs),
         )
 
@@ -561,10 +534,9 @@ class Client(object):
         Returns:
             Munch: List of networks as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return self.c.get(
-            url=f"{v2api_host}/v2/networks/",
+            url=f"{self.v2api_host}/v2/networks/",
             headers=self.config.get_headers(**kwargs),
             params={"continue": cont, "limit": limit},
         )
@@ -576,10 +548,9 @@ class Client(object):
         Returns:
             Munch: Network details as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return self.c.post(
-            url=f"{v2api_host}/v2/networks/",
+            url=f"{self.v2api_host}/v2/networks/",
             headers=self.config.get_headers(**kwargs),
             json=body,
         )
@@ -594,10 +565,9 @@ class Client(object):
         Returns:
             Munch: Network details as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return self.c.get(
-            url=f"{v2api_host}/v2/networks/{name}/",
+            url=f"{self.v2api_host}/v2/networks/{name}/",
             headers=self.config.get_headers(**kwargs),
         )
 
@@ -611,10 +581,9 @@ class Client(object):
         Returns:
             Munch: Network details as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return self.c.delete(
-            url=f"{v2api_host}/v2/networks/{name}/",
+            url=f"{self.v2api_host}/v2/networks/{name}/",
             headers=self.config.get_headers(**kwargs),
         )
 
@@ -626,10 +595,9 @@ class Client(object):
         Returns:
             Munch: List of secrets as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return self.c.get(
-            url=f"{v2api_host}/v2/secrets/",
+            url=f"{self.v2api_host}/v2/secrets/",
             headers=self.config.get_headers(**kwargs),
             params={"continue": cont, "limit": limit},
         )
@@ -641,10 +609,9 @@ class Client(object):
         Returns:
             Munch: Secret details as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return self.c.post(
-            url=f"{v2api_host}/v2/secrets/",
+            url=f"{self.v2api_host}/v2/secrets/",
             headers=self.config.get_headers(*kwargs),
             json=body,
         )
@@ -659,10 +626,9 @@ class Client(object):
         Returns:
             Munch: Secret details as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return self.c.get(
-            url=f"{v2api_host}/v2/secrets/{name}/",
+            url=f"{self.v2api_host}/v2/secrets/{name}/",
             headers=self.config.get_headers(**kwargs),
         )
 
@@ -677,10 +643,9 @@ class Client(object):
         Returns:
             Munch: Secret details as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return self.c.put(
-            url=f"{v2api_host}/v2/secrets/{name}/",
+            url=f"{self.v2api_host}/v2/secrets/{name}/",
             headers=self.config.get_headers(**kwargs),
             json=body,
         )
@@ -695,10 +660,9 @@ class Client(object):
         Returns:
             Munch: Secret details as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return self.c.delete(
-            url=f"{v2api_host}/v2/secrets/{name}/",
+            url=f"{self.v2api_host}/v2/secrets/{name}/",
             headers=self.config.get_headers(**kwargs),
         )
 
@@ -710,10 +674,9 @@ class Client(object):
         Returns:
             Munch: List of config trees as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return self.c.get(
-            url=f"{v2api_host}/v2/configtrees/",
+            url=f"{self.v2api_host}/v2/configtrees/",
             headers=self.config.get_headers(**kwargs),
             params={"continue": cont, "limit": limit},
         )
@@ -728,10 +691,9 @@ class Client(object):
         Returns:
             Munch: Config tree details as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return self.c.post(
-            url=f"{v2api_host}/v2/configtrees/",
+            url=f"{self.v2api_host}/v2/configtrees/",
             headers=self.config.get_headers(**kwargs),
             json=body,
         )
@@ -746,10 +708,9 @@ class Client(object):
         Returns:
             Munch: Config tree details as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return self.c.get(
-            url=f"{v2api_host}/v2/configtrees/{name}/",
+            url=f"{self.v2api_host}/v2/configtrees/{name}/",
             headers=self.config.get_headers(**kwargs),
         )
 
@@ -767,10 +728,9 @@ class Client(object):
         Returns:
             Munch: Config tree details as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return self.c.put(
-            url=f"{v2api_host}/v2/configtrees/{name}/",
+            url=f"{self.v2api_host}/v2/configtrees/{name}/",
             headers=self.config.get_headers(project_guid=project_guid, **kwargs),
             json=configtree,
         )
@@ -786,10 +746,9 @@ class Client(object):
         Returns:
             Munch: Config tree details as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return self.c.put(
-            url=f"{v2api_host}/v2/configtrees/{name}/",
+            url=f"{self.v2api_host}/v2/configtrees/{name}/",
             headers=self.config.get_headers(**kwargs),
             json=body,
         )
@@ -804,10 +763,9 @@ class Client(object):
         Returns:
             Munch: Config tree details as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return self.c.delete(
-            url=f"{v2api_host}/v2/configtrees/{name}/",
+            url=f"{self.v2api_host}/v2/configtrees/{name}/",
             headers=self.config.get_headers(**kwargs),
         )
 
@@ -831,10 +789,9 @@ class Client(object):
         Returns:
             Munch: List of revisions as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return self.c.get(
-            url=f"{v2api_host}/v2/configtrees/{name}/revisions/",
+            url=f"{self.v2api_host}/v2/configtrees/{name}/revisions/",
             headers=self.config.get_headers(**kwargs),
             params={
                 "continue": cont,
@@ -857,10 +814,9 @@ class Client(object):
         Returns:
             Munch: Revision details as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return self.c.post(
-            url=f"{v2api_host}/v2/configtrees/{name}/revisions/",
+            url=f"{self.v2api_host}/v2/configtrees/{name}/revisions/",
             headers=self.config.get_headers(project_guid=project_guid, **kwargs),
             json=body,
         )
@@ -874,10 +830,9 @@ class Client(object):
         Returns:
             Munch: Revision details as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return self.c.put(
-            url=f"{v2api_host}/v2/configtrees/{name}/revisions/{revision_id}/keys/",
+            url=f"{self.v2api_host}/v2/configtrees/{name}/revisions/{revision_id}/keys/",
             headers=self.config.get_headers(**kwargs),
             json=configValues,
         )
@@ -896,10 +851,9 @@ class Client(object):
         Returns:
             Munch: Revision details as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return self.c.patch(
-            url=f"{v2api_host}/v2/configtrees/{name}/revisions/{revision_id}/commit/",
+            url=f"{self.v2api_host}/v2/configtrees/{name}/revisions/{revision_id}/commit/",
             headers=self.config.get_headers(project_guid=project_guid, **kwargs),
             json=configTreeRevision,
         )
@@ -919,10 +873,9 @@ class Client(object):
         Returns:
             Munch: Key details as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return self.c.get(
-            url=f"{v2api_host}/v2/configtrees/{name}/revisions/{revision_id}/{key}/",
+            url=f"{self.v2api_host}/v2/configtrees/{name}/revisions/{revision_id}/{key}/",
             headers=self.config.get_headers(project_guid=project_guid, **kwargs),
         )
 
@@ -941,10 +894,9 @@ class Client(object):
         Returns:
             Munch: Key details as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return self.c.put(
-            url=f"{v2api_host}/v2/configtrees/{name}/revisions/{revision_id}/{key}/",
+            url=f"{self.v2api_host}/v2/configtrees/{name}/revisions/{revision_id}/{key}/",
             headers=self.config.get_headers(project_guid=project_guid, **kwargs),
         )
 
@@ -963,10 +915,9 @@ class Client(object):
         Returns:
             Munch: Key details as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return self.c.delete(
-            url=f"{v2api_host}/v2/configtrees/{name}/revisions/{revision_id}/{key}/",
+            url=f"{self.v2api_host}/v2/configtrees/{name}/revisions/{revision_id}/{key}/",
             headers=self.config.get_headers(project_guid=project_guid, **kwargs),
         )
 
@@ -992,10 +943,9 @@ class Client(object):
         Returns:
             Munch: Key details as a Munch object.
         """
-        v2api_host = self.config.hosts.get("v2api_host")
 
         return self.c.patch(
-            url=f"{v2api_host}/v2/configtrees/{name}/revisions/{revision_id}/{key}/",
+            url=f"{self.v2api_host}/v2/configtrees/{name}/revisions/{revision_id}/{key}/",
             headers=self.config.get_headers(project_guid=project_guid, **kwargs),
             json=configKeyRename,
         )
