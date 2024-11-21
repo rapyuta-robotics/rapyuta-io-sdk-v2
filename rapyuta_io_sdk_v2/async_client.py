@@ -20,6 +20,7 @@ from rapyuta_io_sdk_v2.config import Configuration
 from rapyuta_io_sdk_v2.utils import (
     handle_auth_token,
     handle_and_munchify_response,
+    walk_pages,
 )
 
 
@@ -129,7 +130,7 @@ class AsyncClient(object):
         self.config.set_project(project_guid)
 
     # ----------------- Projects -----------------
-    @handle_and_munchify_response
+    @walk_pages
     async def list_projects(self, cont: int = 0, limit: int = 50, **kwargs) -> Munch:
         """List all projects.
 
@@ -242,7 +243,7 @@ class AsyncClient(object):
         )
 
     # -------------------Package-------------------
-    @handle_and_munchify_response
+    @walk_pages
     async def list_packages(self, cont: int = 0, limit: int = 10, **kwargs) -> Munch:
         """List all packages in a project.
 
@@ -303,7 +304,7 @@ class AsyncClient(object):
         )
 
     # -------------------Deployment-------------------
-    @handle_and_munchify_response
+    @walk_pages
     async def list_deployments(self, cont: int = 0, limit: int = 50, **kwargs) -> Munch:
         """List all deployments in a project.
 
@@ -379,7 +380,7 @@ class AsyncClient(object):
         )
 
     # -------------------Disks-------------------
-    @handle_and_munchify_response
+    @walk_pages
     async def list_disks(self, cont: int = 0, limit: int = 50, **kwargs) -> Munch:
         """List all disks in a project.
 
@@ -440,7 +441,7 @@ class AsyncClient(object):
         )
 
     # -------------------Static Routes-------------------
-    @handle_and_munchify_response
+    @walk_pages
     async def list_staticroutes(self, cont: int = 0, limit: int = 0, **kwargs) -> Munch:
         """List all static routes in a project.
 
@@ -519,7 +520,7 @@ class AsyncClient(object):
         )
 
     # -------------------Networks-------------------
-    @handle_and_munchify_response
+    @walk_pages
     async def list_networks(self, cont: int = 0, limit: int = 0, **kwargs) -> Munch:
         """List all networks in a project.
 
@@ -580,7 +581,7 @@ class AsyncClient(object):
         )
 
     # -------------------Secrets-------------------
-    @handle_and_munchify_response
+    @walk_pages
     async def list_secrets(self, cont: int = 0, limit: int = 50, **kwargs) -> Munch:
         """List all secrets in a project.
 
@@ -659,7 +660,7 @@ class AsyncClient(object):
         )
 
     # -------------------Config Trees-------------------
-    @handle_and_munchify_response
+    @walk_pages
     async def list_configtrees(self, cont: int = 0, limit: int = 50, **kwargs) -> Munch:
         """List all config trees in a project.
 
@@ -761,7 +762,7 @@ class AsyncClient(object):
             headers=self.config.get_headers(**kwargs),
         )
 
-    @handle_and_munchify_response
+    @walk_pages
     async def list_revisions(
         self,
         name: str,
