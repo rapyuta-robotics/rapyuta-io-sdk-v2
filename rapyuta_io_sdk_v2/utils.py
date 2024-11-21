@@ -123,3 +123,38 @@ def handle_auth_token(func):
         return async_wrapper
     else:
         return sync_wrapper
+
+
+def walk_pages(func):
+    def wrapper(self, *args, **kwargs):
+        result = {"items": []}
+
+        limit = kwargs.pop("limit", 50)
+        limit = int(limit) if limit else 50
+
+        cont = kwargs.pop("cont", 0)
+        cont = int(cont) if cont else 0
+
+        while True:
+            response = func(self, cont, limit, **kwargs)
+            handle_server_errors(response)
+
+            data = response.json()
+            items = data.get("items", [])
+            if not items:
+                break
+
+            cont = data.get("metadata", {}).get("continue", None)
+            if cont is None:
+                break
+
+            result["items"].extend(items)
+
+            # Stop if we reach the limit
+            if limit is not None and len(result["items"]) >= limit:
+                result["items"] = result["items"][:limit]
+                return munchify(result)
+
+        return munchify(result)
+
+    return wrapper

@@ -20,6 +20,7 @@ from rapyuta_io_sdk_v2.config import Configuration
 from rapyuta_io_sdk_v2.utils import (
     handle_and_munchify_response,
     handle_auth_token,
+    walk_pages,
 )
 
 
@@ -171,7 +172,8 @@ class Client(object):
             headers=self.config.get_headers(with_project=False, **kwargs),
         )
 
-    @handle_and_munchify_response
+    # @handle_and_munchify_response
+    @walk_pages
     def list_projects(self, cont: int = 0, limit: int = 50, **kwargs) -> Munch:
         """List all projects.
 
@@ -250,7 +252,7 @@ class Client(object):
         )
 
     # -------------------Package-------------------
-    @handle_and_munchify_response
+    @walk_pages
     def list_packages(self, cont: int = 0, limit: int = 10, **kwargs) -> Munch:
         """List all packages in a project.
 
@@ -311,7 +313,7 @@ class Client(object):
         )
 
     # -------------------Deployment-------------------
-    @handle_and_munchify_response
+    @walk_pages
     def list_deployments(self, cont: int = 0, limit: int = 50, **kwargs) -> Munch:
         """List all deployments in a project.
 
@@ -387,7 +389,7 @@ class Client(object):
         )
 
     # -------------------Disks-------------------
-    @handle_and_munchify_response
+    @walk_pages
     def list_disks(self, cont: int = 0, limit: int = 50, **kwargs) -> Munch:
         """List all disks in a project.
 
@@ -448,7 +450,7 @@ class Client(object):
         )
 
     # -------------------Static Routes-------------------
-    @handle_and_munchify_response
+    @walk_pages
     def list_staticroutes(self, cont: int = 0, limit: int = 0, **kwargs) -> Munch:
         """List all static routes in a project.
 
@@ -527,7 +529,7 @@ class Client(object):
         )
 
     # -------------------Networks-------------------
-    @handle_and_munchify_response
+    @walk_pages
     def list_networks(self, cont: int = 0, limit: int = 0, **kwargs) -> Munch:
         """List all networks in a project.
 
@@ -588,7 +590,7 @@ class Client(object):
         )
 
     # -------------------Secrets-------------------
-    @handle_and_munchify_response
+    @walk_pages
     def list_secrets(self, cont: int = 0, limit: int = 50, **kwargs) -> Munch:
         """List all secrets in a project.
 
@@ -667,7 +669,7 @@ class Client(object):
         )
 
     # -------------------Config Trees-------------------
-    @handle_and_munchify_response
+    @walk_pages
     def list_configtrees(self, cont: int = 0, limit: int = 50, **kwargs) -> Munch:
         """List all config trees in a project.
 
@@ -769,7 +771,7 @@ class Client(object):
             headers=self.config.get_headers(**kwargs),
         )
 
-    @handle_and_munchify_response
+    @walk_pages
     def list_revisions(
         self,
         name: str,

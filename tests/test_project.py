@@ -6,17 +6,26 @@ import pytest
 
 
 # Test function for list_projects
-def test_list_projects_success(client, mock_response, mocker: MockerFixture):  # noqa: F811
+def test_list_projects_success(client, mocker: MockerFixture):  # noqa: F811
     # Mock the httpx.Client.get method
     mock_get = mocker.patch("httpx.Client.get")
 
-    # Set up the mock response
-    mock_get.return_value = httpx.Response(
-        status_code=200,
-        json=mock_response,
-    )
+    # Set up mock responses for pagination
+    mock_get.side_effect = [
+        httpx.Response(
+            status_code=200,
+            json={
+                "metadata": {"continue": 1},
+                "items": [{"name": "test-project", "guid": "mock_project_guid"}],
+            },
+        ),
+        httpx.Response(
+            status_code=200,
+            json={"metadata": {}, "items": []},  # Simulate end of pages
+        ),
+    ]
 
-    # Override get_headers to return the mocked headers without None values
+    # Override get_headers to return mocked headers without None values
     client.config.get_headers = lambda with_project: {
         k: v
         for k, v in {
@@ -32,7 +41,10 @@ def test_list_projects_success(client, mock_response, mocker: MockerFixture):  #
 
     # Validate the response
     assert isinstance(response, Munch)
-    assert response["metadata"]["name"] == "test-project"
+    assert response["items"] == [{"name": "test-project", "guid": "mock_project_guid"}]
+
+    # Ensure the mock was called twice (for pagination)
+    assert mock_get.call_count == 2
 
 
 def test_list_projects_unauthorized(client, mocker: MockerFixture):  # noqa: F811
