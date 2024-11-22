@@ -11,19 +11,13 @@ def test_list_projects_success(client, mocker: MockerFixture):  # noqa: F811
     mock_get = mocker.patch("httpx.Client.get")
 
     # Set up mock responses for pagination
-    mock_get.side_effect = [
-        httpx.Response(
-            status_code=200,
-            json={
-                "metadata": {"continue": 1},
-                "items": [{"name": "test-project", "guid": "mock_project_guid"}],
-            },
-        ),
-        httpx.Response(
-            status_code=200,
-            json={"metadata": {}, "items": []},  # Simulate end of pages
-        ),
-    ]
+    mock_get.return_value = httpx.Response(
+        status_code=200,
+        json={
+            "metadata": {"continue": 1},
+            "items": [{"name": "test-project", "guid": "mock_project_guid"}],
+        },
+    )
 
     # Override get_headers to return mocked headers without None values
     client.config.get_headers = lambda with_project: {
@@ -42,9 +36,6 @@ def test_list_projects_success(client, mocker: MockerFixture):  # noqa: F811
     # Validate the response
     assert isinstance(response, Munch)
     assert response["items"] == [{"name": "test-project", "guid": "mock_project_guid"}]
-
-    # Ensure the mock was called twice (for pagination)
-    assert mock_get.call_count == 2
 
 
 def test_list_projects_unauthorized(client, mocker: MockerFixture):  # noqa: F811

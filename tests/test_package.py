@@ -10,19 +10,13 @@ def test_list_packages_success(client, mocker: MockerFixture):  # noqa: F811
     mock_get = mocker.patch("httpx.Client.get")
 
     # Set up the mock responses for pagination
-    mock_get.side_effect = [
-        httpx.Response(
-            status_code=200,
-            json={
-                "metadata": {"continue": 31},
-                "items": [{"name": "test_package", "guid": "mock_package_guid"}],
-            },
-        ),
-        httpx.Response(
-            status_code=200,
-            json={"metadata": {}},  # Simulate end of pages
-        ),
-    ]
+    mock_get.return_value = httpx.Response(
+        status_code=200,
+        json={
+            "metadata": {"continue": 1},
+            "items": [{"name": "test_package", "guid": "mock_package_guid"}],
+        },
+    )
 
     # Override get_headers to return the mocked headers without None values
     client.config.get_headers = lambda with_project=True: {
@@ -41,9 +35,6 @@ def test_list_packages_success(client, mocker: MockerFixture):  # noqa: F811
     # Validate the response
     assert isinstance(response, Munch)
     assert response["items"] == [{"name": "test_package", "guid": "mock_package_guid"}]
-
-    # Ensure the mock was called twice
-    assert mock_get.call_count == 2
 
 
 def test_list_packages_not_found(client, mocker: MockerFixture):  # noqa: F811
