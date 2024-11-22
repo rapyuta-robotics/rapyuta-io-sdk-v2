@@ -14,6 +14,7 @@
 # limitations under the License.
 # from rapyuta_io_sdk_v2.config import Configuration
 import asyncio
+import functools
 import json
 import os
 import sys
@@ -21,7 +22,7 @@ import sys
 import httpx
 
 import rapyuta_io_sdk_v2.exceptions as exceptions
-from munch import munchify
+from munch import munchify, Munch
 
 
 def handle_server_errors(response: httpx.Response):
@@ -90,12 +91,14 @@ def get_default_app_dir(app_name: str) -> str:
 
 # Decorator to handle server errors and munchify response
 def handle_and_munchify_response(func):
-    async def async_wrapper(*args, **kwargs):
+    @functools.wraps(func)
+    async def async_wrapper(*args, **kwargs) -> Munch:
         response = await func(*args, **kwargs)
         handle_server_errors(response)
         return munchify(response.json())
 
-    def sync_wrapper(*args, **kwargs):
+    @functools.wraps(func)
+    def sync_wrapper(*args, **kwargs) -> Munch:
         response = func(*args, **kwargs)
         handle_server_errors(response)
         return munchify(response.json())
@@ -106,55 +109,32 @@ def handle_and_munchify_response(func):
         return sync_wrapper
 
 
-def handle_auth_token(func):
-    async def async_wrapper(self, *args, **kwargs):
-        response = await func(self, *args, **kwargs)
-        handle_server_errors(response)
-        self.config.auth_token = response.json()["data"].get("token")
-        return self.config.auth_token
+def walk_pages(func, *args, limit=50, cont=0, **kwargs):
+    """
+    A generator function to paginate through API results.
 
-    def sync_wrapper(self, *args, **kwargs):
-        response = func(self, *args, **kwargs)
-        handle_server_errors(response)
-        self.config.auth_token = response.json()["data"].get("token")
-        return self.config.auth_token
+    Args:
+        func (callable): The API function to call, must accept `cont` and `limit` as arguments.
+        *args: Positional arguments to pass to the API function.
+        limit (int, optional): Maximum number of items to return. Defaults to 50.
+        cont (int, optional): Initial continuation token. Defaults to 0.
+        **kwargs: Additional keyword arguments to pass to the API function.
 
-    if asyncio.iscoroutinefunction(func):
-        return async_wrapper
-    else:
-        return sync_wrapper
+    Yields:
+        Munch: Each item from the API response.
+    """
+    while True:
+        response = func(cont, limit, *args, **kwargs)
 
+        data = response
+        items = data.get("items", [])
+        if not items:
+            break
 
-def walk_pages(func):
-    def wrapper(self, *args, **kwargs):
-        result = {"items": []}
+        for item in items:
+            yield munchify(item)
 
-        limit = kwargs.pop("limit", 50)
-        limit = int(limit) if limit else 50
-
-        cont = kwargs.pop("cont", 0)
-        cont = int(cont) if cont else 0
-
-        while True:
-            response = func(self, cont, limit, **kwargs)
-            handle_server_errors(response)
-
-            data = response.json()
-            items = data.get("items", [])
-            if not items:
-                break
-
-            cont = data.get("metadata", {}).get("continue", None)
-            if cont is None:
-                break
-
-            result["items"].extend(items)
-
-            # Stop if we reach the limit
-            if limit is not None and len(result["items"]) >= limit:
-                result["items"] = result["items"][:limit]
-                return munchify(result)
-
-        return munchify(result)
-
-    return wrapper
+        # Update `cont` for the next page
+        cont = data.get("metadata", {}).get("continue", None)
+        if cont is None:
+            break

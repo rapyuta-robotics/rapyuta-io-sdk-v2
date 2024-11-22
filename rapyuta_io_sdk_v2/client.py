@@ -18,9 +18,8 @@ from munch import Munch
 import platform
 from rapyuta_io_sdk_v2.config import Configuration
 from rapyuta_io_sdk_v2.utils import (
+    handle_server_errors,
     handle_and_munchify_response,
-    handle_auth_token,
-    walk_pages,
 )
 
 
@@ -56,13 +55,33 @@ class Client(object):
         self.v2api_host = self.config.hosts.get("v2api_host")
         self.rip_host = self.config.hosts.get("rip_host")
 
-    @handle_auth_token
+    def get_auth_token(self, email: str, password: str) -> str:
+        """Get the authentication token for the user.
+
+        Args:
+            email (str)
+            password (str)
+
+        Returns:
+            str: authentication token
+        """
+        response = self.c.post(
+            url=f"{self.rip_host}/user/login",
+            headers={"Content-Type": "application/json"},
+            json={
+                "email": email,
+                "password": password,
+            },
+        )
+        handle_server_errors(response)
+        return response.json()["data"].get("token")
+
     def login(
         self,
-        email: str = None,
-        password: str = None,
+        email: str,
+        password: str,
         environment: str = "ga",
-    ) -> str:
+    ) -> None:
         """Get the authentication token for the user.
 
         Args:
@@ -73,22 +92,9 @@ class Client(object):
         Returns:
             str: authentication token
         """
-        if email is None and password is None and self.config is None:
-            raise ValueError("email and password are required")
 
-        if self.config is None:
-            self.config = Configuration(
-                email=email, password=password, environment=environment
-            )
-
-        return self.c.post(
-            url=f"{self.rip_host}/user/login",
-            headers={"Content-Type": "application/json"},
-            json={
-                "email": email or self.config.email,
-                "password": password or self.config.password,
-            },
-        )
+        token = self.get_auth_token(email, password)
+        self.config.auth_token = token
 
     @handle_and_munchify_response
     def logout(self, token: str = None) -> None:
@@ -103,11 +109,12 @@ class Client(object):
 
         return self.c.post(
             url=f"{self.rip_host}/user/logout",
-            headers={"Content-Type": "application/json"},
-            json={"token": token},
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {token}",
+            },
         )
 
-    @handle_auth_token
     def refresh_token(self, token: str = None) -> str:
         """Refresh the authentication token.
 
@@ -121,11 +128,13 @@ class Client(object):
         if token is None:
             token = self.config.auth_token
 
-        return self.c.post(
+        response = self.c.post(
             url=f"{self.rip_host}/refreshtoken",
             headers={"Content-Type": "application/json"},
             json={"token": token},
         )
+        handle_server_errors(response)
+        return response.json()["data"].get("token")
 
     def set_organization(self, organization_guid: str) -> None:
         """Set the organization GUID.
@@ -173,8 +182,10 @@ class Client(object):
         )
 
     # @handle_and_munchify_response
-    @walk_pages
-    def list_projects(self, cont: int = 0, limit: int = 50, **kwargs) -> Munch:
+    @handle_and_munchify_response
+    def list_projects(
+        self, cont: int = 0, limit: int = 50, status: list[str] = None, **kwargs
+    ) -> Munch:
         """List all projects.
 
         Returns:
@@ -184,7 +195,7 @@ class Client(object):
         return self.c.get(
             url=f"{self.v2api_host}/v2/projects/",
             headers=self.config.get_headers(with_project=False, **kwargs),
-            params={"continue": cont, "limit": limit},
+            params={"continue": cont, "limit": limit, "status": status},
         )
 
     @handle_and_munchify_response
@@ -252,7 +263,7 @@ class Client(object):
         )
 
     # -------------------Package-------------------
-    @walk_pages
+    @handle_and_munchify_response
     def list_packages(self, cont: int = 0, limit: int = 10, **kwargs) -> Munch:
         """List all packages in a project.
 
@@ -313,7 +324,7 @@ class Client(object):
         )
 
     # -------------------Deployment-------------------
-    @walk_pages
+    @handle_and_munchify_response
     def list_deployments(self, cont: int = 0, limit: int = 50, **kwargs) -> Munch:
         """List all deployments in a project.
 
@@ -389,7 +400,7 @@ class Client(object):
         )
 
     # -------------------Disks-------------------
-    @walk_pages
+    @handle_and_munchify_response
     def list_disks(self, cont: int = 0, limit: int = 50, **kwargs) -> Munch:
         """List all disks in a project.
 
@@ -450,7 +461,7 @@ class Client(object):
         )
 
     # -------------------Static Routes-------------------
-    @walk_pages
+    @handle_and_munchify_response
     def list_staticroutes(self, cont: int = 0, limit: int = 0, **kwargs) -> Munch:
         """List all static routes in a project.
 
@@ -529,7 +540,7 @@ class Client(object):
         )
 
     # -------------------Networks-------------------
-    @walk_pages
+    @handle_and_munchify_response
     def list_networks(self, cont: int = 0, limit: int = 0, **kwargs) -> Munch:
         """List all networks in a project.
 
@@ -590,7 +601,7 @@ class Client(object):
         )
 
     # -------------------Secrets-------------------
-    @walk_pages
+    @handle_and_munchify_response
     def list_secrets(self, cont: int = 0, limit: int = 50, **kwargs) -> Munch:
         """List all secrets in a project.
 
@@ -669,7 +680,7 @@ class Client(object):
         )
 
     # -------------------Config Trees-------------------
-    @walk_pages
+    @handle_and_munchify_response
     def list_configtrees(self, cont: int = 0, limit: int = 50, **kwargs) -> Munch:
         """List all config trees in a project.
 
@@ -771,7 +782,7 @@ class Client(object):
             headers=self.config.get_headers(**kwargs),
         )
 
-    @walk_pages
+    @handle_and_munchify_response
     def list_revisions(
         self,
         name: str,

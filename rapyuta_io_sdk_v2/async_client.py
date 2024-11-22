@@ -18,9 +18,8 @@ from munch import Munch
 import platform
 from rapyuta_io_sdk_v2.config import Configuration
 from rapyuta_io_sdk_v2.utils import (
-    handle_auth_token,
     handle_and_munchify_response,
-    walk_pages,
+    handle_server_errors,
 )
 
 
@@ -48,25 +47,8 @@ class AsyncClient(object):
                 )
             },
         )
-        self.rip_host = self.config.hosts.get("rip_host")
-        self.v2api_host = self.config.hosts.get("v2api_host")
-
-    @handle_auth_token
-    def login(
-        self, email: str = None, password: str = None, environment: str = "ga"
-    ) -> str:
-        """Get the authentication token for the user.
-
-        Args:
-            email (str, optional): async defaults to None.
-            password (str, optional): async defaults to None.
-            environment (str, optional): async defaults to "ga".
-
-
-        Returns:
-            str: auth token
-        """
-        sync_client = httpx.Client(
+        self.sync_client = httpx.Client(
+            timeout=timeout,
             limits=httpx.Limits(
                 max_keepalive_connections=5,
                 max_connections=5,
@@ -83,35 +65,79 @@ class AsyncClient(object):
                 )
             },
         )
-        if email is None and password is None and self.config is None:
-            raise ValueError("email and password are required")
+        self.rip_host = self.config.hosts.get("rip_host")
+        self.v2api_host = self.config.hosts.get("v2api_host")
 
-        if self.config is None:
-            self.config = Configuration(
-                email=email, password=password, environment=environment
-            )
+    def get_auth_token(self, email: str, password: str) -> str:
+        """Get the authentication token for the user.
 
-        return sync_client.post(
+        Args:
+            email (str)
+            password (str)
+
+        Returns:
+            str: authentication token
+        """
+        response = self.sync_client.post(
             url=f"{self.rip_host}/user/login",
             headers={"Content-Type": "application/json"},
             json={
-                "email": email or self.config.email,
-                "password": password or self.config.password,
+                "email": email,
+                "password": password,
             },
         )
+        handle_server_errors(response)
+        return response.json()["data"].get("token")
 
-    def logout(self, token=None):
-        pass
+    def login(
+        self,
+        email: str,
+        password: str,
+        environment: str = "ga",
+    ) -> None:
+        """Get the authentication token for the user.
+
+        Args:
+            email (str)
+            password (str)
+            environment (str)
+
+        Returns:
+            str: authentication token
+        """
+
+        token = self.get_auth_token(email, password)
+        self.config.auth_token = token
+
+    @handle_and_munchify_response
+    def logout(self, token: str = None) -> None:
+        """Expire the authentication token.
+
+        Args:
+            token (str): The token to expire.
+        """
+
+        if token is None:
+            token = self.config.auth_token
+
+        return self.sync_client.post(
+            url=f"{self.rip_host}/user/logout",
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {token}",
+            },
+        )
 
     async def refresh_token(self, token: str = None) -> str:
         if token is None:
             token = self.config.auth_token
 
-        return await self.c.post(
+        response = await self.c.post(
             url=f"{self.rip_host}/refreshtoken",
             headers={"Content-Type": "application/json"},
             json={"token": token},
         )
+        return response.json()["data"].get("token")
 
     def set_organization(self, organization_guid: str) -> None:
         """Set the organization GUID.
@@ -130,7 +156,7 @@ class AsyncClient(object):
         self.config.set_project(project_guid)
 
     # ----------------- Projects -----------------
-    @walk_pages
+    @handle_and_munchify_response
     async def list_projects(self, cont: int = 0, limit: int = 50, **kwargs) -> Munch:
         """List all projects.
 
@@ -243,7 +269,7 @@ class AsyncClient(object):
         )
 
     # -------------------Package-------------------
-    @walk_pages
+    @handle_and_munchify_response
     async def list_packages(self, cont: int = 0, limit: int = 10, **kwargs) -> Munch:
         """List all packages in a project.
 
@@ -304,7 +330,7 @@ class AsyncClient(object):
         )
 
     # -------------------Deployment-------------------
-    @walk_pages
+    @handle_and_munchify_response
     async def list_deployments(self, cont: int = 0, limit: int = 50, **kwargs) -> Munch:
         """List all deployments in a project.
 
@@ -380,7 +406,7 @@ class AsyncClient(object):
         )
 
     # -------------------Disks-------------------
-    @walk_pages
+    @handle_and_munchify_response
     async def list_disks(self, cont: int = 0, limit: int = 50, **kwargs) -> Munch:
         """List all disks in a project.
 
@@ -441,7 +467,7 @@ class AsyncClient(object):
         )
 
     # -------------------Static Routes-------------------
-    @walk_pages
+    @handle_and_munchify_response
     async def list_staticroutes(self, cont: int = 0, limit: int = 0, **kwargs) -> Munch:
         """List all static routes in a project.
 
@@ -520,7 +546,7 @@ class AsyncClient(object):
         )
 
     # -------------------Networks-------------------
-    @walk_pages
+    @handle_and_munchify_response
     async def list_networks(self, cont: int = 0, limit: int = 0, **kwargs) -> Munch:
         """List all networks in a project.
 
@@ -581,7 +607,7 @@ class AsyncClient(object):
         )
 
     # -------------------Secrets-------------------
-    @walk_pages
+    @handle_and_munchify_response
     async def list_secrets(self, cont: int = 0, limit: int = 50, **kwargs) -> Munch:
         """List all secrets in a project.
 
@@ -660,7 +686,7 @@ class AsyncClient(object):
         )
 
     # -------------------Config Trees-------------------
-    @walk_pages
+    @handle_and_munchify_response
     async def list_configtrees(self, cont: int = 0, limit: int = 50, **kwargs) -> Munch:
         """List all config trees in a project.
 
@@ -762,7 +788,7 @@ class AsyncClient(object):
             headers=self.config.get_headers(**kwargs),
         )
 
-    @walk_pages
+    @handle_and_munchify_response
     async def list_revisions(
         self,
         name: str,
