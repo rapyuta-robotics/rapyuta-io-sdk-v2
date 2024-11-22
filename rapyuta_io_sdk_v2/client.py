@@ -184,9 +184,22 @@ class Client(object):
     # @handle_and_munchify_response
     @handle_and_munchify_response
     def list_projects(
-        self, cont: int = 0, limit: int = 50, status: list[str] = None, **kwargs
+        self,
+        cont: int = 0,
+        limit: int = 50,
+        labelSelector: list[str] = None,
+        status: list[str] = None,
+        organizations: list[str] = None,
+        **kwargs,
     ) -> Munch:
-        """List all projects.
+        """List all projects in an organization.
+
+        Args:
+            cont (int, optional): Start index of projects. Defaults to 0.
+            limit (int, optional): Number of projects to list. Defaults to 50.
+            labelSelector (list[str], optional): Define labelSelector to get projects from. Defaults to None.
+            status (list[str], optional): Define status to get projects from. Defaults to None.
+            organizations (list[str], optional): Define organizations to get projects from. Defaults to None.
 
         Returns:
             Munch: List of projects as a Munch object.
@@ -195,7 +208,13 @@ class Client(object):
         return self.c.get(
             url=f"{self.v2api_host}/v2/projects/",
             headers=self.config.get_headers(with_project=False, **kwargs),
-            params={"continue": cont, "limit": limit, "status": status},
+            params={
+                "continue": cont,
+                "limit": limit,
+                "status": status,
+                "organizations": organizations,
+                "labelSelector": labelSelector,
+            },
         )
 
     @handle_and_munchify_response
@@ -218,6 +237,10 @@ class Client(object):
     @handle_and_munchify_response
     def update_project(self, body: dict, project_guid: str = None, **kwargs) -> Munch:
         """Update a project by its GUID.
+
+        Args:
+            body (object): Project details
+            project_guid (str, optional): Project GUID. Defaults to None.
 
         Returns:
             Munch: Project details as a Munch object.
@@ -264,17 +287,38 @@ class Client(object):
 
     # -------------------Package-------------------
     @handle_and_munchify_response
-    def list_packages(self, cont: int = 0, limit: int = 10, **kwargs) -> Munch:
+    def list_packages(
+        self,
+        cont: int = 0,
+        limit: int = 50,
+        labelSelector: list[str] = None,
+        name: str = None,
+        regions: list[str] = None,
+        **kwargs,
+    ) -> Munch:
         """List all packages in a project.
 
+        Args:
+            cont (int, optional): Start index of packages. Defaults to 0.
+            limit (int, optional): Number of packages to list. Defaults to 50.
+            labelSelector (list[str], optional): Define labelSelector to get packages from. Defaults to None.
+            name (str, optional): Define name to get packages from. Defaults to None.
+            regions (list[str], optional): Define regions to get packages from. Defaults to None.
+
         Returns:
-            Munch: List of packages as a Munch object.
+            Munch: _description_
         """
 
         return self.c.get(
             url=f"{self.v2api_host}/v2/packages/",
             headers=self.config.get_headers(**kwargs),
-            params={"continue": cont, "limit": limit},
+            params={
+                "continue": cont,
+                "limit": limit,
+                "labelSelector": labelSelector,
+                "name": name,
+                "regions": regions,
+            },
         )
 
     @handle_and_munchify_response
@@ -325,12 +369,37 @@ class Client(object):
 
     # -------------------Deployment-------------------
     @handle_and_munchify_response
-    def list_deployments(self, cont: int = 0, limit: int = 50, **kwargs) -> Munch:
+    def list_deployments(
+        self,
+        cont: int = 0,
+        dependencies: bool = False,
+        deviceName: str = None,
+        guids: list[str] = None,
+        labelSelector: list[str] = None,
+        limit: int = 50,
+        name: str = None,
+        names: list[str] = None,
+        packageName: str = None,
+        packageVersion: str = None,
+        phases: list[str] = None,
+        regions: list[str] = None,
+        **kwargs,
+    ) -> Munch:
         """List all deployments in a project.
 
         Args:
-            cont (int): Start index of deployments
-            limit (int): Number of deployments to list
+            cont (int, optional): Start index of deployments. Defaults to 0.
+            dependencies (bool, optional): Filter by dependencies. Defaults to False.
+            deviceName (str, optional): Filter deployments by device name. Defaults to None.
+            guids (list[str], optional): Filter by GUIDs. Defaults to None.
+            labelSelector (list[str], optional): Define labelSelector to get deployments from. Defaults to None.
+            limit (int, optional): Number of deployments to list. Defaults to 50.
+            name (str, optional): Define name to get deployments from. Defaults to None.
+            names (list[str], optional): Define names to get deployments from. Defaults to None.
+            packageName (str, optional): Filter by package name. Defaults to None.
+            packageVersion (str, optional): Filter by package version. Defaults to None.
+            phases (list[str], optional): Filter by phases. Available values : InProgress, Provisioning, Succeeded, FailedToUpdate, FailedToStart, Stopped. Defaults to None.
+            regions (list[str], optional): Filter by regions. Defaults to None.
 
         Returns:
             Munch: List of deployments as a Munch object.
@@ -339,7 +408,20 @@ class Client(object):
         return self.c.get(
             url=f"{self.v2api_host}/v2/deployments/",
             headers=self.config.get_headers(**kwargs),
-            params={"continue": cont, "limit": limit},
+            params={
+                "continue": cont,
+                "limit": limit,
+                "dependencies": dependencies,
+                "deviceName": deviceName,
+                "guids": guids,
+                "labelSelector": labelSelector,
+                "name": name,
+                "names": names,
+                "packageName": packageName,
+                "packageVersion": packageVersion,
+                "phases": phases,
+                "regions": regions,
+            },
         )
 
     @handle_and_munchify_response
@@ -360,7 +442,7 @@ class Client(object):
         )
 
     @handle_and_munchify_response
-    def get_deployment(self, name: str, **kwargs) -> Munch:
+    def get_deployment(self, name: str, guid: str = None, **kwargs) -> Munch:
         """Get a deployment by its name.
 
         Returns:
@@ -370,6 +452,7 @@ class Client(object):
         return self.c.get(
             url=f"{self.v2api_host}/v2/deployments/{name}/",
             headers=self.config.get_headers(**kwargs),
+            json={"guid": guid},
         )
 
     @handle_and_munchify_response
@@ -399,19 +482,73 @@ class Client(object):
             headers=self.config.get_headers(**kwargs),
         )
 
-    # -------------------Disks-------------------
     @handle_and_munchify_response
-    def list_disks(self, cont: int = 0, limit: int = 50, **kwargs) -> Munch:
-        """List all disks in a project.
+    def get_deployment_graph(self, name: str, **kwargs) -> Munch:
+        """Get a deployment graph by its name. [Experimental]
 
         Returns:
-            Munch: List of disks as a Munch object.
+            Munch: Deployment graph as a Munch object.
+        """
+
+        return self.c.get(
+            url=f"{self.v2api_host}/v2/deployments/{name}/graph/",
+            headers=self.config.get_headers(**kwargs),
+        )
+
+    @handle_and_munchify_response
+    def get_deployment_history(self, name: str, guid: str = None, **kwargs) -> Munch:
+        """Get a deployment history by its name.
+
+        Returns:
+            Munch: Deployment history as a Munch object.
+        """
+
+        return self.c.get(
+            url=f"{self.v2api_host}/v2/deployments/{name}/history/",
+            headers=self.config.get_headers(**kwargs),
+            params={"guid": guid},
+        )
+
+    # -------------------Disks-------------------
+    @handle_and_munchify_response
+    def list_disks(
+        self,
+        cont: int = 0,
+        labelSelector: list[str] = None,
+        limit: int = 50,
+        name: str = None,
+        names: list[str] = None,
+        regions: list[str] = None,
+        status: list[str] = None,
+        **kwargs,
+    ) -> Munch:
+        """List all disks in a project.
+
+        Args:
+            cont (int, optional): Start index of disks. Defaults to 0.
+            labelSelector (list[str], optional): Define labelSelector to get disks from. Defaults to None.
+            limit (int, optional): Number of disks to list. Defaults to 50.
+            name (str, optional): Define name to get disks from. Defaults to None.
+            names (list[str], optional): Define names to get disks from. Defaults to None.
+            regions (list[str], optional): Define regions to get disks from. Defaults to None.
+            status (list[str], optional): Define status to get disks from. Available values : Available, Bound, Released, Failed, Pending.Defaults to None.
+
+        Returns:
+            Munch: _description_
         """
 
         return self.c.get(
             url=f"{self.v2api_host}/v2/disks/",
             headers=self.config.get_headers(**kwargs),
-            params={"continue": cont, "limit": limit},
+            params={
+                "continue": cont,
+                "limit": limit,
+                "labelSelector": labelSelector,
+                "name": name,
+                "names": names,
+                "regions": regions,
+                "status": status,
+            },
         )
 
     @handle_and_munchify_response
@@ -462,8 +599,27 @@ class Client(object):
 
     # -------------------Static Routes-------------------
     @handle_and_munchify_response
-    def list_staticroutes(self, cont: int = 0, limit: int = 0, **kwargs) -> Munch:
+    def list_staticroutes(
+        self,
+        cont: int = 0,
+        guids: list[str] = None,
+        labelSelector: list[str] = None,
+        limit: int = 50,
+        name: str = None,
+        names: list[str] = None,
+        regions: list[str] = None,
+        **kwargs,
+    ) -> Munch:
         """List all static routes in a project.
+
+        Args:
+            cont (int, optional): Start index of static routes. Defaults to 0.
+            guids (list[str], optional): Define guids to get static routes from. Defaults to None.
+            labelSelector (list[str], optional): Define labelSelector to get static routes from. Defaults to None.
+            limit (int, optional): Number of static routes to list. Defaults to 50.
+            name (str, optional): Define name to get static routes from. Defaults to None.
+            names (list[str], optional): Define names to get static routes from. Defaults to None.
+            regions (list[str], optional): Define regions to get static routes from. Defaults to None.
 
         Returns:
             Munch: List of static routes as a Munch object.
@@ -472,7 +628,15 @@ class Client(object):
         return self.c.get(
             url=f"{self.v2api_host}/v2/staticroutes/",
             headers=self.config.get_headers(**kwargs),
-            params={"continue": cont, "limit": limit},
+            params={
+                "continue": cont,
+                "limit": limit,
+                "guids": guids,
+                "labelSelector": labelSelector,
+                "name": name,
+                "names": names,
+                "regions": regions,
+            },
         )
 
     @handle_and_munchify_response
@@ -541,8 +705,33 @@ class Client(object):
 
     # -------------------Networks-------------------
     @handle_and_munchify_response
-    def list_networks(self, cont: int = 0, limit: int = 0, **kwargs) -> Munch:
+    def list_networks(
+        self,
+        cont: int = 0,
+        deviceName: str = None,
+        labelSelector: list[str] = None,
+        limit: int = 50,
+        name: str = None,
+        names: list[str] = None,
+        networkType: str = None,
+        phases: list[str] = None,
+        regions: list[str] = None,
+        status: list[str] = None,
+        **kwargs,
+    ) -> Munch:
         """List all networks in a project.
+
+        Args:
+            cont (int, optional): Start index of networks. Defaults to 0.
+            deviceName (str, optional): Filter networks by device name. Defaults to None.
+            labelSelector (list[str], optional): Define labelSelector to get networks from. Defaults to None.
+            limit (int, optional): Number of networks to list. Defaults to 50.
+            name (str, optional): Define name to get networks from. Defaults to None.
+            names (list[str], optional): Define names to get networks from. Defaults to None.
+            networkType (str, optional): Define network type to get networks from. Defaults to None.
+            phases (list[str], optional): Define phases to get networks from. Available values : InProgress, Provisioning, Succeeded, FailedToUpdate, FailedToStart, Stopped. Defaults to None.
+            regions (list[str], optional): Define regions to get networks from. Defaults to None.
+            status (list[str], optional): Define status to get networks from. Available values : Running, Pending, Error, Unknown, Stopped. Defaults to None.
 
         Returns:
             Munch: List of networks as a Munch object.
@@ -551,7 +740,18 @@ class Client(object):
         return self.c.get(
             url=f"{self.v2api_host}/v2/networks/",
             headers=self.config.get_headers(**kwargs),
-            params={"continue": cont, "limit": limit},
+            params={
+                "continue": cont,
+                "limit": limit,
+                "deviceName": deviceName,
+                "labelSelector": labelSelector,
+                "name": name,
+                "names": names,
+                "networkType": networkType,
+                "phases": phases,
+                "regions": regions,
+                "status": status,
+            },
         )
 
     @handle_and_munchify_response
@@ -602,8 +802,25 @@ class Client(object):
 
     # -------------------Secrets-------------------
     @handle_and_munchify_response
-    def list_secrets(self, cont: int = 0, limit: int = 50, **kwargs) -> Munch:
+    def list_secrets(
+        self,
+        cont: int = 0,
+        labelSelector: list[str] = None,
+        limit: int = 50,
+        name: str = None,
+        names: list[str] = None,
+        regions: list[str] = None,
+        **kwargs,
+    ) -> Munch:
         """List all secrets in a project.
+
+        Args:
+            cont (int, optional): Start index of secrets. Defaults to 0.
+            labelSelector (list[str], optional): Define labelSelector to get secrets from. Defaults to None.
+            limit (int, optional): Number of secrets to list. Defaults to 50.
+            name (str, optional): Define name to get secrets from. Defaults to None.
+            names (list[str], optional): Define names to get secrets from. Defaults to None.
+            regions (list[str], optional): Define regions to get secrets from. Defaults to None.
 
         Returns:
             Munch: List of secrets as a Munch object.
@@ -612,7 +829,14 @@ class Client(object):
         return self.c.get(
             url=f"{self.v2api_host}/v2/secrets/",
             headers=self.config.get_headers(**kwargs),
-            params={"continue": cont, "limit": limit},
+            params={
+                "continue": cont,
+                "limit": limit,
+                "labelSelector": labelSelector,
+                "name": name,
+                "names": names,
+                "regions": regions,
+            },
         )
 
     @handle_and_munchify_response
@@ -681,8 +905,23 @@ class Client(object):
 
     # -------------------Config Trees-------------------
     @handle_and_munchify_response
-    def list_configtrees(self, cont: int = 0, limit: int = 50, **kwargs) -> Munch:
+    def list_configtrees(
+        self,
+        cont: int = 0,
+        labelSelector: list[str] = None,
+        limit: int = 50,
+        name: str = None,
+        regions: list[str] = None,
+        **kwargs,
+    ) -> Munch:
         """List all config trees in a project.
+
+        Args:
+            cont (int, optional): Start index of config trees. Defaults to 0.
+            labelSelector (list[str], optional): Define labelSelector to get config trees from. Defaults to None.
+            limit (int, optional): Number of config trees to list. Defaults to 50.
+            name (str, optional): Define name to get config trees from. Defaults to None.
+            regions (list[str], optional): Define regions to get config trees from. Defaults to None.
 
         Returns:
             Munch: List of config trees as a Munch object.
@@ -691,7 +930,13 @@ class Client(object):
         return self.c.get(
             url=f"{self.v2api_host}/v2/configtrees/",
             headers=self.config.get_headers(**kwargs),
-            params={"continue": cont, "limit": limit},
+            params={
+                "continue": cont,
+                "limit": limit,
+                "labelSelector": labelSelector,
+                "name": name,
+                "regions": regions,
+            },
         )
 
     @handle_and_munchify_response
@@ -712,11 +957,23 @@ class Client(object):
         )
 
     @handle_and_munchify_response
-    def get_configtree(self, name: str, **kwargs) -> Munch:
+    def get_configtree(
+        self,
+        name: str,
+        contentTypes: list[str] = None,
+        includeData: bool = False,
+        keyPrefixes: list[str] = None,
+        revision: str = None,
+        **kwargs,
+    ) -> Munch:
         """Get a config tree by its name.
 
         Args:
             name (str): Config tree name
+            contentTypes (list[str], optional): Define contentTypes to get config tree from. Defaults to None.
+            includeData (bool, optional): Include data. Defaults to False.
+            keyPrefixes (list[str], optional): Define keyPrefixes to get config tree from. Defaults to None.
+            revision (str, optional): Define revision to get config tree from. Defaults to None.
 
         Returns:
             Munch: Config tree details as a Munch object.
@@ -725,6 +982,12 @@ class Client(object):
         return self.c.get(
             url=f"{self.v2api_host}/v2/configtrees/{name}/",
             headers=self.config.get_headers(**kwargs),
+            params={
+                "contentTypes": contentTypes,
+                "includeData": includeData,
+                "keyPrefixes": keyPrefixes,
+                "revision": revision,
+            },
         )
 
     @handle_and_munchify_response
@@ -789,6 +1052,8 @@ class Client(object):
         cont: int = 0,
         limit: int = 50,
         committed: bool = False,
+        labelSelector: list[str] = None,
+        regions: list[str] = None,
         **kwargs,
     ) -> Munch:
         """List all revisions of a config tree.
@@ -798,6 +1063,8 @@ class Client(object):
             cont (int, optional): Continue param . Defaults to 0.
             limit (int, optional): Limit param . Defaults to 50.
             committed (bool, optional): Committed. Defaults to False.
+            labelSelector (list[str], optional): Define labelSelector to get revisions from. Defaults to None.
+            regions (list[str], optional): Define regions to get revisions from. Defaults to None.
 
         Returns:
             Munch: List of revisions as a Munch object.
@@ -810,6 +1077,8 @@ class Client(object):
                 "continue": cont,
                 "limit": limit,
                 "committed": committed,
+                "labelSelector": labelSelector,
+                "regions": regions,
             },
         )
 

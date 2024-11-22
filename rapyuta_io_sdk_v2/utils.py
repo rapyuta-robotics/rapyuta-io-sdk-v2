@@ -14,7 +14,7 @@
 # limitations under the License.
 # from rapyuta_io_sdk_v2.config import Configuration
 import asyncio
-import functools
+from functools import wraps
 import json
 import os
 import sys
@@ -91,13 +91,13 @@ def get_default_app_dir(app_name: str) -> str:
 
 # Decorator to handle server errors and munchify response
 def handle_and_munchify_response(func):
-    @functools.wraps(func)
+    @wraps(func)
     async def async_wrapper(*args, **kwargs) -> Munch:
         response = await func(*args, **kwargs)
         handle_server_errors(response)
         return munchify(response.json())
 
-    @functools.wraps(func)
+    @wraps(func)
     def sync_wrapper(*args, **kwargs) -> Munch:
         response = func(*args, **kwargs)
         handle_server_errors(response)
