@@ -13,14 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import platform
+
 import httpx
 from munch import Munch
-import platform
+
 from rapyuta_io_sdk_v2.config import Configuration
-from rapyuta_io_sdk_v2.utils import (
-    handle_server_errors,
-    handle_and_munchify_response,
-)
+from rapyuta_io_sdk_v2.utils import handle_and_munchify_response, handle_server_errors
 
 
 class Client(object):
@@ -97,7 +96,7 @@ class Client(object):
         self.config.auth_token = token
 
     @handle_and_munchify_response
-    def logout(self, token: str = None) -> None:
+    def logout(self, token: str = None) -> Munch:
         """Expire the authentication token.
 
         Args:
@@ -187,7 +186,7 @@ class Client(object):
         self,
         cont: int = 0,
         limit: int = 50,
-        labelSelector: list[str] = None,
+        label_selector: list[str] = None,
         status: list[str] = None,
         organizations: list[str] = None,
         **kwargs,
@@ -197,7 +196,7 @@ class Client(object):
         Args:
             cont (int, optional): Start index of projects. Defaults to 0.
             limit (int, optional): Number of projects to list. Defaults to 50.
-            labelSelector (list[str], optional): Define labelSelector to get projects from. Defaults to None.
+            label_selector (list[str], optional): Define labelSelector to get projects from. Defaults to None.
             status (list[str], optional): Define status to get projects from. Defaults to None.
             organizations (list[str], optional): Define organizations to get projects from. Defaults to None.
 
@@ -213,7 +212,7 @@ class Client(object):
                 "limit": limit,
                 "status": status,
                 "organizations": organizations,
-                "labelSelector": labelSelector,
+                "labelSelector": label_selector,
             },
         )
 
@@ -291,7 +290,7 @@ class Client(object):
         self,
         cont: int = 0,
         limit: int = 50,
-        labelSelector: list[str] = None,
+        label_selector: list[str] = None,
         name: str = None,
         regions: list[str] = None,
         **kwargs,
@@ -301,7 +300,7 @@ class Client(object):
         Args:
             cont (int, optional): Start index of packages. Defaults to 0.
             limit (int, optional): Number of packages to list. Defaults to 50.
-            labelSelector (list[str], optional): Define labelSelector to get packages from. Defaults to None.
+            label_selector (list[str], optional): Define labelSelector to get packages from. Defaults to None.
             name (str, optional): Define name to get packages from. Defaults to None.
             regions (list[str], optional): Define regions to get packages from. Defaults to None.
 
@@ -315,7 +314,7 @@ class Client(object):
             params={
                 "continue": cont,
                 "limit": limit,
-                "labelSelector": labelSelector,
+                "labelSelector": label_selector,
                 "name": name,
                 "regions": regions,
             },
@@ -375,7 +374,7 @@ class Client(object):
         dependencies: bool = False,
         deviceName: str = None,
         guids: list[str] = None,
-        labelSelector: list[str] = None,
+        label_selector: list[str] = None,
         limit: int = 50,
         name: str = None,
         names: list[str] = None,
@@ -392,7 +391,7 @@ class Client(object):
             dependencies (bool, optional): Filter by dependencies. Defaults to False.
             deviceName (str, optional): Filter deployments by device name. Defaults to None.
             guids (list[str], optional): Filter by GUIDs. Defaults to None.
-            labelSelector (list[str], optional): Define labelSelector to get deployments from. Defaults to None.
+            label_selector (list[str], optional): Define labelSelector to get deployments from. Defaults to None.
             limit (int, optional): Number of deployments to list. Defaults to 50.
             name (str, optional): Define name to get deployments from. Defaults to None.
             names (list[str], optional): Define names to get deployments from. Defaults to None.
@@ -414,7 +413,7 @@ class Client(object):
                 "dependencies": dependencies,
                 "deviceName": deviceName,
                 "guids": guids,
-                "labelSelector": labelSelector,
+                "labelSelector": label_selector,
                 "name": name,
                 "names": names,
                 "packageName": packageName,
@@ -514,7 +513,7 @@ class Client(object):
     def list_disks(
         self,
         cont: int = 0,
-        labelSelector: list[str] = None,
+        label_selector: list[str] = None,
         limit: int = 50,
         name: str = None,
         names: list[str] = None,
@@ -526,7 +525,7 @@ class Client(object):
 
         Args:
             cont (int, optional): Start index of disks. Defaults to 0.
-            labelSelector (list[str], optional): Define labelSelector to get disks from. Defaults to None.
+            label_selector (list[str], optional): Define labelSelector to get disks from. Defaults to None.
             limit (int, optional): Number of disks to list. Defaults to 50.
             name (str, optional): Define name to get disks from. Defaults to None.
             names (list[str], optional): Define names to get disks from. Defaults to None.
@@ -543,7 +542,7 @@ class Client(object):
             params={
                 "continue": cont,
                 "limit": limit,
-                "labelSelector": labelSelector,
+                "labelSelector": label_selector,
                 "name": name,
                 "names": names,
                 "regions": regions,
@@ -603,7 +602,7 @@ class Client(object):
         self,
         cont: int = 0,
         guids: list[str] = None,
-        labelSelector: list[str] = None,
+        label_selector: list[str] = None,
         limit: int = 50,
         name: str = None,
         names: list[str] = None,
@@ -615,7 +614,7 @@ class Client(object):
         Args:
             cont (int, optional): Start index of static routes. Defaults to 0.
             guids (list[str], optional): Define guids to get static routes from. Defaults to None.
-            labelSelector (list[str], optional): Define labelSelector to get static routes from. Defaults to None.
+            label_selector (list[str], optional): Define labelSelector to get static routes from. Defaults to None.
             limit (int, optional): Number of static routes to list. Defaults to 50.
             name (str, optional): Define name to get static routes from. Defaults to None.
             names (list[str], optional): Define names to get static routes from. Defaults to None.
@@ -632,7 +631,7 @@ class Client(object):
                 "continue": cont,
                 "limit": limit,
                 "guids": guids,
-                "labelSelector": labelSelector,
+                "labelSelector": label_selector,
                 "name": name,
                 "names": names,
                 "regions": regions,
@@ -709,7 +708,7 @@ class Client(object):
         self,
         cont: int = 0,
         deviceName: str = None,
-        labelSelector: list[str] = None,
+        label_selector: list[str] = None,
         limit: int = 50,
         name: str = None,
         names: list[str] = None,
@@ -724,7 +723,7 @@ class Client(object):
         Args:
             cont (int, optional): Start index of networks. Defaults to 0.
             deviceName (str, optional): Filter networks by device name. Defaults to None.
-            labelSelector (list[str], optional): Define labelSelector to get networks from. Defaults to None.
+            label_selector (list[str], optional): Define labelSelector to get networks from. Defaults to None.
             limit (int, optional): Number of networks to list. Defaults to 50.
             name (str, optional): Define name to get networks from. Defaults to None.
             names (list[str], optional): Define names to get networks from. Defaults to None.
@@ -744,7 +743,7 @@ class Client(object):
                 "continue": cont,
                 "limit": limit,
                 "deviceName": deviceName,
-                "labelSelector": labelSelector,
+                "labelSelector": label_selector,
                 "name": name,
                 "names": names,
                 "networkType": networkType,
@@ -805,7 +804,7 @@ class Client(object):
     def list_secrets(
         self,
         cont: int = 0,
-        labelSelector: list[str] = None,
+        label_selector: list[str] = None,
         limit: int = 50,
         name: str = None,
         names: list[str] = None,
@@ -816,7 +815,7 @@ class Client(object):
 
         Args:
             cont (int, optional): Start index of secrets. Defaults to 0.
-            labelSelector (list[str], optional): Define labelSelector to get secrets from. Defaults to None.
+            label_selector (list[str], optional): Define labelSelector to get secrets from. Defaults to None.
             limit (int, optional): Number of secrets to list. Defaults to 50.
             name (str, optional): Define name to get secrets from. Defaults to None.
             names (list[str], optional): Define names to get secrets from. Defaults to None.
@@ -832,7 +831,7 @@ class Client(object):
             params={
                 "continue": cont,
                 "limit": limit,
-                "labelSelector": labelSelector,
+                "labelSelector": label_selector,
                 "name": name,
                 "names": names,
                 "regions": regions,
@@ -908,7 +907,7 @@ class Client(object):
     def list_configtrees(
         self,
         cont: int = 0,
-        labelSelector: list[str] = None,
+        label_selector: list[str] = None,
         limit: int = 50,
         name: str = None,
         regions: list[str] = None,
@@ -918,7 +917,7 @@ class Client(object):
 
         Args:
             cont (int, optional): Start index of config trees. Defaults to 0.
-            labelSelector (list[str], optional): Define labelSelector to get config trees from. Defaults to None.
+            label_selector (list[str], optional): Define labelSelector to get config trees from. Defaults to None.
             limit (int, optional): Number of config trees to list. Defaults to 50.
             name (str, optional): Define name to get config trees from. Defaults to None.
             regions (list[str], optional): Define regions to get config trees from. Defaults to None.
@@ -933,7 +932,7 @@ class Client(object):
             params={
                 "continue": cont,
                 "limit": limit,
-                "labelSelector": labelSelector,
+                "labelSelector": label_selector,
                 "name": name,
                 "regions": regions,
             },
@@ -1052,7 +1051,7 @@ class Client(object):
         cont: int = 0,
         limit: int = 50,
         committed: bool = False,
-        labelSelector: list[str] = None,
+        label_selector: list[str] = None,
         regions: list[str] = None,
         **kwargs,
     ) -> Munch:
@@ -1063,7 +1062,7 @@ class Client(object):
             cont (int, optional): Continue param . Defaults to 0.
             limit (int, optional): Limit param . Defaults to 50.
             committed (bool, optional): Committed. Defaults to False.
-            labelSelector (list[str], optional): Define labelSelector to get revisions from. Defaults to None.
+            label_selector (list[str], optional): Define labelSelector to get revisions from. Defaults to None.
             regions (list[str], optional): Define regions to get revisions from. Defaults to None.
 
         Returns:
@@ -1077,7 +1076,7 @@ class Client(object):
                 "continue": cont,
                 "limit": limit,
                 "committed": committed,
-                "labelSelector": labelSelector,
+                "labelSelector": label_selector,
                 "regions": regions,
             },
         )

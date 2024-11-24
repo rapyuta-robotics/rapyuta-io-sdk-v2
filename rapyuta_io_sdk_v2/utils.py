@@ -14,15 +14,16 @@
 # limitations under the License.
 # from rapyuta_io_sdk_v2.config import Configuration
 import asyncio
-from functools import wraps
 import json
 import os
 import sys
+import typing
+from functools import wraps
 
 import httpx
+from munch import Munch, munchify
 
 import rapyuta_io_sdk_v2.exceptions as exceptions
-from munch import munchify, Munch
 
 
 def handle_server_errors(response: httpx.Response):
@@ -90,7 +91,13 @@ def get_default_app_dir(app_name: str) -> str:
 
 
 # Decorator to handle server errors and munchify response
-def handle_and_munchify_response(func):
+def handle_and_munchify_response(func) -> typing.Callable:
+    """Decorator to handle server errors and munchify response.
+
+    Args:
+        func (callable): The function to decorate.
+    """
+
     @wraps(func)
     async def async_wrapper(*args, **kwargs) -> Munch:
         response = await func(*args, **kwargs)
@@ -105,13 +112,18 @@ def handle_and_munchify_response(func):
 
     if asyncio.iscoroutinefunction(func):
         return async_wrapper
-    else:
-        return sync_wrapper
+
+    return sync_wrapper
 
 
-def walk_pages(func, *args, limit=50, cont=0, **kwargs):
-    """
-    A generator function to paginate through API results.
+def walk_pages(
+    func: typing.Callable,
+    *args,
+    limit: int = 50,
+    cont: int = 0,
+    **kwargs,
+) -> typing.Generator:
+    """A generator function to paginate through list API results.
 
     Args:
         func (callable): The API function to call, must accept `cont` and `limit` as arguments.
@@ -124,9 +136,8 @@ def walk_pages(func, *args, limit=50, cont=0, **kwargs):
         Munch: Each item from the API response.
     """
     while True:
-        response = func(cont, limit, *args, **kwargs)
+        data = func(cont, limit, *args, **kwargs)
 
-        data = response
         items = data.get("items", [])
         if not items:
             break
@@ -135,6 +146,6 @@ def walk_pages(func, *args, limit=50, cont=0, **kwargs):
             yield munchify(item)
 
         # Update `cont` for the next page
-        cont = data.get("metadata", {}).get("continue", None)
+        cont = data.get("metadata", {}).get("continue")
         if cont is None:
             break

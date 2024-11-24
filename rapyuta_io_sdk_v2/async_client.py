@@ -13,9 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import platform
+
 import httpx
 from munch import Munch
-import platform
+
 from rapyuta_io_sdk_v2.config import Configuration
 from rapyuta_io_sdk_v2.utils import (
     handle_and_munchify_response,
@@ -110,7 +112,7 @@ class AsyncClient(object):
         self.config.auth_token = token
 
     @handle_and_munchify_response
-    def logout(self, token: str = None) -> None:
+    def logout(self, token: str = None) -> Munch:
         """Expire the authentication token.
 
         Args:
