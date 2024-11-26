@@ -1228,3 +1228,186 @@ class Client(object):
             headers=self.config.get_headers(project_guid=project_guid, **kwargs),
             json=configKeyRename,
         )
+
+    # Managed Service API
+    @handle_and_munchify_response
+    def list_providers(self) -> Munch:
+        """List all providers.
+
+        Returns:
+            Munch: List of providers as a Munch object.
+        """
+
+        return self.c.get(
+            url=f"{self.v2api_host}/v2/managedservices/providers/",
+            headers=self.config.get_headers(with_project=False),
+        )
+
+    @handle_and_munchify_response
+    def list_instances(
+        self,
+        cont: int = 0,
+        limit: int = 50,
+        label_selector: list[str] = None,
+        regions: list[str] = None,
+        guid: str = None,
+        name: str = None,
+    ):
+        """List all instances in a project.
+
+        Args:
+            cont (int, optional): Start index of instances. Defaults to 0.
+            limit (int, optional): Number of instances to list. Defaults to 50.
+            label_selector (list[str], optional): Define labelSelector to get instances from. Defaults to None.
+            regions (list[str], optional): Define regions to get instances from. Defaults to None.
+            guid (str, optional): Defaults to None.
+            name (str, optional): Defaults to None.
+
+        Returns:
+            Munch: List of instances as a Munch object.
+        """
+        return self.c.get(
+            url=f"{self.v2api_host}/v2/managedservices/",
+            headers=self.config.get_headers(),
+            params={
+                "continue": cont,
+                "limit": limit,
+                "labelSelector": label_selector,
+                "regions": regions,
+                "guid": guid,
+                "name": name,
+            },
+        )
+
+    @handle_and_munchify_response
+    def get_instance(self, name: str) -> Munch:
+        """Get an instance by its name.
+
+        Args:
+            name (str): Instance name
+
+        Returns:
+            Munch: Instance details as a Munch object.
+        """
+
+        return self.c.get(
+            url=f"{self.v2api_host}/v2/managedservices/{name}/",
+            headers=self.config.get_headers(),
+        )
+
+    @handle_and_munchify_response
+    def create_instance(self, body: dict) -> Munch:
+        """Create a new instance.
+
+        Returns:
+            Munch: Instance details as a Munch object.
+        """
+
+        return self.c.post(
+            url=f"{self.v2api_host}/v2/managedservices/",
+            headers=self.config.get_headers(),
+            json=body,
+        )
+
+    @handle_and_munchify_response
+    def delete_instance(self, name: str) -> Munch:
+        """Delete an instance.
+
+        Returns:
+            Munch: Instance details as a Munch object.
+        """
+
+        return self.c.delete(
+            url=f"{self.v2api_host}/v2/managedservices/{name}/",
+            headers=self.config.get_headers(),
+        )
+
+    @handle_and_munchify_response
+    def list_instance_bindings(
+        self,
+        instance_name: str,
+        cont: int = 0,
+        limit: int = 50,
+        label_selector: list[str] = None,
+        regions: list[str] = None,
+        guid: str = None,
+        name: str = None,
+    ):
+        """List all instance bindings in a project.
+
+        Args:
+            instance_name (str): Instance name.
+            cont (int, optional): Start index of instance bindings. Defaults to 0.
+            limit (int, optional): Number of instance bindings to list. Defaults to 50.
+            label_selector (list[str], optional): Define labelSelector to get instance bindings from. Defaults to None.
+            regions (list[str], optional): Define regions to get instance bindings from. Defaults to None.
+            guid (str, optional): Defaults to None.
+            name (str, optional): Defaults to None.
+
+        Returns:
+            Munch: List of instance bindings as a Munch object.
+        """
+        return self.c.get(
+            url=f"{self.v2api_host}/v2/managedservices/{instance_name}/bindings/",
+            headers=self.config.get_headers(),
+            params={
+                "continue": cont,
+                "limit": limit,
+                "labelSelector": label_selector,
+                "regions": regions,
+                "guid": guid,
+                "name": name,
+            },
+        )
+
+    @handle_and_munchify_response
+    def create_instance_binding(self, instance_name: str, body: dict) -> Munch:
+        """Create a new instance binding.
+
+        Args:
+            instance_name (str): Instance name.
+            body (object): Instance binding details.
+
+        Returns:
+            Munch: Instance binding details as a Munch object.
+        """
+
+        return self.c.post(
+            url=f"{self.v2api_host}/v2/managedservices/{instance_name}/bindings/",
+            headers=self.config.get_headers(),
+            json=body,
+        )
+
+    @handle_and_munchify_response
+    def get_instance_binding(self, instance_name: str, name: str) -> Munch:
+        """Get an instance binding by its name.
+
+        Args:
+            instance_name (str): Instance name.
+            name (str): Instance binding name.
+
+        Returns:
+            Munch: Instance binding details as a Munch object.
+        """
+
+        return self.c.get(
+            url=f"{self.v2api_host}/v2/managedservices/{instance_name}/bindings/{name}/",
+            headers=self.config.get_headers(),
+        )
+
+    @handle_and_munchify_response
+    def delete_instance_binding(self, instance_name: str, name: str) -> Munch:
+        """Delete an instance binding.
+
+        Args:
+            instance_name (str): Instance name.
+            name (str): Instance binding name.
+
+        Returns:
+            Munch: Instance binding details as a Munch object.
+        """
+
+        return self.c.delete(
+            url=f"{self.v2api_host}/v2/managedservices/{instance_name}/bindings/{name}/",
+            headers=self.config.get_headers(),
+        )
