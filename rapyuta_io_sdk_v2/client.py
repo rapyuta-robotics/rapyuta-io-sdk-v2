@@ -79,14 +79,12 @@ class Client(object):
         self,
         email: str,
         password: str,
-        environment: str = "ga",
     ) -> None:
         """Get the authentication token for the user.
 
         Args:
             email (str)
             password (str)
-            environment (str)
 
         Returns:
             str: authentication token

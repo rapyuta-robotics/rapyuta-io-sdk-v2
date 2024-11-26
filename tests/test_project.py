@@ -4,10 +4,10 @@ from munch import Munch
 from pytest_mock import MockerFixture
 
 from tests.utils.test_util import (
-    client,  # noqa: F401
-    mock_response,  # noqa: F401
+    client,
+    mock_response_project,
     project_body,
-)
+)  # noqa: F401
 
 
 # Test function for list_projects
@@ -101,7 +101,7 @@ def test_list_projects_not_found(client, mocker: MockerFixture):  # noqa: F811
     assert str(exc.value) == "not found"
 
 
-def test_get_project_success(client, mock_response, mocker: MockerFixture):  # noqa: F811
+def test_get_project_success(client, mock_response_project, mocker: MockerFixture):  # noqa: F811
     # Mock the httpx.Client.get method
     mock_get = mocker.patch("httpx.Client.get")
 
@@ -162,14 +162,14 @@ def test_get_project_not_found(client, mocker: MockerFixture):  # noqa: F811
     assert str(exc.value) == "project not found"
 
 
-def test_create_project_success(client, mock_response, mocker: MockerFixture):  # noqa: F811
+def test_create_project_success(client, mock_response_project, mocker: MockerFixture):  # noqa: F811
     # Mock the httpx.Client.post method
     mock_post = mocker.patch("httpx.Client.post")
 
     # Set up the mock response
     mock_post.return_value = httpx.Response(
         status_code=201,
-        json=mock_response,
+        json=mock_response_project,
     )
 
     # Override get_headers to return the mocked headers without None values
@@ -220,14 +220,14 @@ def test_create_project_unauthorized(client, mocker: MockerFixture):  # noqa: F8
     assert str(exc.value) == "unauthorized permission access"
 
 
-def test_update_project_success(client, mock_response, mocker: MockerFixture):  # noqa: F811
+def test_update_project_success(client, mock_response_project, mocker: MockerFixture):  # noqa: F811
     # Mock the httpx.Client.put method
     mock_put = mocker.patch("httpx.Client.put")
 
     # Set up the mock response
     mock_put.return_value = httpx.Response(
         status_code=200,
-        json=mock_response,
+        json=mock_response_project,
     )
 
     # Override get_headers to return the mocked headers without None values
@@ -251,7 +251,7 @@ def test_update_project_success(client, mock_response, mocker: MockerFixture):  
     assert response["metadata"]["guid"] == "mock_project_guid"
 
 
-def test_delete_project_success(client, mock_response, mocker: MockerFixture):  # noqa: F811
+def test_delete_project_success(client, mock_response_project, mocker: MockerFixture):  # noqa: F811
     # Mock the httpx.Client.delete method
     mock_delete = mocker.patch("httpx.Client.delete")
 

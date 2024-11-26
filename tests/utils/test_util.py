@@ -15,7 +15,7 @@ def client():
 
 
 @pytest.fixture
-def mock_response():
+def mock_response_project():
     return {
         "kind": "Project",
         "metadata": {"name": "test-project", "guid": "mock_project_guid"},
@@ -56,4 +56,36 @@ def package_body():
             "projectguid": "mock_project_guid",
         },
         "spec": {"runtime": "cloud", "cloud": {"enabled": True}},
+    }
+
+
+@pytest.fixture
+def deployment_body():
+    return {
+        "apiVersion": "apiextensions.rapyuta.io/v1",
+        "kind": "Deployment",
+        "metadata": {
+            "name": "test-deployment",
+            "depends": {
+                "kind": "Package",
+                "nameOrGUID": "mock_package_guid",
+            },
+        },
+        "restart": "Always",
+    }
+
+
+@pytest.fixture
+def disk_body():
+    return {
+        "apiVersion": "apiextensions.rapyuta.io/v1",
+        "kind": "Disk",
+        "metadata": {
+            "name": "test-disk",
+            "labels": {"app": "test"},
+        },
+        "spec": {
+            "runtime": "cloud",
+            "capacity": "4",
+        },
     }

@@ -3,11 +3,7 @@ import pytest
 from munch import Munch
 from pytest_mock import MockerFixture
 
-from tests.utils.test_util import (
-    client,  # noqa: F401
-    mock_response,  # noqa: F401
-    package_body,  # noqa: F401
-)
+from tests.utils.test_util import client, package_body  # noqa: F401
 
 
 def test_list_packages_success(client, mocker: MockerFixture):  # noqa: F811
@@ -68,7 +64,7 @@ def test_list_packages_not_found(client, mocker: MockerFixture):  # noqa: F811
     # assert response. == "not found"
 
 
-def test_get_package_success(client, mock_response, mocker: MockerFixture):  # noqa: F811
+def test_get_package_success(client, mocker: MockerFixture):  # noqa: F811
     # Mock the httpx.Client.get method
     mock_get = mocker.patch("httpx.Client.get")
 
@@ -149,7 +145,7 @@ def test_create_package_success(client, package_body, mocker: MockerFixture):  #
     }
 
     # Call the create_package method
-    response = client.create_package(body={"name": "test_package"})
+    response = client.create_package(body=package_body)
 
     # Validate the response
     assert isinstance(response, Munch)
