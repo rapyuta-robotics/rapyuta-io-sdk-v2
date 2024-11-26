@@ -1,8 +1,13 @@
-from pytest_mock import MockerFixture
-from munch import Munch
 import httpx
-from tests.utils.test_util import client, mock_response, project_body  # noqa: F401
 import pytest
+from munch import Munch
+from pytest_mock import MockerFixture
+
+from tests.utils.test_util import (
+    client,
+    mock_response,  # noqa: F401
+    project_body,
+)
 
 
 # Test function for list_projects

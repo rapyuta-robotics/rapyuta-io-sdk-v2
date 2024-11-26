@@ -305,7 +305,7 @@ class Client(object):
             regions (list[str], optional): Define regions to get packages from. Defaults to None.
 
         Returns:
-            Munch: _description_
+            Munch: List of packages as a Munch object.
         """
 
         return self.c.get(
@@ -533,7 +533,7 @@ class Client(object):
             status (list[str], optional): Define status to get disks from. Available values : Available, Bound, Released, Failed, Pending.Defaults to None.
 
         Returns:
-            Munch: _description_
+            Munch: List of disks as a Munch object.
         """
 
         return self.c.get(
