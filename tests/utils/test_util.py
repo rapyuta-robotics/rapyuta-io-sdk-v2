@@ -89,3 +89,41 @@ def disk_body():
             "capacity": "4",
         },
     }
+
+
+@pytest.fixture
+def staticroute_body():
+    return {
+        "apiVersion": "apiextensions.rapyuta.io/v1",
+        "kind": "StaticRoute",
+        "metadata": {
+            "name": "test-staticroute",
+            "region": "jp",
+            "labels": {"app": "test"},
+        },
+    }
+
+
+@pytest.fixture
+def network_body():
+    return {
+        "apiVersion": "apiextensions.rapyuta.io/v1",
+        "kind": "Network",
+        "metadata": {
+            "name": "test-network",
+            "region": "jp",
+            "labels": {"app": "test"},
+        },
+    }
+
+
+@pytest.fixture
+def secret_body():
+    return {
+        "apiVersion": "apiextensions.rapyuta.io/v1",
+        "kind": "Secret",
+        "metadata": {
+            "name": "test-secret",
+            "labels": {"app": "test"},
+        },
+    }

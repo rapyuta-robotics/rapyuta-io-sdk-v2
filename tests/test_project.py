@@ -4,8 +4,8 @@ from munch import Munch
 from pytest_mock import MockerFixture
 
 from tests.utils.test_util import (
-    client,
-    mock_response_project,
+    client,  # noqa: F401
+    mock_response_project,  # noqa: F401
     project_body,
 )  # noqa: F401
 
