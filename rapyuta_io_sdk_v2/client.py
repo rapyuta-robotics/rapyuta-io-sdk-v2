@@ -989,7 +989,7 @@ class Client(object):
 
     @handle_and_munchify_response
     def set_configtree_revision(
-        self, name: str, configtree: object, project_guid: str = None, **kwargs
+        self, name: str, configtree: dict, project_guid: str = None, **kwargs
     ) -> Munch:
         """Set a config tree revision.
 
@@ -1121,7 +1121,7 @@ class Client(object):
         self,
         name: str,
         revision_id: str,
-        configTreeRevision: object,
+        configTreeRevision: dict,
         project_guid: str = None,
         **kwargs,
     ) -> Munch:
@@ -1206,7 +1206,7 @@ class Client(object):
         name: str,
         revision_id: str,
         key: str,
-        configKeyRename: object,
+        configKeyRename: dict,
         project_guid: str = None,
         **kwargs,
     ) -> Munch:

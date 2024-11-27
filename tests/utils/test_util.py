@@ -1,6 +1,6 @@
 import pytest
 
-from rapyuta_io_sdk_v2.client import Client
+from rapyuta_io_sdk_v2 import Client, Configuration
 
 
 # Fixture to initialize the Client
@@ -127,3 +127,24 @@ def secret_body():
             "labels": {"app": "test"},
         },
     }
+
+
+@pytest.fixture
+def configtree_body():
+    return {
+        "apiVersion": "apiextensions.rapyuta.io/v1",
+        "kind": "ConfigTree",
+        "metadata": {
+            "name": "test-configtree",
+            "labels": {"app": "test"},
+        },
+    }
+
+
+@pytest.fixture
+def mock_config():
+    return Configuration(
+        project_guid="mock_project_guid",
+        organization_guid="mock_org_guid",
+        auth_token="mock_auth_token",
+    )
