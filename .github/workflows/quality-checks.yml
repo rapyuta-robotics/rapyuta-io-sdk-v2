@@ -22,24 +22,27 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.8', '3.10', '3.12', '3.13']
+        python-version: ['3.8.10', '3.9', '3.10', '3.11', '3.12', '3.13']
 
     steps:
-      # Step 1: Check out the repository
       - uses: actions/checkout@v4
 
-      # Step 2: Set up Python
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
             python-version: ${{ matrix.python-version }}
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v3
-        with:
-          version: "latest"
+        uses: astral-sh/setup-uv@v4
 
-      # Step 4: Install dependencies with uv, activate virtual environment, and run tests with pytest
+      - name: Set up Python ${{ matrix.python-version }}
+        run: uv python install ${{ matrix.python-version }}
+
+      - name: Try import
+        run: |
+          uv run python -c "import rapyuta_io_sdk_v2"
+
       - name: Install dependencies, activate uv environment, and run tests
         run: |
           uv sync 
