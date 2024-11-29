@@ -1,6 +1,13 @@
-# Rapyuta IO SDK v2
+<p align="center">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="./assets/v2sdk-logo-dark.png">
+      <img alt="Telemetry Pipeline Logo" src="./assets/v2sdk-logo-light.png">
+    </picture>
+</p>
 
-Rapyuta IO SDK v2 provides a comprehensive set of tools and functionalities to interact with the rapyuta.io platform.
+# rapyuta.io SDK v2
+
+rapyuta.io SDK v2 provides a comprehensive set of tools and functionalities to interact with the rapyuta.io platform.
 
 ## Installation
 
@@ -8,13 +15,13 @@ Rapyuta IO SDK v2 provides a comprehensive set of tools and functionalities to i
 pip install rapyuta-io-sdk-v2
 ```
 
-## Configuration
+## Usage
 
-To use the SDK, you need to configure it with your Rapyuta IO credentials and environment settings.
+To use the SDK, you need to configure it with your rapyuta.io credentials.
 
 ### From a Configuration File
 
-You can create a Configuration object from a JSON file:
+You can create a `Configuration` object from a JSON file.
 
 ```python
 from rapyuta_io_sdk_v2.config import Configuration, Client
@@ -23,7 +30,7 @@ config = Configuration.from_file("/path/to/config.json")
 client = Client(config)
 ```
 
-### Using Email and Password
+### Using `email` and `password`
 
 ```python
 from rapyuta_io_sdk_v2.config import Configuration, Client
@@ -33,27 +40,15 @@ client = Client(config)
 client.login(email="EMAIL", password="PASSWORD")
 ```
 
-## Usage
+You are now set to invoke various methods on the `client` object.
 
-You can call multiple methods for projects, packages, deployments, etc.
-
-* To List Projects
+For example, this is how you can list projects.
 
 ```python
 projects = client.list_projects()
 print(projects)
 ```
 
-* To List Deployments
-
-```python
-print(client.list_deployments())
-```
-
-## More Operations
-
-The SDK supports many more operations such as managing disks, networks, secrets, and static routes. Refer to the source code for detailed method definitions and usage.
-
 ## Contributing
 
-We welcome contributions! Please read our [contributing guidelines](CONTRIBUTING.md) to get started.
+We welcome contributions. Please read our [contribution guidelines](CONTRIBUTING.md) to get started.
