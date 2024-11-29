@@ -1,26 +1,58 @@
 # Rapyuta IO SDK v2
-Rapyuta IO SDK v2 provides a comprehensive set of tools and functionalities to interact with the rapyut.io platform.
+
+Rapyuta IO SDK v2 provides a comprehensive set of tools and functionalities to interact with the rapyuta.io platform.
 
 ## Installation
+
 ```bash
 pip install rapyuta-io-sdk-v2
 ```
 
-### Quick Start
+## Configuration
+
+To use the SDK, you need to configure it with your Rapyuta IO credentials and environment settings.
+
+### From a Configuration File
+
+You can create a Configuration object from a JSON file:
+
 ```python
-from rapyuta_io_sdk_v2 import Configuration, Client
+from rapyuta_io_sdk_v2.config import Configuration, Client
 
-config = Configuration(email="user@email.com", 
-                       password="password", 
-                       organization_guid="organization_guid", 
-                       project_guid="project_guid")
-
+config = Configuration.from_file("/path/to/config.json")
 client = Client(config)
-client.login()
-
-# Get current project
-project = client.get_project()
 ```
+
+### Using Email and Password
+
+```python
+from rapyuta_io_sdk_v2.config import Configuration, Client
+
+config = Configuration(organization_guid="ORGANIZATION_GUID")
+client = Client(config)
+client.login(email="EMAIL", password="PASSWORD")
+```
+
+## Usage
+
+You can call multiple methods for projects, packages, deployments, etc.
+
+* To List Projects
+
+```python
+projects = client.list_projects()
+print(projects)
+```
+
+* To List Deployments
+
+```python
+print(client.list_deployments())
+```
+
+## More Operations
+
+The SDK supports many more operations such as managing disks, networks, secrets, and static routes. Refer to the source code for detailed method definitions and usage.
 
 ## Contributing
 
