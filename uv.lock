@@ -30,6 +30,18 @@ wheels = [
 ]
 
 [[package]]
+name = "asyncmock"
+version = "0.4.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "mock" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/c8/58/fa6b3147951a8d82cc78e628dffee0aa5838328c52ebfee4e0ddceb5d92b/asyncmock-0.4.2.tar.gz", hash = "sha256:c251889d542e98fe5f7ece2b5b8643b7d62b50a5657d34a4cbce8a1d5170d750", size = 3191 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/03/e3/873f433eca053c92d3cdb9336a379ee025bc1a86d4624ef87bf97a9ac7bc/asyncmock-0.4.2-py3-none-any.whl", hash = "sha256:fd8bc4e7813251a8959d1140924ccba3adbbc7af885dba7047c67f73c0b664b1", size = 4190 },
+]
+
+[[package]]
 name = "certifi"
 version = "2024.8.30"
 source = { registry = "https://pypi.org/simple" }
@@ -250,6 +262,18 @@ wheels = [
 ]
 
 [[package]]
+name = "pytest-asyncio"
+version = "0.24.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pytest" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/52/6d/c6cf50ce320cf8611df7a1254d86233b3df7cc07f9b5f5cbcb82e08aa534/pytest_asyncio-0.24.0.tar.gz", hash = "sha256:d081d828e576d85f875399194281e92bf8a68d60d72d1a2faf2feddb6c46b276", size = 49855 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/96/31/6607dab48616902f76885dfcf62c08d929796fc3b2d2318faf9fd54dbed9/pytest_asyncio-0.24.0-py3-none-any.whl", hash = "sha256:a811296ed596b69bf0b6f3dc40f83bcaf341b155a269052d82efa2b25ac7037b", size = 18024 },
+]
+
+[[package]]
 name = "pytest-cov"
 version = "5.0.0"
 source = { registry = "https://pypi.org/simple" }
@@ -287,9 +311,11 @@ dependencies = [
 dev = [
     { name = "anyio" },
     { name = "asyncer" },
+    { name = "asyncmock" },
     { name = "coverage" },
     { name = "mock" },
     { name = "pytest" },
+    { name = "pytest-asyncio" },
     { name = "pytest-cov" },
     { name = "pytest-mock" },
     { name = "typing-extensions" },
@@ -305,9 +331,11 @@ requires-dist = [
 dev = [
     { name = "anyio", specifier = ">=4.5.2" },
     { name = "asyncer", specifier = ">=0.0.8" },
+    { name = "asyncmock", specifier = ">=0.4.2" },
     { name = "coverage", specifier = ">=7.6.1" },
     { name = "mock", specifier = ">=5.1.0" },
     { name = "pytest", specifier = ">=8.3.3" },
+    { name = "pytest-asyncio", specifier = ">=0.24.0" },
     { name = "pytest-cov", specifier = ">=5.0.0" },
     { name = "pytest-mock", specifier = ">=3.14.0" },
     { name = "typing-extensions", specifier = ">=4.12.2" },
