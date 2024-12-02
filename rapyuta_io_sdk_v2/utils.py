@@ -13,14 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # from rapyuta_io_sdk_v2.config import Configuration
-import http
+import asyncio
 import json
 import os
 import sys
+import typing
+from functools import wraps
 
 import httpx
+from munch import Munch, munchify
 
-from rapyuta_io_sdk_v2.exceptions import HttpAlreadyExistsError, HttpNotFoundError
+import rapyuta_io_sdk_v2.exceptions as exceptions
 
 
 def handle_server_errors(response: httpx.Response):
@@ -36,36 +39,36 @@ def handle_server_errors(response: httpx.Response):
         err = response.text
 
     # 404 Not Found
-    if status_code == http.HTTPStatus.NOT_FOUND:
-        raise HttpNotFoundError(err)
+    if status_code == httpx.codes.NOT_FOUND:
+        raise exceptions.HttpNotFoundError(err)
     # 405 Method Not Allowed
-    if status_code == http.HTTPStatus.METHOD_NOT_ALLOWED:
-        raise Exception("method not allowed")
+    if status_code == httpx.codes.METHOD_NOT_ALLOWED:
+        raise exceptions.MethodNotAllowedError(err)
     # 409 Conflict
-    if status_code == http.HTTPStatus.CONFLICT:
-        raise HttpAlreadyExistsError()
+    if status_code == httpx.codes.CONFLICT:
+        raise exceptions.HttpAlreadyExistsError(err)
     # 500 Internal Server Error
-    if status_code == http.HTTPStatus.INTERNAL_SERVER_ERROR:
-        raise Exception("internal server error")
+    if status_code == httpx.codes.INTERNAL_SERVER_ERROR:
+        raise exceptions.InternalServerError(err)
     # 501 Not Implemented
-    if status_code == http.HTTPStatus.NOT_IMPLEMENTED:
-        raise Exception("not implemented")
+    if status_code == httpx.codes.NOT_IMPLEMENTED:
+        raise exceptions.NotImplementedError(err)
     # 502 Bad Gateway
-    if status_code == http.HTTPStatus.BAD_GATEWAY:
-        raise Exception("bad gateway")
+    if status_code == httpx.codes.BAD_GATEWAY:
+        raise exceptions.BadGatewayError(err)
     # 503 Service Unavailable
-    if status_code == http.HTTPStatus.SERVICE_UNAVAILABLE:
-        raise Exception("service unavailable")
+    if status_code == httpx.codes.SERVICE_UNAVAILABLE:
+        raise exceptions.ServiceUnavailableError(err)
     # 504 Gateway Timeout
-    if status_code == http.HTTPStatus.GATEWAY_TIMEOUT:
-        raise Exception("gateway timeout")
+    if status_code == httpx.codes.GATEWAY_TIMEOUT:
+        raise exceptions.GatewayTimeoutError(err)
     # 401 UnAuthorize Access
-    if status_code == http.HTTPStatus.UNAUTHORIZED:
-        raise Exception("unauthorized permission access")
+    if status_code == httpx.codes.UNAUTHORIZED:
+        raise exceptions.UnauthorizedAccessError(err)
 
     # Anything else that is not known
     if status_code > 504:
-        raise Exception("unknown server error")
+        raise exceptions.UnknownError(err)
 
 
 def get_default_app_dir(app_name: str) -> str:
@@ -85,3 +88,64 @@ def get_default_app_dir(app_name: str) -> str:
     # On Linux and other Unix-like systems
     xdg_config_home = os.environ.get("XDG_CONFIG_HOME", os.path.expanduser("~/.config"))
     return os.path.join(xdg_config_home, app_name)
+
+
+# Decorator to handle server errors and munchify response
+def handle_and_munchify_response(func) -> typing.Callable:
+    """Decorator to handle server errors and munchify response.
+
+    Args:
+        func (callable): The function to decorate.
+    """
+
+    @wraps(func)
+    async def async_wrapper(*args, **kwargs) -> Munch:
+        response = await func(*args, **kwargs)
+        handle_server_errors(response)
+        return munchify(response.json())
+
+    @wraps(func)
+    def sync_wrapper(*args, **kwargs) -> Munch:
+        response = func(*args, **kwargs)
+        handle_server_errors(response)
+        return munchify(response.json())
+
+    if asyncio.iscoroutinefunction(func):
+        return async_wrapper
+
+    return sync_wrapper
+
+
+def walk_pages(
+    func: typing.Callable,
+    *args,
+    limit: int = 50,
+    cont: int = 0,
+    **kwargs,
+) -> typing.Generator:
+    """A generator function to paginate through list API results.
+
+    Args:
+        func (callable): The API function to call, must accept `cont` and `limit` as arguments.
+        *args: Positional arguments to pass to the API function.
+        limit (int, optional): Maximum number of items to return. Defaults to 50.
+        cont (int, optional): Initial continuation token. Defaults to 0.
+        **kwargs: Additional keyword arguments to pass to the API function.
+
+    Yields:
+        Munch: Each item from the API response.
+    """
+    while True:
+        data = func(cont, limit, *args, **kwargs)
+
+        items = data.get("items", [])
+        if not items:
+            break
+
+        for item in items:
+            yield munchify(item)
+
+        # Update `cont` for the next page
+        cont = data.get("metadata", {}).get("continue")
+        if cont is None:
+            break

@@ -13,16 +13,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import json
-from dataclasses import dataclass
 import os
+from dataclasses import dataclass
 
 from rapyuta_io_sdk_v2.constants import (
     APP_NAME,
     NAMED_ENVIRONMENTS,
     STAGING_ENVIRONMENT_SUBDOMAIN,
 )
-from rapyuta_io_sdk_v2.utils import get_default_app_dir
 from rapyuta_io_sdk_v2.exceptions import ValidationError
+from rapyuta_io_sdk_v2.utils import get_default_app_dir
 
 
 @dataclass
@@ -69,22 +69,30 @@ class Configuration(object):
                 auth_token=data.get("auth_token"),
             )
 
-    def get_headers(self, with_project: bool = True) -> dict:
+    def get_headers(
+        self,
+        organization_guid: str = None,
+        with_project: bool = True,
+        project_guid: str = None,
+    ) -> dict:
         """Get the headers for the configuration.
 
         Args:
-            with_project (bool): Include project guid in headers. Default is True.
+            with_project (bool): Whether to include the project headers.
+            **kwargs: Arbitrary keyword arguments.
 
         Returns:
             dict: Headers for the configuration.
         """
         headers = dict(Authorization=f"Bearer {self.auth_token}")
 
-        if self.organization_guid:
-            headers["organizationguid"] = self.organization_guid
+        organization_guid = organization_guid or self.organization_guid
+        if organization_guid:
+            headers["organizationguid"] = organization_guid
 
-        if with_project and self.project_guid is not None:
-            headers["project"] = self.project_guid
+        project_guid = project_guid or self.project_guid
+        if with_project and project_guid is not None:
+            headers["project"] = project_guid
 
         custom_client_request_id = os.getenv("REQUEST_ID")
         if custom_client_request_id:
