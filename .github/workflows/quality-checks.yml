@@ -1,0 +1,31 @@
+name: ✅ Quality Checks
+on: [ push ]
+
+jobs:
+  perform-checks:
+    name: Perform checks
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12', '3.13']
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Lint code
+        uses: astral-sh/ruff-action@v1
+        with:
+          args: "check"
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        run: uv python install ${{ matrix.python-version }}
+
+      - name: Run unit tests
+        run: |
+          uv sync --all-extras --dev
+          source .venv/bin/activate
+          uv run pytest tests/

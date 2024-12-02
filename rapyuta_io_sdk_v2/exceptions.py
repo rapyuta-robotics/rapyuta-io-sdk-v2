@@ -44,3 +44,51 @@ class ValidationError(Exception):
     def __init__(self, message=None):
         self.message = message
         super().__init__(self.message)
+
+
+class MethodNotAllowedError(Exception):
+    def __init__(self, message="method not allowed"):
+        self.message = message
+        super().__init__(self.message)
+
+
+class InternalServerError(Exception):
+    def __init__(self, message="internal server error"):
+        self.message = message
+        super().__init__(self.message)
+
+
+class NotImplementedError(Exception):
+    def __init__(self, message="not implemented"):
+        self.message = message
+        super().__init__(self.message)
+
+
+class BadGatewayError(Exception):
+    def __init__(self, message="bad gateway"):
+        self.message = message
+        super().__init__(self.message)
+
+
+class UnauthorizedAccessError(Exception):
+    def __init__(self, message="unauthorized permission access"):
+        self.message = message
+        super().__init__(self.message)
+
+
+class GatewayTimeoutError(Exception):
+    def __init__(self, message="gateway timeout"):
+        self.message = message
+        super().__init__(self.message)
+
+
+class ServiceUnavailableError(Exception):
+    def __init__(self, message="service unavailable"):
+        self.message = message
+        super().__init__(self.message)
+
+
+class UnknownError(Exception):
+    def __init__(self, message="unknown error"):
+        self.message = message
+        super().__init__(self.message)
