@@ -1,6 +1,6 @@
 import pytest
 
-from rapyuta_io_sdk_v2 import Client, Configuration, AsyncClient
+from rapyuta_io_sdk_v2 import Configuration
 
 
 @pytest.fixture
