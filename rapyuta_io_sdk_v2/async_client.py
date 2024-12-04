@@ -392,14 +392,14 @@ class AsyncClient(object):
         self,
         cont: int = 0,
         dependencies: bool = False,
-        deviceName: str = None,
+        device_name: str = None,
         guids: list[str] = None,
         label_selector: list[str] = None,
         limit: int = 50,
         name: str = None,
         names: list[str] = None,
-        packageName: str = None,
-        packageVersion: str = None,
+        package_name: str = None,
+        package_version: str = None,
         phases: list[str] = None,
         regions: list[str] = None,
         **kwargs,
@@ -409,14 +409,14 @@ class AsyncClient(object):
         Args:
             cont (int, optional): Start index of deployments. Defaults to 0.
             dependencies (bool, optional): Filter by dependencies. Defaults to False.
-            deviceName (str, optional): Filter deployments by device name. Defaults to None.
+            device_name (str, optional): Filter deployments by device name. Defaults to None.
             guids (list[str], optional): Filter by GUIDs. Defaults to None.
             label_selector (list[str], optional): Define labelSelector to get deployments from. Defaults to None.
             limit (int, optional): Number of deployments to list. Defaults to 50.
             name (str, optional): Define name to get deployments from. Defaults to None.
             names (list[str], optional): Define names to get deployments from. Defaults to None.
-            packageName (str, optional): Filter by package name. Defaults to None.
-            packageVersion (str, optional): Filter by package version. Defaults to None.
+            package_name (str, optional): Filter by package name. Defaults to None.
+            package_version (str, optional): Filter by package version. Defaults to None.
             phases (list[str], optional): Filter by phases. Available values : InProgress, Provisioning, Succeeded, FailedToUpdate, FailedToStart, Stopped. Defaults to None.
             regions (list[str], optional): Filter by regions. Defaults to None.
 
@@ -431,13 +431,13 @@ class AsyncClient(object):
                 "continue": cont,
                 "limit": limit,
                 "dependencies": dependencies,
-                "deviceName": deviceName,
+                "deviceName": device_name,
                 "guids": guids,
                 "labelSelector": label_selector,
                 "name": name,
                 "names": names,
-                "packageName": packageName,
-                "packageVersion": packageVersion,
+                "packageName": package_name,
+                "packageVersion": package_version,
                 "phases": phases,
                 "regions": regions,
             },
@@ -729,12 +729,12 @@ class AsyncClient(object):
     async def list_networks(
         self,
         cont: int = 0,
-        deviceName: str = None,
+        device_name: str = None,
         label_selector: list[str] = None,
         limit: int = 50,
         name: str = None,
         names: list[str] = None,
-        networkType: str = None,
+        network_type: str = None,
         phases: list[str] = None,
         regions: list[str] = None,
         status: list[str] = None,
@@ -744,12 +744,12 @@ class AsyncClient(object):
 
         Args:
             cont (int, optional): Start index of networks. Defaults to 0.
-            deviceName (str, optional): Filter networks by device name. Defaults to None.
+            device_name (str, optional): Filter networks by device name. Defaults to None.
             label_selector (list[str], optional): Define labelSelector to get networks from. Defaults to None.
             limit (int, optional): Number of networks to list. Defaults to 50.
             name (str, optional): Define name to get networks from. Defaults to None.
             names (list[str], optional): Define names to get networks from. Defaults to None.
-            networkType (str, optional): Define network type to get networks from. Defaults to None.
+            network_type (str, optional): Define network type to get networks from. Defaults to None.
             phases (list[str], optional): Define phases to get networks from. Available values : InProgress, Provisioning, Succeeded, FailedToUpdate, FailedToStart, Stopped. Defaults to None.
             regions (list[str], optional): Define regions to get networks from. Defaults to None.
             status (list[str], optional): Define status to get networks from. Available values : Running, Pending, Error, Unknown, Stopped. Defaults to None.
@@ -764,11 +764,11 @@ class AsyncClient(object):
             params={
                 "continue": cont,
                 "limit": limit,
-                "deviceName": deviceName,
+                "deviceName": device_name,
                 "labelSelector": label_selector,
                 "name": name,
                 "names": names,
-                "networkType": networkType,
+                "networkType": network_type,
                 "phases": phases,
                 "regions": regions,
                 "status": status,
@@ -981,9 +981,9 @@ class AsyncClient(object):
     async def get_configtree(
         self,
         name: str,
-        contentTypes: list[str] = None,
-        includeData: bool = False,
-        keyPrefixes: list[str] = None,
+        content_type: list[str] = None,
+        include_data: bool = False,
+        key_prefixes: list[str] = None,
         revision: str = None,
         **kwargs,
     ) -> Munch:
@@ -991,9 +991,9 @@ class AsyncClient(object):
 
         Args:
             name (str): Config tree name
-            contentTypes (list[str], optional): Define contentTypes to get config tree from. Defaults to None.
-            includeData (bool, optional): Include data. Defaults to False.
-            keyPrefixes (list[str], optional): Define keyPrefixes to get config tree from. Defaults to None.
+            content_types (list[str], optional): Define contentTypes to get config tree from. Defaults to None.
+            include_data (bool, optional): Include data. Defaults to False.
+            key_prefixes (list[str], optional): Define keyPrefixes to get config tree from. Defaults to None.
             revision (str, optional): Define revision to get config tree from. Defaults to None.
 
         Returns:
@@ -1004,9 +1004,9 @@ class AsyncClient(object):
             url=f"{self.v2api_host}/v2/configtrees/{name}/",
             headers=self.config.get_headers(**kwargs),
             params={
-                "contentTypes": contentTypes,
-                "includeData": includeData,
-                "keyPrefixes": keyPrefixes,
+                "contentTypes": content_type,
+                "includeData": include_data,
+                "keyPrefixes": key_prefixes,
                 "revision": revision,
             },
         )
