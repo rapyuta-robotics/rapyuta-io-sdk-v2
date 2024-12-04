@@ -3,7 +3,7 @@ import pytest  # noqa: F401
 from munch import Munch
 from pytest_mock import MockerFixture
 
-from tests.utils.test_util import client  # noqa: F401
+from tests.utils.fixtures import client  # noqa: F401
 
 
 def test_list_providers_success(client, mocker: MockerFixture):  # noqa: F811

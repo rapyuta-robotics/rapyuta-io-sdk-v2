@@ -3,11 +3,11 @@ import pytest
 from munch import Munch
 from pytest_mock import MockerFixture
 
-from tests.utils.test_util import (
-    client,  # noqa: F401
+from tests.utils.util import (
     mock_response_project,  # noqa: F401
     project_body,
 )  # noqa: F401
+from tests.utils.fixtures import client  # noqa: F401
 
 
 # Test function for list_projects

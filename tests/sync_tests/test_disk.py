@@ -3,7 +3,8 @@ import pytest
 from munch import Munch
 from pytest_mock import MockerFixture
 
-from tests.utils.test_util import client, disk_body  # noqa: F401
+from tests.utils.util import disk_body  # noqa: F401
+from tests.utils.fixtures import client  # noqa: F401
 
 
 def test_list_disks_success(client, mocker: MockerFixture):  # noqa: F811

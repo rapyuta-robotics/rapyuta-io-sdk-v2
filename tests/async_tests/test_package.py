@@ -4,10 +4,8 @@ import httpx
 from munch import Munch
 from asyncmock import AsyncMock
 
-from tests.utils.test_util import (
-    async_client as client,  # noqa: F401
-    package_body,
-)
+from tests.utils.util import package_body
+from tests.utils.fixtures import async_client as client  # noqa: F401
 
 
 @pytest.mark.asyncio
