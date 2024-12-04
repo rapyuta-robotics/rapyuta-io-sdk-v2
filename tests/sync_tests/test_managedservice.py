@@ -35,9 +35,7 @@ def test_list_providers_success(client, mocker: MockerFixture):  # noqa: F811
 
     # Validate the response
     assert isinstance(response, Munch)
-    assert response["items"] == [
-        {"name": "test-provider", "guid": "mock_provider_guid"}
-    ]
+    assert response["items"] == [{"name": "test-provider", "guid": "mock_provider_guid"}]
 
 
 def test_list_instances_success(client, mocker: MockerFixture):  # noqa: F811
@@ -69,9 +67,7 @@ def test_list_instances_success(client, mocker: MockerFixture):  # noqa: F811
 
     # Validate the response
     assert isinstance(response, Munch)
-    assert response["items"] == [
-        {"name": "test-instance", "guid": "mock_instance_guid"}
-    ]
+    assert response["items"] == [{"name": "test-instance", "guid": "mock_instance_guid"}]
 
 
 def test_get_instance_success(client, mocker: MockerFixture):  # noqa: F811

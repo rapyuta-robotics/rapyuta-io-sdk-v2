@@ -242,9 +242,7 @@ def test_update_project_success(client, mock_response_project, mocker: MockerFix
     }
 
     # Call the update_project method
-    response = client.update_project(
-        project_guid="mock_project_guid", body=project_body
-    )
+    response = client.update_project(project_guid="mock_project_guid", body=project_body)
 
     # Validate the response
     assert isinstance(response, Munch)

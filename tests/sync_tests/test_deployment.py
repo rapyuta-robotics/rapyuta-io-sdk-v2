@@ -195,9 +195,7 @@ def test_update_deployment_success(client, deployment_body, mocker: MockerFixtur
         if v is not None
     }
 
-    response = client.update_deployment(
-        name="mock_deployment_name", body=deployment_body
-    )
+    response = client.update_deployment(name="mock_deployment_name", body=deployment_body)
 
     assert isinstance(response, Munch)
     assert response["metadata"]["guid"] == "test_deployment_guid"

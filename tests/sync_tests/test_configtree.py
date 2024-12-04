@@ -205,9 +205,7 @@ def test_update_configtree_success(client, mocker: MockerFixture):  # noqa: F811
     }
 
     # Call the update_configtree method
-    response = client.update_configtree(
-        name="mock_configtree_name", body=configtree_body
-    )
+    response = client.update_configtree(name="mock_configtree_name", body=configtree_body)
 
     # Validate the response
     assert isinstance(response, Munch)

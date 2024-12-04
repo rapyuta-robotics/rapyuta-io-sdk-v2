@@ -30,9 +30,7 @@ def mock_response_project():
         "kind": "Project",
         "metadata": {"name": "test-project", "guid": "mock_project_guid"},
         "spec": {
-            "users": [
-                {"userGUID": "mock_user_guid", "emailID": "test.user@example.com"}
-            ]
+            "users": [{"userGUID": "mock_user_guid", "emailID": "test.user@example.com"}]
         },
     }
 

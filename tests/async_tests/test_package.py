@@ -51,9 +51,7 @@ async def test_create_package_success(client, mocker: AsyncMock):  # noqa: F811
         json={
             "kind": "Package",
             "metadata": {"name": "test-package", "guid": "mock_package_guid"},
-            "spec": {
-                "users": [{"userGUID": "mock_user_guid", "emailID": "mock_email"}]
-            },
+            "spec": {"users": [{"userGUID": "mock_user_guid", "emailID": "mock_email"}]},
         },
     )
 
