@@ -461,7 +461,7 @@ class AsyncClient(object):
         )
 
     @handle_and_munchify_response
-    async def get_deployment(self, name: str, guid: str = None,**kwargs) -> Munch:
+    async def get_deployment(self, name: str, guid: str = None, **kwargs) -> Munch:
         """Get a deployment by its name.
 
         Returns:
