@@ -461,7 +461,7 @@ class AsyncClient(object):
         )
 
     @handle_and_munchify_response
-    async def get_deployment(self, name: str, **kwargs) -> Munch:
+    async def get_deployment(self, name: str, guid: str = None,**kwargs) -> Munch:
         """Get a deployment by its name.
 
         Returns:
@@ -471,6 +471,7 @@ class AsyncClient(object):
         return await self.c.get(
             url=f"{self.v2api_host}/v2/deployments/{name}/",
             headers=self.config.get_headers(**kwargs),
+            params={"guid": guid},
         )
 
     @handle_and_munchify_response
@@ -981,7 +982,7 @@ class AsyncClient(object):
     async def get_configtree(
         self,
         name: str,
-        content_type: list[str] = None,
+        content_types: list[str] = None,
         include_data: bool = False,
         key_prefixes: list[str] = None,
         revision: str = None,
@@ -1004,7 +1005,7 @@ class AsyncClient(object):
             url=f"{self.v2api_host}/v2/configtrees/{name}/",
             headers=self.config.get_headers(**kwargs),
             params={
-                "contentTypes": content_type,
+                "contentTypes": content_types,
                 "includeData": include_data,
                 "keyPrefixes": key_prefixes,
                 "revision": revision,
