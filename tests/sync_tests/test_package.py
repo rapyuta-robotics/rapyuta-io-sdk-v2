@@ -1,13 +1,13 @@
 import httpx
 import pytest
 from munch import Munch
-from pytest_mock import MockerFixture
+from pytest_mock import MockFixture
 
-from tests.utils.util import package_body  # noqa: F401
+from tests.data.mock_data import package_body  # noqa: F401
 from tests.utils.fixtures import client  # noqa: F401
 
 
-def test_list_packages_success(client, mocker: MockerFixture):  # noqa: F811
+def test_list_packages_success(client, mocker: MockFixture):  # noqa: F811
     # Mock the httpx.Client.get method
     mock_get = mocker.patch("httpx.Client.get")
 
@@ -20,17 +20,6 @@ def test_list_packages_success(client, mocker: MockerFixture):  # noqa: F811
         },
     )
 
-    # Override get_headers to return the mocked headers without None values
-    client.config.get_headers = lambda with_project=True: {
-        k: v
-        for k, v in {
-            "Authorization": f"Bearer {client.auth_token}",
-            "organizationguid": client.organization_guid,
-            "project": "mock_project_guid" if with_project else None,
-        }.items()
-        if v is not None
-    }
-
     # Call the list_packages method
     response = client.list_packages()
 
@@ -39,7 +28,7 @@ def test_list_packages_success(client, mocker: MockerFixture):  # noqa: F811
     assert response["items"] == [{"name": "test_package", "guid": "mock_package_guid"}]
 
 
-def test_list_packages_not_found(client, mocker: MockerFixture):  # noqa: F811
+def test_list_packages_not_found(client, mocker: MockFixture):  # noqa: F811
     # Mock the httpx.Client.get method
     mock_get = mocker.patch("httpx.Client.get")
 
@@ -48,13 +37,6 @@ def test_list_packages_not_found(client, mocker: MockerFixture):  # noqa: F811
         status_code=404,
         json={"error": "not found"},
     )
-
-    # Override get_headers to return the mocked headers without None values
-    client.config.get_headers = lambda with_project=True: {
-        "Authorization": f"Bearer {client.auth_token}",
-        "organizationguid": client.organization_guid,
-        "project": "mock_project_guid" if with_project else None,
-    }
 
     # Call the list_packages method
     with pytest.raises(Exception) as exc:
@@ -65,7 +47,7 @@ def test_list_packages_not_found(client, mocker: MockerFixture):  # noqa: F811
     # assert response. == "not found"
 
 
-def test_get_package_success(client, mocker: MockerFixture):  # noqa: F811
+def test_get_package_success(client, mocker: MockFixture):  # noqa: F811
     # Mock the httpx.Client.get method
     mock_get = mocker.patch("httpx.Client.get")
 
@@ -77,17 +59,6 @@ def test_get_package_success(client, mocker: MockerFixture):  # noqa: F811
         },
     )
 
-    # Override get_headers to return the mocked headers without None values
-    client.config.get_headers = lambda with_project=True, **kwargs: {
-        k: v
-        for k, v in {
-            "Authorization": f"Bearer {client.auth_token}",
-            "organizationguid": client.organization_guid,
-            "project": kwargs.get("project_guid") if with_project else None,
-        }.items()
-        if v is not None
-    }
-
     # Call the get_package method
     response = client.get_package(name="mock_package_name")
 
@@ -97,7 +68,7 @@ def test_get_package_success(client, mocker: MockerFixture):  # noqa: F811
     assert response.metadata.name == "test_package"
 
 
-def test_get_package_not_found(client, mocker: MockerFixture):  # noqa: F811
+def test_get_package_not_found(client, mocker: MockFixture):  # noqa: F811
     # Mock the httpx.Client.get method
     mock_get = mocker.patch("httpx.Client.get")
 
@@ -107,13 +78,6 @@ def test_get_package_not_found(client, mocker: MockerFixture):  # noqa: F811
         json={"error": "not found"},
     )
 
-    # Override get_headers to return the mocked headers without None values
-    client.config.get_headers = lambda with_project=True, **kwargs: {
-        "Authorization": f"Bearer {client.auth_token}",
-        "organizationguid": client.organization_guid,
-        "project": kwargs.get("package_guid") if with_project else None,
-    }
-
     # Call the get_package method
     with pytest.raises(Exception) as exc:
         client.get_package(name="mock_package_name")
@@ -122,7 +86,7 @@ def test_get_package_not_found(client, mocker: MockerFixture):  # noqa: F811
     assert str(exc.value) == "not found"
 
 
-def test_create_package_success(client, package_body, mocker: MockerFixture):  # noqa: F811
+def test_create_package_success(client, package_body, mocker: MockFixture):  # noqa: F811
     # Mock the httpx.Client.post method
     mock_post = mocker.patch("httpx.Client.post")
 
@@ -133,17 +97,6 @@ def test_create_package_success(client, package_body, mocker: MockerFixture):  #
             "metadata": {"guid": "test_package_guid", "name": "test_package"},
         },
     )
-
-    # Override get_headers to return the mocked headers without None values
-    client.config.get_headers = lambda with_project=True, **kwargs: {
-        k: v
-        for k, v in {
-            "Authorization": f"Bearer {client.auth_token}",
-            "organizationguid": client.organization_guid,
-            "project": kwargs.get("project_guid") if with_project else None,
-        }.items()
-        if v is not None
-    }
 
     # Call the create_package method
     response = client.create_package(body=package_body)

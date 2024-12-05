@@ -1,15 +1,17 @@
 import httpx
 import pytest
+import pytest_asyncio  # noqa: F401
 from munch import Munch
-from pytest_mock import MockFixture
+from asyncmock import AsyncMock
 
 from tests.data.mock_data import network_body  # noqa: F401
-from tests.utils.fixtures import client  # noqa: F401
+from tests.utils.fixtures import async_client as client  # noqa: F401
 
 
-def test_list_networks_success(client, mocker: MockFixture):  # noqa: F811
-    # Mock the httpx.Client.get method
-    mock_get = mocker.patch("httpx.Client.get")
+@pytest.mark.asyncio
+async def test_list_networks_success(client, mocker: AsyncMock):  # noqa: F811
+    # Mock the httpx.AsyncClient.get method
+    mock_get = mocker.patch("httpx.AsyncClient.get")
 
     # Set up the mock responses for pagination
     mock_get.return_value = httpx.Response(
@@ -21,16 +23,17 @@ def test_list_networks_success(client, mocker: MockFixture):  # noqa: F811
     )
 
     # Call the list_networks method
-    response = client.list_networks()
+    response = await client.list_networks()
 
     # Validate the response
     assert isinstance(response, Munch)
     assert response["items"] == [{"name": "test-network", "guid": "mock_network_guid"}]
 
 
-def test_list_networks_not_found(client, mocker: MockFixture):  # noqa: F811
-    # Mock the httpx.Client.get method
-    mock_get = mocker.patch("httpx.Client.get")
+@pytest.mark.asyncio
+async def test_list_networks_not_found(client, mocker: AsyncMock):  # noqa: F811
+    # Mock the httpx.AsyncClient.get method
+    mock_get = mocker.patch("httpx.AsyncClient.get")
 
     # Set up the mock response
     mock_get.return_value = httpx.Response(
@@ -39,14 +42,15 @@ def test_list_networks_not_found(client, mocker: MockFixture):  # noqa: F811
     )
 
     with pytest.raises(Exception) as exc:
-        client.list_networks()
+        await client.list_networks()
 
     assert str(exc.value) == "not found"
 
 
-def test_create_network_success(client, mocker: MockFixture):  # noqa: F811
-    # Mock the httpx.Client.post method
-    mock_post = mocker.patch("httpx.Client.post")
+@pytest.mark.asyncio
+async def test_create_network_success(client, mocker: AsyncMock):  # noqa: F811
+    # Mock the httpx.AsyncClient.post method
+    mock_post = mocker.patch("httpx.AsyncClient.post")
 
     # Set up the mock response
     mock_post.return_value = httpx.Response(
@@ -57,16 +61,17 @@ def test_create_network_success(client, mocker: MockFixture):  # noqa: F811
     )
 
     # Call the create_network method
-    response = client.create_network(body=network_body)
+    response = await client.create_network(body=network_body)
 
     # Validate the response
     assert isinstance(response, Munch)
     assert response["metadata"]["name"] == "test-network"
 
 
-def test_create_network_failure(client, mocker: MockFixture):  # noqa: F811
-    # Mock the httpx.Client.post method
-    mock_post = mocker.patch("httpx.Client.post")
+@pytest.mark.asyncio
+async def test_create_network_failure(client, mocker: AsyncMock):  # noqa: F811
+    # Mock the httpx.AsyncClient.post method
+    mock_post = mocker.patch("httpx.AsyncClient.post")
 
     # Set up the mock response
     mock_post.return_value = httpx.Response(
@@ -75,14 +80,15 @@ def test_create_network_failure(client, mocker: MockFixture):  # noqa: F811
     )
 
     with pytest.raises(Exception) as exc:
-        client.create_network(body=network_body)
+        await client.create_network(body=network_body)
 
     assert str(exc.value) == "already exists"
 
 
-def test_get_network_success(client, mocker: MockFixture):  # noqa: F811
-    # Mock the httpx.Client.get method
-    mock_get = mocker.patch("httpx.Client.get")
+@pytest.mark.asyncio
+async def test_get_network_success(client, mocker: AsyncMock):  # noqa: F811
+    # Mock the httpx.AsyncClient.get method
+    mock_get = mocker.patch("httpx.AsyncClient.get")
 
     # Set up the mock response
     mock_get.return_value = httpx.Response(
@@ -93,16 +99,17 @@ def test_get_network_success(client, mocker: MockFixture):  # noqa: F811
     )
 
     # Call the get_network method
-    response = client.get_network(name="test-network")
+    response = await client.get_network(name="test-network")
 
     # Validate the response
     assert isinstance(response, Munch)
     assert response["metadata"]["guid"] == "mock_network_guid"
 
 
-def test_delete_network_success(client, mocker: MockFixture):  # noqa: F811
-    # Mock the httpx.Client.delete method
-    mock_delete = mocker.patch("httpx.Client.delete")
+@pytest.mark.asyncio
+async def test_delete_network_success(client, mocker: AsyncMock):  # noqa: F811
+    # Mock the httpx.AsyncClient.delete method
+    mock_delete = mocker.patch("httpx.AsyncClient.delete")
 
     # Set up the mock response
     mock_delete.return_value = httpx.Response(
@@ -111,7 +118,7 @@ def test_delete_network_success(client, mocker: MockFixture):  # noqa: F811
     )
 
     # Call the delete_network method
-    response = client.delete_network(name="test-network")
+    response = await client.delete_network(name="test-network")
 
     # Validate the response
     assert response["success"] is True

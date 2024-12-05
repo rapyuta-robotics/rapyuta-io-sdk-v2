@@ -28,5 +28,4 @@ jobs:
         run: |
           uv sync --all-extras --dev
           source .venv/bin/activate
-          uv run pytest tests/sync_tests --cov
-          uv run pytest tests/async_tests --cov
+          uv run pytest tests/ --cov

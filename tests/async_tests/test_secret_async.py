@@ -1,15 +1,17 @@
 import httpx
 import pytest
+import pytest_asyncio  # noqa: F401
 from munch import Munch
-from pytest_mock import MockFixture
+from asyncmock import AsyncMock
 
 from tests.data.mock_data import secret_body  # noqa: F401
-from tests.utils.fixtures import client  # noqa: F401
+from tests.utils.fixtures import async_client as client  # noqa: F401
 
 
-def test_list_secrets_success(client, mocker: MockFixture):  # noqa: F811
-    # Mock the httpx.Client.get method
-    mock_get = mocker.patch("httpx.Client.get")
+@pytest.mark.asyncio
+async def test_list_secrets_success(client, mocker: AsyncMock):  # noqa: F811
+    # Mock the httpx.AsyncClient.get method
+    mock_get = mocker.patch("httpx.AsyncClient.get")
 
     # Set up mock responses for pagination
     mock_get.return_value = httpx.Response(
@@ -21,16 +23,17 @@ def test_list_secrets_success(client, mocker: MockFixture):  # noqa: F811
     )
 
     # Call the list_secrets method
-    response = client.list_secrets()
+    response = await client.list_secrets()
 
     # Validate the response
     assert isinstance(response, Munch)
     assert response["items"] == [{"name": "test-secret", "guid": "mock_secret_guid"}]
 
 
-def test_list_secrets_not_found(client, mocker: MockFixture):  # noqa: F811
-    # Mock the httpx.Client.get method
-    mock_get = mocker.patch("httpx.Client.get")
+@pytest.mark.asyncio
+async def test_list_secrets_not_found(client, mocker: AsyncMock):  # noqa: F811
+    # Mock the httpx.AsyncClient.get method
+    mock_get = mocker.patch("httpx.AsyncClient.get")
 
     # Set up the mock response
     mock_get.return_value = httpx.Response(
@@ -39,14 +42,15 @@ def test_list_secrets_not_found(client, mocker: MockFixture):  # noqa: F811
     )
 
     with pytest.raises(Exception) as exc:
-        client.list_secrets()
+        await client.list_secrets()
 
     assert str(exc.value) == "not found"
 
 
-def test_create_secret_success(client, mocker: MockFixture):  # noqa: F811
-    # Mock the httpx.Client.post method
-    mock_post = mocker.patch("httpx.Client.post")
+@pytest.mark.asyncio
+async def test_create_secret_success(client, mocker: AsyncMock):  # noqa: F811
+    # Mock the httpx.AsyncClient.post method
+    mock_post = mocker.patch("httpx.AsyncClient.post")
 
     # Set up the mock response
     mock_post.return_value = httpx.Response(
@@ -57,16 +61,17 @@ def test_create_secret_success(client, mocker: MockFixture):  # noqa: F811
     )
 
     # Call the create_secret method
-    response = client.create_secret(secret_body)
+    response = await client.create_secret(secret_body)
 
     # Validate the response
     assert isinstance(response, Munch)
     assert response.metadata.guid == "test_secret_guid"
 
 
-def test_create_secret_already_exists(client, mocker: MockFixture):  # noqa: F811
-    # Mock the httpx.Client.post method
-    mock_post = mocker.patch("httpx.Client.post")
+@pytest.mark.asyncio
+async def test_create_secret_already_exists(client, mocker: AsyncMock):  # noqa: F811
+    # Mock the httpx.AsyncClient.post method
+    mock_post = mocker.patch("httpx.AsyncClient.post")
 
     # Set up the mock response
     mock_post.return_value = httpx.Response(
@@ -75,14 +80,15 @@ def test_create_secret_already_exists(client, mocker: MockFixture):  # noqa: F81
     )
 
     with pytest.raises(Exception) as exc:
-        client.create_secret(secret_body)
+        await client.create_secret(secret_body)
 
     assert str(exc.value) == "secret already exists"
 
 
-def test_update_secret_success(client, mocker: MockFixture):  # noqa: F811
-    # Mock the httpx.Client.put method
-    mock_put = mocker.patch("httpx.Client.put")
+@pytest.mark.asyncio
+async def test_update_secret_success(client, mocker: AsyncMock):  # noqa: F811
+    # Mock the httpx.AsyncClient.put method
+    mock_put = mocker.patch("httpx.AsyncClient.put")
 
     # Set up the mock response
     mock_put.return_value = httpx.Response(
@@ -93,16 +99,17 @@ def test_update_secret_success(client, mocker: MockFixture):  # noqa: F811
     )
 
     # Call the update_secret method
-    response = client.update_secret("mock_secret_guid", body=secret_body)
+    response = await client.update_secret("mock_secret_guid", body=secret_body)
 
     # Validate the response
     assert isinstance(response, Munch)
     assert response.metadata.guid == "test_secret_guid"
 
 
-def test_delete_secret_success(client, mocker: MockFixture):  # noqa: F811
-    # Mock the httpx.Client.delete method
-    mock_delete = mocker.patch("httpx.Client.delete")
+@pytest.mark.asyncio
+async def test_delete_secret_success(client, mocker: AsyncMock):  # noqa: F811
+    # Mock the httpx.AsyncClient.delete method
+    mock_delete = mocker.patch("httpx.AsyncClient.delete")
 
     # Set up the mock response
     mock_delete.return_value = httpx.Response(
@@ -111,15 +118,16 @@ def test_delete_secret_success(client, mocker: MockFixture):  # noqa: F811
     )
 
     # Call the delete_secret method
-    response = client.delete_secret("mock_secret_guid")
+    response = await client.delete_secret("mock_secret_guid")
 
     # Validate the response
     assert response == {"success": True}
 
 
-def test_get_secret_success(client, mocker: MockFixture):  # noqa: F811
-    # Mock the httpx.Client.get method
-    mock_get = mocker.patch("httpx.Client.get")
+@pytest.mark.asyncio
+async def test_get_secret_success(client, mocker: AsyncMock):  # noqa: F811
+    # Mock the httpx.AsyncClient.get method
+    mock_get = mocker.patch("httpx.AsyncClient.get")
 
     # Set up the mock response
     mock_get.return_value = httpx.Response(
@@ -130,7 +138,7 @@ def test_get_secret_success(client, mocker: MockFixture):  # noqa: F811
     )
 
     # Call the get_secret method
-    response = client.get_secret("mock_secret_guid")
+    response = await client.get_secret("mock_secret_guid")
 
     # Validate the response
     assert isinstance(response, Munch)

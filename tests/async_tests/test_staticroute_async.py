@@ -1,15 +1,16 @@
 import httpx
 import pytest
 from munch import Munch
-from pytest_mock import MockFixture
+from asyncmock import AsyncMock
 
 from tests.data.mock_data import staticroute_body  # noqa: F401
-from tests.utils.fixtures import client  # noqa: F401
+from tests.utils.fixtures import async_client as client  # noqa: F401
 
 
-def test_list_staticroutes_success(client, mocker: MockFixture):  # noqa: F811
-    # Mock the httpx.Client.get method
-    mock_get = mocker.patch("httpx.Client.get")
+@pytest.mark.asyncio
+async def test_list_staticroutes_success(client, mocker: AsyncMock):  # noqa: F811
+    # Mock the httpx.AsyncClient.get method
+    mock_get = mocker.patch("httpx.AsyncClient.get")
 
     # Set up the mock responses for pagination
     mock_get.return_value = httpx.Response(
@@ -21,7 +22,7 @@ def test_list_staticroutes_success(client, mocker: MockFixture):  # noqa: F811
     )
 
     # Call the list_staticroutes method
-    response = client.list_staticroutes()
+    response = await client.list_staticroutes()
 
     # Validate the response
     assert isinstance(response, Munch)
@@ -30,9 +31,10 @@ def test_list_staticroutes_success(client, mocker: MockFixture):  # noqa: F811
     ]
 
 
-def test_list_staticroutes_not_found(client, mocker: MockFixture):  # noqa: F811
-    # Mock the httpx.Client.get method
-    mock_get = mocker.patch("httpx.Client.get")
+@pytest.mark.asyncio
+async def test_list_staticroutes_not_found(client, mocker: AsyncMock):  # noqa: F811
+    # Mock the httpx.AsyncClient.get method
+    mock_get = mocker.patch("httpx.AsyncClient.get")
 
     # Set up the mock response
     mock_get.return_value = httpx.Response(
@@ -41,14 +43,15 @@ def test_list_staticroutes_not_found(client, mocker: MockFixture):  # noqa: F811
     )
 
     with pytest.raises(Exception) as exc:
-        client.list_staticroutes()
+        await client.list_staticroutes()
 
     assert str(exc.value) == "not found"
 
 
-def test_create_staticroute_success(client, mocker: MockFixture):  # noqa: F811
-    # Mock the httpx.Client.post method
-    mock_post = mocker.patch("httpx.Client.post")
+@pytest.mark.asyncio
+async def test_create_staticroute_success(client, mocker: AsyncMock):  # noqa: F811
+    # Mock the httpx.AsyncClient.post method
+    mock_post = mocker.patch("httpx.AsyncClient.post")
 
     # Set up the mock response
     mock_post.return_value = httpx.Response(
@@ -59,16 +62,17 @@ def test_create_staticroute_success(client, mocker: MockFixture):  # noqa: F811
     )
 
     # Call the create_staticroute method
-    response = client.create_staticroute(body=staticroute_body)
+    response = await client.create_staticroute(body=staticroute_body)
 
     # Validate the response
     assert isinstance(response, Munch)
     assert response.metadata.guid == "test_staticroute_guid"
 
 
-def test_create_staticroute_bad_request(client, mocker: MockFixture):  # noqa: F811
-    # Mock the httpx.Client.post method
-    mock_post = mocker.patch("httpx.Client.post")
+@pytest.mark.asyncio
+async def test_create_staticroute_bad_request(client, mocker: AsyncMock):  # noqa: F811
+    # Mock the httpx.AsyncClient.post method
+    mock_post = mocker.patch("httpx.AsyncClient.post")
 
     # Set up the mock response
     mock_post.return_value = httpx.Response(
@@ -77,14 +81,15 @@ def test_create_staticroute_bad_request(client, mocker: MockFixture):  # noqa: F
     )
 
     with pytest.raises(Exception) as exc:
-        client.create_staticroute(body=staticroute_body)
+        await client.create_staticroute(body=staticroute_body)
 
     assert str(exc.value) == "already exists"
 
 
-def test_get_staticroute_success(client, mocker: MockFixture):  # noqa: F811
-    # Mock the httpx.Client.get method
-    mock_get = mocker.patch("httpx.Client.get")
+@pytest.mark.asyncio
+async def test_get_staticroute_success(client, mocker: AsyncMock):  # noqa: F811
+    # Mock the httpx.AsyncClient.get method
+    mock_get = mocker.patch("httpx.AsyncClient.get")
 
     # Set up the mock response
     mock_get.return_value = httpx.Response(
@@ -95,16 +100,17 @@ def test_get_staticroute_success(client, mocker: MockFixture):  # noqa: F811
     )
 
     # Call the get_staticroute method
-    response = client.get_staticroute(name="mock_staticroute_name")
+    response = await client.get_staticroute(name="mock_staticroute_name")
 
     # Validate the response
     assert isinstance(response, Munch)
     assert response.metadata.guid == "test_staticroute_guid"
 
 
-def test_update_staticroute_success(client, mocker: MockFixture):  # noqa: F811
-    # Mock the httpx.Client.put method
-    mock_put = mocker.patch("httpx.Client.put")
+@pytest.mark.asyncio
+async def test_update_staticroute_success(client, mocker: AsyncMock):  # noqa: F811
+    # Mock the httpx.AsyncClient.put method
+    mock_put = mocker.patch("httpx.AsyncClient.put")
 
     # Set up the mock response
     mock_put.return_value = httpx.Response(
@@ -115,7 +121,7 @@ def test_update_staticroute_success(client, mocker: MockFixture):  # noqa: F811
     )
 
     # Call the update_staticroute method
-    response = client.update_staticroute(
+    response = await client.update_staticroute(
         name="mock_staticroute_name", body=staticroute_body
     )
 
@@ -124,9 +130,10 @@ def test_update_staticroute_success(client, mocker: MockFixture):  # noqa: F811
     assert response.metadata.guid == "test_staticroute_guid"
 
 
-def test_delete_staticroute_success(client, mocker: MockFixture):  # noqa: F811
-    # Mock the httpx.Client.delete method
-    mock_delete = mocker.patch("httpx.Client.delete")
+@pytest.mark.asyncio
+async def test_delete_staticroute_success(client, mocker: AsyncMock):  # noqa: F811
+    # Mock the httpx.AsyncClient.delete method
+    mock_delete = mocker.patch("httpx.AsyncClient.delete")
 
     # Set up the mock response
     mock_delete.return_value = httpx.Response(
@@ -135,7 +142,7 @@ def test_delete_staticroute_success(client, mocker: MockFixture):  # noqa: F811
     )
 
     # Call the delete_staticroute method
-    response = client.delete_staticroute(name="mock_staticroute_name")
+    response = await client.delete_staticroute(name="mock_staticroute_name")
 
     # Validate the response
     assert response["success"] is True

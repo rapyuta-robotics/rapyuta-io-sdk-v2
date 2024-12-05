@@ -181,7 +181,6 @@ class Client(object):
             headers=self.config.get_headers(with_project=False, **kwargs),
         )
 
-    # @handle_and_munchify_response
     @handle_and_munchify_response
     def list_projects(
         self,
@@ -1113,14 +1112,14 @@ class Client(object):
 
     @handle_and_munchify_response
     def put_keys_in_revision(
-        self, name: str, revision_id: str, configValues: list[(dict)], **kwargs
+        self, name: str, revision_id: str, config_values: list[(dict)], **kwargs
     ) -> Munch:
         """Put keys in a revision.
 
         Args:
             name (str): Config tree name
             revision_id (str): Config tree revision ID
-            configValues (list[dict]): Config values
+            config_values (list[dict]): Config values
 
         Returns:
             Munch: Revision details as a Munch object.
@@ -1129,7 +1128,7 @@ class Client(object):
         return self.c.put(
             url=f"{self.v2api_host}/v2/configtrees/{name}/revisions/{revision_id}/keys/",
             headers=self.config.get_headers(**kwargs),
-            json=configValues,
+            json=config_values,
         )
 
     @handle_and_munchify_response
@@ -1137,7 +1136,7 @@ class Client(object):
         self,
         name: str,
         revision_id: str,
-        configTreeRevision: dict,
+        config_tree_revision: dict,
         project_guid: str = None,
         **kwargs,
     ) -> Munch:
@@ -1146,7 +1145,7 @@ class Client(object):
         Args:
             name (str): Config tree name
             revision_id (str): Config tree revision ID
-            configTreeRevision (object): Config tree revision details
+            config_tree_revision (dict): Config tree revision details
             project_guid (str, optional): Project GUID. Defaults to None.
 
         Returns:
@@ -1156,7 +1155,7 @@ class Client(object):
         return self.c.patch(
             url=f"{self.v2api_host}/v2/configtrees/{name}/revisions/{revision_id}/commit/",
             headers=self.config.get_headers(project_guid=project_guid, **kwargs),
-            json=configTreeRevision,
+            json=config_tree_revision,
         )
 
     @handle_and_munchify_response
@@ -1228,7 +1227,7 @@ class Client(object):
         name: str,
         revision_id: str,
         key: str,
-        configKeyRename: dict,
+        config_key_rename: dict,
         project_guid: str = None,
         **kwargs,
     ) -> Munch:
@@ -1238,7 +1237,7 @@ class Client(object):
             name (str): Config tree name
             revision_id (str): Config tree revision ID
             key (str): Key
-            configKeyRename (object): Key rename details
+            config_key_rename (object): Key rename details
             project_guid (str, optional): Project GUID. Defaults to None.
 
         Returns:
@@ -1248,7 +1247,7 @@ class Client(object):
         return self.c.patch(
             url=f"{self.v2api_host}/v2/configtrees/{name}/revisions/{revision_id}/{key}/",
             headers=self.config.get_headers(project_guid=project_guid, **kwargs),
-            json=configKeyRename,
+            json=config_key_rename,
         )
 
     # Managed Service API

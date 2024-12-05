@@ -149,3 +149,38 @@ def walk_pages(
         cont = data.get("metadata", {}).get("continue")
         if cont is None:
             break
+
+
+async def walk_pages_async(
+    func: typing.Callable,
+    *args,
+    limit: int = 50,
+    cont: int = 0,
+    **kwargs,
+) -> typing.AsyncGenerator:
+    """A generator function to paginate through list API results.
+
+    Args:
+        func (callable): The API function to call, must accept `cont` and `limit` as arguments.
+        *args: Positional arguments to pass to the API function.
+        limit (int, optional): Maximum number of items to return. Defaults to 50.
+        cont (int, optional): Initial continuation token. Defaults to 0.
+        **kwargs: Additional keyword arguments to pass to the API function.
+
+    Yields:
+        Munch: Each item from the API response.
+    """
+    while True:
+        data = await func(cont, limit, *args, **kwargs)
+
+        items = data.get("items", [])
+        if not items:
+            break
+
+        for item in items:
+            yield munchify(item)
+
+        # Update `cont` for the next page
+        cont = data.get("metadata", {}).get("continue")
+        if cont is None:
+            break

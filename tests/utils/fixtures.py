@@ -7,9 +7,10 @@ from rapyuta_io_sdk_v2 import Client, AsyncClient
 def client():
     client = Client()
     client.config.hosts["v2api_host"] = "https://mock-api.rapyuta.io"
-    client.auth_token = "mock_token"
-    client.organization_guid = "mock_org_guid"
-    client.project = "mock_project_guid"
+    client.config.auth_token = "mock_token"
+    client.config.organization_guid = "mock_org_guid"
+    client.config.project_guid = "mock_project_guid"
+    client.config.environment = "mock"
     return client
 
 
@@ -17,7 +18,8 @@ def client():
 def async_client():
     client = AsyncClient()
     client.config.hosts["v2api_host"] = "https://mock-api.rapyuta.io"
-    client.auth_token = "mock_token"
-    client.organization_guid = "mock_org_guid"
-    client.project = "mock_project_guid"
+    client.config.auth_token = "mock_token"
+    client.config.organization_guid = "mock_org_guid"
+    client.config.project_guid = "mock_project_guid"
+    client.config.environment = "mock"
     return client

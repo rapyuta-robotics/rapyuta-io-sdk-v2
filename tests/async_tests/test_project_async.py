@@ -4,7 +4,7 @@ import httpx
 from munch import Munch
 from asyncmock import AsyncMock
 
-from tests.utils.util import project_body
+from tests.data.mock_data import project_body
 from tests.utils.fixtures import async_client as client  # noqa: F401
 
 

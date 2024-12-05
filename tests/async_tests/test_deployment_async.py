@@ -1,15 +1,17 @@
 import httpx
 import pytest
+import pytest_asyncio  # noqa: F401
 from munch import Munch
-from pytest_mock import MockFixture
+from asyncmock import AsyncMock
 
 from tests.data.mock_data import deployment_body  # noqa: F401
-from tests.utils.fixtures import client  # noqa: F401
+from tests.utils.fixtures import async_client as client  # noqa: F401
 
 
-def test_list_deployments_success(client, mocker: MockFixture):  # noqa: F811
-    # Mock the httpx.Client.get method
-    mock_get = mocker.patch("httpx.Client.get")
+@pytest.mark.asyncio
+async def test_list_deployments_success(client, mocker: AsyncMock):  # noqa: F811
+    # Mock the httpx.AsyncClient.get") method
+    mock_get = mocker.patch("httpx.AsyncClient.get")
 
     # Set up the mock responses for pagination
     mock_get.return_value = httpx.Response(
@@ -21,7 +23,7 @@ def test_list_deployments_success(client, mocker: MockFixture):  # noqa: F811
     )
 
     # Call the list_deployments method
-    response = client.list_deployments()
+    response = await client.list_deployments()
 
     # Validate the response
     assert isinstance(response, Munch)
@@ -30,9 +32,10 @@ def test_list_deployments_success(client, mocker: MockFixture):  # noqa: F811
     ]
 
 
-def test_list_deployments_not_found(client, mocker: MockFixture):  # noqa: F811
-    # Mock the httpx.Client.get method
-    mock_get = mocker.patch("httpx.Client.get")
+@pytest.mark.asyncio
+async def test_list_deployments_not_found(client, mocker: AsyncMock):  # noqa: F811
+    # Mock the httpx.AsyncClient.get") method
+    mock_get = mocker.patch("httpx.AsyncClient.get")
 
     # Set up the mock response
     mock_get.return_value = httpx.Response(
@@ -41,14 +44,15 @@ def test_list_deployments_not_found(client, mocker: MockFixture):  # noqa: F811
     )
 
     with pytest.raises(Exception) as exc:
-        client.list_deployments()
+        await client.list_deployments()
 
     assert str(exc.value) == "not found"
 
 
-def test_get_deployment_success(client, mocker: MockFixture):  # noqa: F811
-    # Mock the httpx.Client.get method
-    mock_get = mocker.patch("httpx.Client.get")
+@pytest.mark.asyncio
+async def test_get_deployment_success(client, mocker: AsyncMock):  # noqa: F811
+    # Mock the httpx.AsyncClient.get") method
+    mock_get = mocker.patch("httpx.AsyncClient.get")
 
     # Set up the mock response
     mock_get.return_value = httpx.Response(
@@ -60,16 +64,17 @@ def test_get_deployment_success(client, mocker: MockFixture):  # noqa: F811
     )
 
     # Call the get_deployment method
-    response = client.get_deployment(name="mock_deployment_name")
+    response = await client.get_deployment(name="mock_deployment_name")
 
     # Validate the response
     assert isinstance(response, Munch)
     assert response["metadata"]["guid"] == "test_deployment_guid"
 
 
-def test_get_deployment_not_found(client, mocker: MockFixture):  # noqa: F811
-    # Mock the httpx.Client.get method
-    mock_get = mocker.patch("httpx.Client.get")
+@pytest.mark.asyncio
+async def test_get_deployment_not_found(client, mocker: AsyncMock):  # noqa: F811
+    # Mock the httpx.AsyncClient.get") method
+    mock_get = mocker.patch("httpx.AsyncClient.get")
 
     # Set up the mock response
     mock_get.return_value = httpx.Response(
@@ -79,13 +84,14 @@ def test_get_deployment_not_found(client, mocker: MockFixture):  # noqa: F811
 
     # Call the get_deployment method
     with pytest.raises(Exception) as exc:
-        client.get_deployment(name="mock_deployment_name")
+        await client.get_deployment(name="mock_deployment_name")
 
     assert str(exc.value) == "deployment not found"
 
 
-def test_create_deployment_success(client, deployment_body, mocker: MockFixture):  # noqa: F811
-    mock_post = mocker.patch("httpx.Client.post")
+@pytest.mark.asyncio
+async def test_create_deployment_success(client, deployment_body, mocker: AsyncMock):  # noqa: F811
+    mock_post = mocker.patch("httpx.AsyncClient.post")
 
     mock_post.return_value = httpx.Response(
         status_code=200,
@@ -95,14 +101,15 @@ def test_create_deployment_success(client, deployment_body, mocker: MockFixture)
         },
     )
 
-    response = client.create_deployment(body=deployment_body)
+    response = await client.create_deployment(body=deployment_body)
 
     assert isinstance(response, Munch)
     assert response["metadata"]["guid"] == "test_deployment_guid"
 
 
-def test_create_deployment_unauthorized(client, deployment_body, mocker: MockFixture):  # noqa: F811
-    mock_post = mocker.patch("httpx.Client.post")
+@pytest.mark.asyncio
+async def test_create_deployment_unauthorized(client, deployment_body, mocker: AsyncMock):  # noqa: F811
+    mock_post = mocker.patch("httpx.AsyncClient.post")
 
     mock_post.return_value = httpx.Response(
         status_code=401,
@@ -110,13 +117,14 @@ def test_create_deployment_unauthorized(client, deployment_body, mocker: MockFix
     )
 
     with pytest.raises(Exception) as exc:
-        client.create_deployment(body=deployment_body)
+        await client.create_deployment(body=deployment_body)
 
     assert str(exc.value) == "unauthorized"
 
 
-def test_update_deployment_success(client, deployment_body, mocker: MockFixture):  # noqa: F811
-    mock_put = mocker.patch("httpx.Client.put")
+@pytest.mark.asyncio
+async def test_update_deployment_success(client, deployment_body, mocker: AsyncMock):  # noqa: F811
+    mock_put = mocker.patch("httpx.AsyncClient.put")
 
     mock_put.return_value = httpx.Response(
         status_code=200,
@@ -126,17 +134,20 @@ def test_update_deployment_success(client, deployment_body, mocker: MockFixture)
         },
     )
 
-    response = client.update_deployment(name="mock_deployment_name", body=deployment_body)
+    response = await client.update_deployment(
+        name="mock_deployment_name", body=deployment_body
+    )
 
     assert isinstance(response, Munch)
     assert response["metadata"]["guid"] == "test_deployment_guid"
 
 
-def test_delete_deployment_success(client, mocker: MockFixture):  # noqa: F811
-    mock_delete = mocker.patch("httpx.Client.delete")
+@pytest.mark.asyncio
+async def test_delete_deployment_success(client, mocker: AsyncMock):  # noqa: F811
+    mock_delete = mocker.patch("httpx.AsyncClient.delete")
 
     mock_delete.return_value = httpx.Response(status_code=204, json={"success": True})
 
-    response = client.delete_deployment(name="mock_deployment_name")
+    response = await client.delete_deployment(name="mock_deployment_name")
 
     assert response["success"] is True
