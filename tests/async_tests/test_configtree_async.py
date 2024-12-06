@@ -192,7 +192,7 @@ async def test_list_revisions_success(client, mocker: AsyncMock):  # noqa: F811
     )
 
     # Call the list_revisions method
-    response = await client.list_revisions(name="mock_configtree_name")
+    response = await client.list_revisions(tree_name="mock_configtree_name")
 
     # Validate the response
     assert isinstance(response, Munch)

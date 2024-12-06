@@ -292,7 +292,6 @@ class Client(object):
         limit: int = 50,
         label_selector: list[str] = None,
         name: str = None,
-        regions: list[str] = None,
         **kwargs,
     ) -> Munch:
         """List all packages in a project.
@@ -302,7 +301,6 @@ class Client(object):
             limit (int, optional): Number of packages to list. Defaults to 50.
             label_selector (list[str], optional): Define labelSelector to get packages from. Defaults to None.
             name (str, optional): Define name to get packages from. Defaults to None.
-            regions (list[str], optional): Define regions to get packages from. Defaults to None.
 
         Returns:
             Munch: List of packages as a Munch object.
@@ -316,7 +314,6 @@ class Client(object):
                 "limit": limit,
                 "labelSelector": label_selector,
                 "name": name,
-                "regions": regions,
             },
         )
 
@@ -338,14 +335,11 @@ class Client(object):
         )
 
     @handle_and_munchify_response
-    def get_package(
-        self, name: str, project_guid: str = None, version: str = None, **kwargs
-    ) -> Munch:
+    def get_package(self, name: str, version: str = None, **kwargs) -> Munch:
         """Get a package by its name.
 
         Args:
             name (str): Package name
-            project_guid (str, optional): Project GUID. Defaults to None.
             version (str, optional): Package version. Defaults to None.
 
         Returns:
@@ -354,7 +348,7 @@ class Client(object):
 
         return self.c.get(
             url=f"{self.v2api_host}/v2/packages/{name}/",
-            headers=self.config.get_headers(project_guid=project_guid, **kwargs),
+            headers=self.config.get_headers(**kwargs),
             params={"version": version},
         )
 
@@ -379,11 +373,11 @@ class Client(object):
     def list_deployments(
         self,
         cont: int = 0,
+        limit: int = 50,
         dependencies: bool = False,
         device_name: str = None,
         guids: list[str] = None,
         label_selector: list[str] = None,
-        limit: int = 50,
         name: str = None,
         names: list[str] = None,
         package_name: str = None,
@@ -396,11 +390,11 @@ class Client(object):
 
         Args:
             cont (int, optional): Start index of deployments. Defaults to 0.
+            limit (int, optional): Number of deployments to list. Defaults to 50.
             dependencies (bool, optional): Filter by dependencies. Defaults to False.
             device_name (str, optional): Filter deployments by device name. Defaults to None.
             guids (list[str], optional): Filter by GUIDs. Defaults to None.
             label_selector (list[str], optional): Define labelSelector to get deployments from. Defaults to None.
-            limit (int, optional): Number of deployments to list. Defaults to 50.
             name (str, optional): Define name to get deployments from. Defaults to None.
             names (list[str], optional): Define names to get deployments from. Defaults to None.
             package_name (str, optional): Filter by package name. Defaults to None.
@@ -523,7 +517,6 @@ class Client(object):
         cont: int = 0,
         label_selector: list[str] = None,
         limit: int = 50,
-        name: str = None,
         names: list[str] = None,
         regions: list[str] = None,
         status: list[str] = None,
@@ -535,7 +528,6 @@ class Client(object):
             cont (int, optional): Start index of disks. Defaults to 0.
             label_selector (list[str], optional): Define labelSelector to get disks from. Defaults to None.
             limit (int, optional): Number of disks to list. Defaults to 50.
-            name (str, optional): Define name to get disks from. Defaults to None.
             names (list[str], optional): Define names to get disks from. Defaults to None.
             regions (list[str], optional): Define regions to get disks from. Defaults to None.
             status (list[str], optional): Define status to get disks from. Available values : Available, Bound, Released, Failed, Pending.Defaults to None.
@@ -551,7 +543,6 @@ class Client(object):
                 "continue": cont,
                 "limit": limit,
                 "labelSelector": label_selector,
-                "name": name,
                 "names": names,
                 "regions": regions,
                 "status": status,
@@ -609,10 +600,9 @@ class Client(object):
     def list_staticroutes(
         self,
         cont: int = 0,
+        limit: int = 50,
         guids: list[str] = None,
         label_selector: list[str] = None,
-        limit: int = 50,
-        name: str = None,
         names: list[str] = None,
         regions: list[str] = None,
         **kwargs,
@@ -621,10 +611,9 @@ class Client(object):
 
         Args:
             cont (int, optional): Start index of static routes. Defaults to 0.
+            limit (int, optional): Number of static routes to list. Defaults to 50.
             guids (list[str], optional): Define guids to get static routes from. Defaults to None.
             label_selector (list[str], optional): Define labelSelector to get static routes from. Defaults to None.
-            limit (int, optional): Number of static routes to list. Defaults to 50.
-            name (str, optional): Define name to get static routes from. Defaults to None.
             names (list[str], optional): Define names to get static routes from. Defaults to None.
             regions (list[str], optional): Define regions to get static routes from. Defaults to None.
 
@@ -640,7 +629,6 @@ class Client(object):
                 "limit": limit,
                 "guids": guids,
                 "labelSelector": label_selector,
-                "name": name,
                 "names": names,
                 "regions": regions,
             },
@@ -715,10 +703,9 @@ class Client(object):
     def list_networks(
         self,
         cont: int = 0,
+        limit: int = 50,
         device_name: str = None,
         label_selector: list[str] = None,
-        limit: int = 50,
-        name: str = None,
         names: list[str] = None,
         network_type: str = None,
         phases: list[str] = None,
@@ -730,10 +717,9 @@ class Client(object):
 
         Args:
             cont (int, optional): Start index of networks. Defaults to 0.
+            limit (int, optional): Number of networks to list. Defaults to 50.
             device_name (str, optional): Filter networks by device name. Defaults to None.
             label_selector (list[str], optional): Define labelSelector to get networks from. Defaults to None.
-            limit (int, optional): Number of networks to list. Defaults to 50.
-            name (str, optional): Define name to get networks from. Defaults to None.
             names (list[str], optional): Define names to get networks from. Defaults to None.
             network_type (str, optional): Define network type to get networks from. Defaults to None.
             phases (list[str], optional): Define phases to get networks from. Available values : InProgress, Provisioning, Succeeded, FailedToUpdate, FailedToStart, Stopped. Defaults to None.
@@ -752,7 +738,6 @@ class Client(object):
                 "limit": limit,
                 "deviceName": device_name,
                 "labelSelector": label_selector,
-                "name": name,
                 "names": names,
                 "networkType": network_type,
                 "phases": phases,
@@ -812,9 +797,8 @@ class Client(object):
     def list_secrets(
         self,
         cont: int = 0,
-        label_selector: list[str] = None,
         limit: int = 50,
-        name: str = None,
+        label_selector: list[str] = None,
         names: list[str] = None,
         regions: list[str] = None,
         **kwargs,
@@ -823,9 +807,8 @@ class Client(object):
 
         Args:
             cont (int, optional): Start index of secrets. Defaults to 0.
-            label_selector (list[str], optional): Define labelSelector to get secrets from. Defaults to None.
             limit (int, optional): Number of secrets to list. Defaults to 50.
-            name (str, optional): Define name to get secrets from. Defaults to None.
+            label_selector (list[str], optional): Define labelSelector to get secrets from. Defaults to None.
             names (list[str], optional): Define names to get secrets from. Defaults to None.
             regions (list[str], optional): Define regions to get secrets from. Defaults to None.
 
@@ -840,7 +823,6 @@ class Client(object):
                 "continue": cont,
                 "limit": limit,
                 "labelSelector": label_selector,
-                "name": name,
                 "names": names,
                 "regions": regions,
             },
@@ -915,20 +897,18 @@ class Client(object):
     def list_configtrees(
         self,
         cont: int = 0,
-        label_selector: list[str] = None,
         limit: int = 50,
-        name: str = None,
-        regions: list[str] = None,
+        label_selector: list[str] = None,
+        with_project: bool = True,
         **kwargs,
     ) -> Munch:
         """List all config trees in a project.
 
         Args:
             cont (int, optional): Start index of config trees. Defaults to 0.
-            label_selector (list[str], optional): Define labelSelector to get config trees from. Defaults to None.
             limit (int, optional): Number of config trees to list. Defaults to 50.
-            name (str, optional): Define name to get config trees from. Defaults to None.
-            regions (list[str], optional): Define regions to get config trees from. Defaults to None.
+            label_selector (list[str], optional): Define labelSelector to get config trees from. Defaults to None.
+            with_project (bool, optional): Include project. Defaults to True.
 
         Returns:
             Munch: List of config trees as a Munch object.
@@ -936,13 +916,11 @@ class Client(object):
 
         return self.c.get(
             url=f"{self.v2api_host}/v2/configtrees/",
-            headers=self.config.get_headers(**kwargs),
+            headers=self.config.get_headers(with_project=with_project, **kwargs),
             params={
                 "continue": cont,
                 "limit": limit,
                 "labelSelector": label_selector,
-                "name": name,
-                "regions": regions,
             },
         )
 
@@ -1055,37 +1033,34 @@ class Client(object):
     @handle_and_munchify_response
     def list_revisions(
         self,
-        name: str,
+        tree_name: str,
         cont: int = 0,
         limit: int = 50,
         committed: bool = False,
         label_selector: list[str] = None,
-        regions: list[str] = None,
         **kwargs,
     ) -> Munch:
         """List all revisions of a config tree.
 
         Args:
-            name (str): Config tree name
+            tree_name (str): Config tree name
             cont (int, optional): Continue param . Defaults to 0.
             limit (int, optional): Limit param . Defaults to 50.
             committed (bool, optional): Committed. Defaults to False.
             label_selector (list[str], optional): Define labelSelector to get revisions from. Defaults to None.
-            regions (list[str], optional): Define regions to get revisions from. Defaults to None.
 
         Returns:
             Munch: List of revisions as a Munch object.
         """
 
         return self.c.get(
-            url=f"{self.v2api_host}/v2/configtrees/{name}/revisions/",
+            url=f"{self.v2api_host}/v2/configtrees/{tree_name}/revisions/",
             headers=self.config.get_headers(**kwargs),
             params={
                 "continue": cont,
                 "limit": limit,
                 "committed": committed,
                 "labelSelector": label_selector,
-                "regions": regions,
             },
         )
 
@@ -1112,14 +1087,14 @@ class Client(object):
 
     @handle_and_munchify_response
     def put_keys_in_revision(
-        self, name: str, revision_id: str, config_values: list[dict], **kwargs
+        self, name: str, revision_id: str, config_values: dict, **kwargs
     ) -> Munch:
         """Put keys in a revision.
 
         Args:
             name (str): Config tree name
             revision_id (str): Config tree revision ID
-            config_values (list[dict]): Config values
+            config_values (dict): Config values
 
         Returns:
             Munch: Revision details as a Munch object.
@@ -1160,12 +1135,17 @@ class Client(object):
 
     @handle_and_munchify_response
     def get_key_in_revision(
-        self, name: str, revision_id: str, key: str, project_guid: str = None, **kwargs
+        self,
+        tree_name: str,
+        revision_id: str,
+        key: str,
+        project_guid: str = None,
+        **kwargs,
     ) -> Munch:
         """Get a key in a revision.
 
         Args:
-            name (str): Config tree name
+            tree_name (str): Config tree name
             revision_id (str): Config tree revision ID
             key (str): Key
             project_guid (str, optional): Project GUID. Defaults to None.
@@ -1175,18 +1155,23 @@ class Client(object):
         """
 
         return self.c.get(
-            url=f"{self.v2api_host}/v2/configtrees/{name}/revisions/{revision_id}/{key}/",
+            url=f"{self.v2api_host}/v2/configtrees/{tree_name}/revisions/{revision_id}/{key}/",
             headers=self.config.get_headers(project_guid=project_guid, **kwargs),
         )
 
     @handle_and_munchify_response
     def put_key_in_revision(
-        self, name: str, revision_id: str, key: str, project_guid: str = None, **kwargs
+        self,
+        tree_name: str,
+        revision_id: str,
+        key: str,
+        project_guid: str = None,
+        **kwargs,
     ) -> Munch:
         """Put a key in a revision.
 
         Args:
-            name (str): Config tree name
+            tree_name (str): Config tree name
             revision_id (str): Config tree revision ID
             key (str): Key
             project_guid (str, optional): Project GUID. Defaults to None.
@@ -1196,18 +1181,23 @@ class Client(object):
         """
 
         return self.c.put(
-            url=f"{self.v2api_host}/v2/configtrees/{name}/revisions/{revision_id}/{key}/",
+            url=f"{self.v2api_host}/v2/configtrees/{tree_name}/revisions/{revision_id}/{key}/",
             headers=self.config.get_headers(project_guid=project_guid, **kwargs),
         )
 
     @handle_and_munchify_response
     def delete_key_in_revision(
-        self, name: str, revision_id: str, key: str, project_guid: str = None, **kwargs
+        self,
+        tree_name: str,
+        revision_id: str,
+        key: str,
+        project_guid: str = None,
+        **kwargs,
     ) -> Munch:
         """Delete a key in a revision.
 
         Args:
-            name (str): Config tree name
+            tree_name (str): Config tree name
             revision_id (str): Config tree revision ID
             key (str): Key
             project_guid (str, optional): Project GUID. Defaults to None.
@@ -1217,14 +1207,14 @@ class Client(object):
         """
 
         return self.c.delete(
-            url=f"{self.v2api_host}/v2/configtrees/{name}/revisions/{revision_id}/{key}/",
+            url=f"{self.v2api_host}/v2/configtrees/{tree_name}/revisions/{revision_id}/{key}/",
             headers=self.config.get_headers(project_guid=project_guid, **kwargs),
         )
 
     @handle_and_munchify_response
     def rename_key_in_revision(
         self,
-        name: str,
+        tree_name: str,
         revision_id: str,
         key: str,
         config_key_rename: dict,
@@ -1234,7 +1224,7 @@ class Client(object):
         """Rename a key in a revision.
 
         Args:
-            name (str): Config tree name
+            tree_name (str): Config tree name
             revision_id (str): Config tree revision ID
             key (str): Key
             config_key_rename (object): Key rename details
@@ -1245,7 +1235,7 @@ class Client(object):
         """
 
         return self.c.patch(
-            url=f"{self.v2api_host}/v2/configtrees/{name}/revisions/{revision_id}/{key}/",
+            url=f"{self.v2api_host}/v2/configtrees/{tree_name}/revisions/{revision_id}/{key}/",
             headers=self.config.get_headers(project_guid=project_guid, **kwargs),
             json=config_key_rename,
         )
@@ -1270,9 +1260,7 @@ class Client(object):
         cont: int = 0,
         limit: int = 50,
         label_selector: list[str] = None,
-        regions: list[str] = None,
-        guid: str = None,
-        name: str = None,
+        providers: list[str] = None,
     ):
         """List all instances in a project.
 
@@ -1280,9 +1268,7 @@ class Client(object):
             cont (int, optional): Start index of instances. Defaults to 0.
             limit (int, optional): Number of instances to list. Defaults to 50.
             label_selector (list[str], optional): Define labelSelector to get instances from. Defaults to None.
-            regions (list[str], optional): Define regions to get instances from. Defaults to None.
-            guid (str, optional): Defaults to None.
-            name (str, optional): Defaults to None.
+            providers (list[str], optional): Define providers to get instances from. Defaults to None.
 
         Returns:
             Munch: List of instances as a Munch object.
@@ -1294,9 +1280,7 @@ class Client(object):
                 "continue": cont,
                 "limit": limit,
                 "labelSelector": label_selector,
-                "regions": regions,
-                "guid": guid,
-                "name": name,
+                "providers": providers,
             },
         )
 
@@ -1350,9 +1334,6 @@ class Client(object):
         cont: int = 0,
         limit: int = 50,
         label_selector: list[str] = None,
-        regions: list[str] = None,
-        guid: str = None,
-        name: str = None,
     ):
         """List all instance bindings in a project.
 
@@ -1361,9 +1342,6 @@ class Client(object):
             cont (int, optional): Start index of instance bindings. Defaults to 0.
             limit (int, optional): Number of instance bindings to list. Defaults to 50.
             label_selector (list[str], optional): Define labelSelector to get instance bindings from. Defaults to None.
-            regions (list[str], optional): Define regions to get instance bindings from. Defaults to None.
-            guid (str, optional): Defaults to None.
-            name (str, optional): Defaults to None.
 
         Returns:
             Munch: List of instance bindings as a Munch object.
@@ -1375,9 +1353,6 @@ class Client(object):
                 "continue": cont,
                 "limit": limit,
                 "labelSelector": label_selector,
-                "regions": regions,
-                "guid": guid,
-                "name": name,
             },
         )
 

@@ -180,7 +180,7 @@ def test_list_revisions_success(client, mocker: MockFixture):  # noqa: F811
     )
 
     # Call the list_revisions method
-    response = client.list_revisions(name="mock_configtree_name")
+    response = client.list_revisions(tree_name="mock_configtree_name")
 
     # Validate the response
     assert isinstance(response, Munch)
