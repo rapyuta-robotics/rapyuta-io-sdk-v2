@@ -265,9 +265,8 @@ async def test_commit_revision_success(client, mocker: AsyncMock):  # noqa: F811
 
     # Call the commit_revision method
     response = await client.commit_revision(
-        name="mock_configtree_name",
+        tree_name="mock_configtree_name",
         revision_id="mock_revision_id",
-        config_tree_revision=configtree_body,
     )
 
     # Validate the response
@@ -291,7 +290,7 @@ async def test_get_key_in_revision(client, mocker: AsyncMock):  # noqa: F811
 
     # Call the get_key_in_revision method
     response = await client.get_key_in_revision(
-        name="mock_configtree_name", revision_id="mock_revision_id", key="mock_key"
+        tree_name="mock_configtree_name", revision_id="mock_revision_id", key="mock_key"
     )
 
     # Validate the response
@@ -315,7 +314,7 @@ async def test_put_key_in_revision_success(client, mocker: AsyncMock):  # noqa: 
 
     # Call the put_key_in_revision method
     response = await client.put_key_in_revision(
-        name="mock_configtree_name", revision_id="mock_revision_id", key="mock_key"
+        tree_name="mock_configtree_name", revision_id="mock_revision_id", key="mock_key"
     )
 
     # Validate the response
@@ -334,7 +333,7 @@ async def test_delete_key_in_revision_success(client, mocker: AsyncMock):  # noq
     )
 
     response = await client.delete_key_in_revision(
-        name="mock_configtree_name", revision_id="mock_revision_id", key="mock_key"
+        tree_name="mock_configtree_name", revision_id="mock_revision_id", key="mock_key"
     )
 
     assert response["success"] is True
@@ -352,7 +351,7 @@ async def test_rename_key_in_revision_success(client, mocker: AsyncMock):  # noq
     )
 
     response = await client.rename_key_in_revision(
-        name="mock_configtree_name",
+        tree_name="mock_configtree_name",
         revision_id="mock_revision_id",
         key="mock_key",
         config_key_rename={"metadata": {"name": "test_key"}},

@@ -925,7 +925,7 @@ class Client(object):
         )
 
     @handle_and_munchify_response
-    def create_configtree(self, body: dict, **kwargs) -> Munch:
+    def create_configtree(self, body: dict, with_project: bool = True, **kwargs) -> Munch:
         """Create a new config tree.
 
         Args:
@@ -937,7 +937,7 @@ class Client(object):
 
         return self.c.post(
             url=f"{self.v2api_host}/v2/configtrees/",
-            headers=self.config.get_headers(**kwargs),
+            headers=self.config.get_headers(with_project=with_project, **kwargs),
             json=body,
         )
 
@@ -949,6 +949,7 @@ class Client(object):
         include_data: bool = False,
         key_prefixes: list[str] = None,
         revision: str = None,
+        with_project: bool = True,
         **kwargs,
     ) -> Munch:
         """Get a config tree by its name.
@@ -966,7 +967,7 @@ class Client(object):
 
         return self.c.get(
             url=f"{self.v2api_host}/v2/configtrees/{name}/",
-            headers=self.config.get_headers(**kwargs),
+            headers=self.config.get_headers(with_project=with_project, **kwargs),
             params={
                 "contentTypes": content_types,
                 "includeData": include_data,
@@ -997,7 +998,9 @@ class Client(object):
         )
 
     @handle_and_munchify_response
-    def update_configtree(self, name: str, body: dict, **kwargs) -> Munch:
+    def update_configtree(
+        self, name: str, body: dict, with_project: bool = True, **kwargs
+    ) -> Munch:
         """Update a config tree by its name.
 
         Args:
@@ -1010,7 +1013,7 @@ class Client(object):
 
         return self.c.put(
             url=f"{self.v2api_host}/v2/configtrees/{name}/",
-            headers=self.config.get_headers(**kwargs),
+            headers=self.config.get_headers(with_project=with_project, **kwargs),
             json=body,
         )
 
@@ -1109,26 +1112,32 @@ class Client(object):
     @handle_and_munchify_response
     def commit_revision(
         self,
-        name: str,
+        tree_name: str,
         revision_id: str,
-        config_tree_revision: dict,
+        author: str = None,
+        message: str = None,
         project_guid: str = None,
         **kwargs,
     ) -> Munch:
         """Commit a revision.
 
         Args:
-            name (str): Config tree name
+            tree_name (str): Config tree name
             revision_id (str): Config tree revision ID
-            config_tree_revision (dict): Config tree revision details
+            author (str, optional): Revision Author. Defaults to None.
+            message (str, optional): Revision Message. Defaults to None.
             project_guid (str, optional): Project GUID. Defaults to None.
 
         Returns:
             Munch: Revision details as a Munch object.
         """
+        config_tree_revision = {
+            "author": author,
+            "message": message,
+        }
 
         return self.c.patch(
-            url=f"{self.v2api_host}/v2/configtrees/{name}/revisions/{revision_id}/commit/",
+            url=f"{self.v2api_host}/v2/configtrees/{tree_name}/revisions/{revision_id}/commit/",
             headers=self.config.get_headers(project_guid=project_guid, **kwargs),
             json=config_tree_revision,
         )

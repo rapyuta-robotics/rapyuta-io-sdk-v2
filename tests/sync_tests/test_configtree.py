@@ -248,9 +248,8 @@ def test_commit_revision_success(client, mocker: MockFixture):  # noqa: F811
 
     # Call the commit_revision method
     response = client.commit_revision(
-        name="mock_configtree_name",
+        tree_name="mock_configtree_name",
         revision_id="mock_revision_id",
-        config_tree_revision=configtree_body,
     )
 
     # Validate the response
@@ -273,7 +272,7 @@ def test_get_key_in_revision(client, mocker: MockFixture):  # noqa: F811
 
     # Call the get_key_in_revision method
     response = client.get_key_in_revision(
-        name="mock_configtree_name", revision_id="mock_revision_id", key="mock_key"
+        tree_name="mock_configtree_name", revision_id="mock_revision_id", key="mock_key"
     )
 
     # Validate the response
@@ -296,7 +295,7 @@ def test_put_key_in_revision_success(client, mocker: MockFixture):  # noqa: F811
 
     # Call the put_key_in_revision method
     response = client.put_key_in_revision(
-        name="mock_configtree_name", revision_id="mock_revision_id", key="mock_key"
+        tree_name="mock_configtree_name", revision_id="mock_revision_id", key="mock_key"
     )
 
     # Validate the response
@@ -314,7 +313,7 @@ def test_delete_key_in_revision_success(client, mocker: MockFixture):  # noqa: F
     )
 
     response = client.delete_key_in_revision(
-        name="mock_configtree_name", revision_id="mock_revision_id", key="mock_key"
+        tree_name="mock_configtree_name", revision_id="mock_revision_id", key="mock_key"
     )
 
     assert response["success"] is True
@@ -331,7 +330,7 @@ def test_rename_key_in_revision_success(client, mocker: MockFixture):  # noqa: F
     )
 
     response = client.rename_key_in_revision(
-        name="mock_configtree_name",
+        tree_name="mock_configtree_name",
         revision_id="mock_revision_id",
         key="mock_key",
         config_key_rename={"metadata": {"name": "test_key"}},
