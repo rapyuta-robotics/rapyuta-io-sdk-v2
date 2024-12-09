@@ -126,7 +126,7 @@ class AsyncClient(object):
             },
         )
 
-    async def refresh_token(self, token: str = None, set_token: bool = True) -> str:
+    def refresh_token(self, token: str = None, set_token: bool = True) -> str:
         """Refresh the authentication token.
 
         Args:
@@ -140,7 +140,7 @@ class AsyncClient(object):
         if token is None:
             token = self.config.auth_token
 
-        response = await self.c.post(
+        response = self.sync_client.post(
             url=f"{self.rip_host}/refreshtoken",
             headers={"Content-Type": "application/json"},
             json={"token": token},
