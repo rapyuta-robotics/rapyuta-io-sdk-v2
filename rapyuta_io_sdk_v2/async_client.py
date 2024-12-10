@@ -98,7 +98,6 @@ class AsyncClient(object):
         Args:
             email (str)
             password (str)
-            environment (str)
 
         Returns:
             str: authentication token
@@ -948,6 +947,7 @@ class AsyncClient(object):
 
         Args:
             body (object): Config tree details
+            with_project (bool, optional): Work in the project scope. Defaults to True.
 
         Returns:
             Munch: Config tree details as a Munch object.
@@ -978,6 +978,7 @@ class AsyncClient(object):
             include_data (bool, optional): Include data. Defaults to False.
             key_prefixes (list[str], optional): Define keyPrefixes to get config tree from. Defaults to None.
             revision (str, optional): Define revision to get config tree from. Defaults to None.
+            with_project (bool, optional): Work in the project scope. Defaults to True.
 
         Returns:
             Munch: Config tree details as a Munch object.
@@ -1024,6 +1025,7 @@ class AsyncClient(object):
         Args:
             name (str): Config tree name
             body (dict): Update details
+            with_project (bool, optional): Work in the project scope. Defaults to True.
 
         Returns:
             Munch: Config tree details as a Munch object.
@@ -1140,7 +1142,7 @@ class AsyncClient(object):
         """Commit a revision.
 
         Args:
-            name (str): Config tree name
+            tree_name (str): Config tree name
             revision_id (str): Config tree revision ID
             author (str, optional): Revision Author. Defaults to None.
             message (str, optional): Revision Message. Defaults to None.

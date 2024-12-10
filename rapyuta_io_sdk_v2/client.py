@@ -930,6 +930,7 @@ class Client(object):
 
         Args:
             body (object): Config tree details
+            with_project (bool, optional): Work in the project scope. Defaults to True.
 
         Returns:
             Munch: Config tree details as a Munch object.
@@ -960,6 +961,7 @@ class Client(object):
             include_data (bool, optional): Include data. Defaults to False.
             key_prefixes (list[str], optional): Define keyPrefixes to get config tree from. Defaults to None.
             revision (str, optional): Define revision to get config tree from. Defaults to None.
+            with_project (bool, optional): Work in the project scope. Defaults to True.
 
         Returns:
             Munch: Config tree details as a Munch object.
@@ -1006,6 +1008,7 @@ class Client(object):
         Args:
             name (str): Config tree name
             body (dict): Update details
+            with_project (bool, optional): Work in the project scope. Defaults to True.
 
         Returns:
             Munch: Config tree details as a Munch object.
