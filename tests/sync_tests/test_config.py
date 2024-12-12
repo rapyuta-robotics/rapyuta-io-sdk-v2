@@ -1,6 +1,6 @@
 import json
 from rapyuta_io_sdk_v2.config import Configuration
-from tests.utils.test_util import mock_config  # noqa: F401
+from tests.data.mock_data import mock_config  # noqa: F401
 
 
 def test_from_file(mocker):
