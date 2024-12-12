@@ -78,8 +78,9 @@ class Configuration(object):
         """Get the headers for the configuration.
 
         Args:
+            organization_guid (str): The organization guid.
             with_project (bool): Whether to include the project headers.
-            **kwargs: Arbitrary keyword arguments.
+            project_guid (str): The project guid.
 
         Returns:
             dict: Headers for the configuration.
