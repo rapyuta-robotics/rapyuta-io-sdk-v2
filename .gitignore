@@ -14,5 +14,7 @@ wheels/
 main_test.py
 test_config.json
 
+*.env
+ignore*
 ignore/
 .coverage
