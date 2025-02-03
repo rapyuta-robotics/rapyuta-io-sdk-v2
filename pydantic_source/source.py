@@ -6,6 +6,7 @@ from munch import Munch
 
 import yaml
 from pydantic_settings import BaseSettings, PydanticBaseSettingsSource
+from pydantic.fields import FieldInfo
 
 from rapyuta_io_sdk_v2 import Client, Configuration
 import base64
@@ -67,10 +68,12 @@ class ConfigTreeSource(PydanticBaseSettingsSource):
             with open(self.local_file, "r") as file:
                 if self.local_file.endswith(".json"):
                     self.config_tree = self._extract_data_local(json.load(file))
+                    self.config_tree = benedict(self.config_tree).flatten(separator="/")
                 elif self.local_file.endswith(".yaml") or self.local_file.endswith(
                     ".yml"
                 ):
                     self.config_tree = self._extract_data_local(yaml.safe_load(file))
+                    self.config_tree = benedict(self.config_tree).flatten(separator="/")
                 else:
                     raise ValueError(
                         "Unsupported file format. Use .json or .yaml/.yml."
@@ -128,11 +131,28 @@ class ConfigTreeSource(PydanticBaseSettingsSource):
         return d
 
     def __call__(self) -> dict[str, Any]:
-        if self.config_tree is None:
-            raise ValueError("Configuration tree is not loaded.")
-        return self._configtree_data
+        if self.settings_cls.model_config.get("extra") == "allow":
+            return self._configtree_data
+        d: Dict[str, Any] = {}
 
-    def get_field_value(self, field_name: str) -> Any:
-        if self.config_tree is None:
-            raise ValueError("Configuration tree is not loaded.")
-        return self.config_tree.get(field_name, None)
+        for field_name, field in self.settings_cls.model_fields.items():
+            field_value, field_key, value_is_complex = self.get_field_value(
+                field=field, field_name=field_name
+            )
+            print("For call", field_value, field_key, value_is_complex)
+
+            if field_value is not None:
+                d[field_key] = field_value
+        return d
+
+    def get_field_value(
+        self, field: FieldInfo, field_name: str
+    ) -> tuple[Any, str, bool]:
+        value = self._configtree_data.get(field_name)
+        if value is None:
+            return None, field_name, False
+
+        if isinstance(value, list) or isinstance(value, dict):
+            return value, field_name, True
+
+        return value, field_name, False
