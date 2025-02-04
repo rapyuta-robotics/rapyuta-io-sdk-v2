@@ -1,0 +1,14 @@
+{
+    "default": {
+        "apis": {
+            "services": {
+                "value": "services inside the local file",
+                "description": "Description"
+            }
+        },
+        "common": {
+            "value": "common in local file",
+            "description": "Common Description"
+        }
+    }
+}
