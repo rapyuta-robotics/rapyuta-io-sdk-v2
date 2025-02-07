@@ -1,10 +1,8 @@
-import json
 import ast
-from typing import Any, Type, Dict
+from typing import Any, Type, Dict, Iterable
 from benedict import benedict
-from munch import Munch
+from pathlib import Path
 
-import yaml
 from pydantic_settings import BaseSettings, PydanticBaseSettingsSource
 from pydantic.fields import FieldInfo
 
@@ -19,86 +17,69 @@ class ConfigTreeSource(PydanticBaseSettingsSource):
         config: Configuration,
         tree_name: str = "default",
         key_prefix: str = "",
+        with_project: bool = True,
         local_file: str = None,
     ):
         super().__init__(settings_cls)
-        self.client = Client(config=config)
-        self.tree_name = tree_name
-        self.local_file = local_file
+        self._client = Client(config=config)
+        self._tree_name = tree_name
+        self._local_file = local_file
         self._top_prefix = key_prefix
+        self._with_project = with_project
 
-        # ? Placeholder for the configuration tree data
-        self.config_tree = None
+        self._configtree_data = benedict(self._load_config_tree()).unflatten(separator="/")
 
-        # * Load the configuration tree
-        self.load_config_tree()
+    # * Methods to fetch Configtree
+    def _fetch_from_api(self):
+        """
+        Load the configuration tree from an external API.
+        """
+        response = self._client.get_configtree(
+            name=self._tree_name,
+            include_data=True,
+            content_types="kv",
+            key_prefixes=[self._top_prefix],
+            with_project=self._with_project,
+        )
+        return self._extract_data_api(input_data=response["keys"].toDict())
+
+    def _load_from_local_file(self):
+        """
+        Load the configuration tree from a local JSON or YAML file.
+        """
+        data = {}
+        file_prefix = Path(self._local_file).stem
+        file_suffix = Path(self._local_file).suffix[1:]
+
+        if file_suffix not in ["json", "yaml", "yml"]:
+            raise ValueError("Unsupported file format. Use .json or .yaml/.yml.")
+
+        data[file_prefix] = benedict(self._local_file, format=file_suffix)
+        content = self._split_metadata(data)
+        return benedict(content).flatten(separator="/")
+
+    def _load_config_tree(self):
+        if self._local_file:
+            self.config_tree = self._load_from_local_file()
+
+        else:
+            self.config_tree = self._fetch_from_api()
 
         processed_data = self._process_config_tree(raw_data=self.config_tree)
 
         if processed_data is None:
             raise ValueError("processed_data cannot be None")
-
-        self._configtree_data = benedict(processed_data).unflatten(separator="/")
-
-    # * Methods to fetch Configtree
-    def fetch_from_api(self):
-        """
-        Load the configuration tree from an external API.
-        """
-        try:
-            response = self.client.get_configtree(
-                name=self.tree_name,
-                include_data=True,
-                content_types="kv",
-                with_project=False,
-            )
-            config_tree_response = Munch.toDict(response).get("keys")
-            self.config_tree = self._extract_data_api(input_data=config_tree_response)
-        except Exception as e:
-            raise ValueError(f"Failed to fetch configuration tree from API: {e}")
-
-    def load_from_local_file(self):
-        """
-        Load the configuration tree from a local JSON or YAML file.
-        """
-        if not self.local_file:
-            raise ValueError("No local file path provided for configuration tree.")
-
-        try:
-            with open(self.local_file, "r") as file:
-                if self.local_file.endswith(".json"):
-                    self.config_tree = self._extract_data_local(json.load(file))
-                    self.config_tree = benedict(self.config_tree).flatten(separator="/")
-                elif self.local_file.endswith(".yaml") or self.local_file.endswith(
-                    ".yml"
-                ):
-                    self.config_tree = self._extract_data_local(yaml.safe_load(file))
-                    self.config_tree = benedict(self.config_tree).flatten(separator="/")
-                else:
-                    raise ValueError(
-                        "Unsupported file format. Use .json or .yaml/.yml."
-                    )
-        except FileNotFoundError:
-            raise ValueError(f"Local file '{self.local_file}' not found.")
-        except Exception as e:
-            raise ValueError(f"Failed to load configuration tree from file: {e}")
-
-    def load_config_tree(self):
-        if self.local_file:
-            self.load_from_local_file()
-
-        else:
-            self.fetch_from_api()
+        return processed_data
 
     # * Methods to process the tree
-    def _extract_data_api(self, input_data: Dict[str, Any] = None) -> Dict[str, Any]:
+    def _extract_data_api(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         return {
-            key: self._decode_and_convert(value.get("data"))
+            key: self._decode_value(value.get("data"))
             for key, value in input_data.items()
             if "data" in value
         }
 
-    def _decode_and_convert(self, encoded_data: str) -> Any:
+    def _decode_value(self, encoded_data: str) -> Any:
         decoded_data = base64.b64decode(encoded_data).decode("utf-8")
 
         try:
@@ -107,14 +88,33 @@ class ConfigTreeSource(PydanticBaseSettingsSource):
         except (ValueError, SyntaxError):
             return decoded_data
 
-    def _extract_data_local(self, input_data: Dict[str, Any] = None) -> Dict[str, Any]:
-        for key, value in input_data.items():
-            if isinstance(value, dict):
-                if "value" in value:
-                    input_data[key] = value.get("value")
-                else:
-                    self._extract_data_local(value)
-        return input_data
+    def _split_metadata(self, data: Iterable) -> Iterable:
+        """Helper function to split data and metadata from the input data."""
+        if not isinstance(data, dict):
+            return data
+
+        content = {}
+
+        for key, value in data.items():
+            if not isinstance(value, dict):
+                content[key] = value
+                continue
+
+            potential_content = value.get("value")
+            potential_meta = value.get("metadata")
+
+            if (
+                len(value) == 2
+                and potential_content is not None
+                and potential_meta is not None
+                and isinstance(potential_meta, dict)
+            ):
+                content[key] = potential_content
+                continue
+
+            content[key] = self._split_metadata(value)
+
+        return content
 
     # * This method is extracting the data from the raw data and removing the top level prefix
     def _process_config_tree(self, raw_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -139,7 +139,6 @@ class ConfigTreeSource(PydanticBaseSettingsSource):
             field_value, field_key, value_is_complex = self.get_field_value(
                 field=field, field_name=field_name
             )
-            print("For call", field_value, field_key, value_is_complex)
 
             if field_value is not None:
                 d[field_key] = field_value

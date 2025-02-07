@@ -79,6 +79,7 @@ class RRTreeSource(BaseSettings):
                 key_prefix=KEY_PREFIX,
                 tree_name=TREE_NAME,
                 local_file="",
+                # api_with_project=False,
             ),
             env_settings,
             dotenv_settings,
@@ -134,6 +135,7 @@ class RRTreeSourceWithPrefix(BaseSettings):
                 key_prefix=KEY_PREFIX,
                 tree_name=TREE_NAME,
                 local_file="",
+                # api_with_project=False,
             ),
             env_settings,
             dotenv_settings,
@@ -229,7 +231,7 @@ config_tree_with_prefix = RRTreeSourceWithPrefix()
 config_tree_with_file = RRTreeSourceLocal()
 
 
-# @app.get("/configtrees")
+@app.get("/configtrees")
 async def get_full_configtree():
     """Retrieve the full configuration tree"""
     return config_tree.model_dump()
@@ -249,4 +251,4 @@ def get_configtrees_local():
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
