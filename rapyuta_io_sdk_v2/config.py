@@ -71,6 +71,7 @@ class Configuration(object):
 
     def get_headers(
         self,
+        with_organization: bool = True,
         organization_guid: str = None,
         with_project: bool = True,
         project_guid: str = None,
@@ -88,7 +89,7 @@ class Configuration(object):
         headers = dict(Authorization=f"Bearer {self.auth_token}")
 
         organization_guid = organization_guid or self.organization_guid
-        if organization_guid:
+        if with_organization and organization_guid:
             headers["organizationguid"] = organization_guid
 
         project_guid = project_guid or self.project_guid

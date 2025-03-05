@@ -27,7 +27,9 @@ class ConfigTreeSource(PydanticBaseSettingsSource):
         self._top_prefix = key_prefix
         self._with_project = with_project
 
-        self._configtree_data = benedict(self._load_config_tree()).unflatten(separator="/")
+        self._configtree_data = benedict(self._load_config_tree()).unflatten(
+            separator="/"
+        )
 
     # * Methods to fetch Configtree
     def _fetch_from_api(self):
@@ -144,9 +146,7 @@ class ConfigTreeSource(PydanticBaseSettingsSource):
                 d[field_key] = field_value
         return d
 
-    def get_field_value(
-        self, field: FieldInfo, field_name: str
-    ) -> tuple[Any, str, bool]:
+    def get_field_value(self, field: FieldInfo, field_name: str) -> tuple[Any, str, bool]:
         value = self._configtree_data.get(field_name)
         if value is None:
             return None, field_name, False
