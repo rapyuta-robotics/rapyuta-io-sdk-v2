@@ -165,6 +165,79 @@ class AsyncClient(object):
         """
         self.config.set_project(project_guid)
 
+    # -----------------Organization----------------
+    @handle_and_munchify_response
+    async def get_organization(self, organization_guid: str = None, **kwargs) -> Munch:
+        """Get an organization by its GUID.
+
+        If organization GUID is provided, the current organization GUID will be
+        picked from the current configuration.
+
+        Args:
+            organization_guid (str): user provided organization GUID.
+
+        Returns:
+            Munch: Organization details as a Munch object.
+        """
+        return await self.c.get(
+            url=f"{self.v2api_host}/v2/organizations/{organization_guid}/",
+            headers=self.config.get_headers(
+                with_project=False, organization_guid=organization_guid, **kwargs
+            ),
+        )
+
+    @handle_and_munchify_response
+    async def update_organization(
+        self, body: dict, organization_guid: str = None, **kwargs
+    ) -> Munch:
+        """Update an organization by its GUID.
+
+        Args:
+            body (object): Organization details
+            organization_guid (str, optional): Organization GUID. Defaults to None.
+
+        Returns:
+            Munch: Organization details as a Munch object.
+        """
+        return await self.c.put(
+            url=f"{self.v2api_host}/v2/organizations/{organization_guid}/",
+            headers=self.config.get_headers(
+                with_project=False, organization_guid=organization_guid, **kwargs
+            ),
+            json=body,
+        )
+
+    # ---------------------User--------------------
+    @handle_and_munchify_response
+    async def get_user(self, **kwargs) -> Munch:
+        """Get User details.
+
+        Returns:
+            Munch: User details as a Munch object.
+        """
+        return await self.c.get(
+            url=f"{self.v2api_host}/v2/users/me/",
+            headers=self.config.get_headers(with_project=False, **kwargs),
+        )
+
+    @handle_and_munchify_response
+    async def update_user(self, body: dict, **kwargs) -> Munch:
+        """Update the user details.
+
+        Args:
+            body (dict): User details
+
+        Returns:
+            Munch: User details as a Munch object.
+        """
+        return await self.c.put(
+            url=f"{self.v2api_host}/v2/users/me/",
+            headers=self.config.get_headers(
+                with_project=False, with_organization=False, **kwargs
+            ),
+            json=body,
+        )
+
     # ----------------- Projects -----------------
     @handle_and_munchify_response
     async def list_projects(

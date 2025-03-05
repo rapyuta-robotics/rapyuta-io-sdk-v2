@@ -4,6 +4,93 @@ from rapyuta_io_sdk_v2 import Configuration
 
 
 @pytest.fixture
+def mock_response_user():
+    return {
+        "kind": "User",
+        "metadata": {"name": "test user", "guid": "mock_user_guid"},
+        "spec": {
+            "firstName": "test",
+            "lastName": "user",
+            "emailID": "test.user@rapyuta-robotics.com",
+            "projects": [
+                {
+                    "guid": "mock_project_guid",
+                    "creator": "mock_user_guid",
+                    "name": "test-project",
+                    "organizationGUID": "mock_org_guid",
+                    "organizationCreatorGUID": "mock_user_guid",
+                },
+            ],
+            "organizations": [
+                {
+                    "guid": "mock_org_guid",
+                    "name": "test-org",
+                    "creator": "mock_user_guid",
+                    "shortGUID": "abcde",
+                },
+            ],
+        },
+    }
+
+
+@pytest.fixture
+def user_body():
+    return {
+        "kind": "User",
+        "metadata": {"name": "test user", "guid": "mock_user_guid"},
+        "spec": {
+            "firstName": "test",
+            "lastName": "user",
+            "emailID": "test.user@rapyuta-robotics.com",
+        },
+    }
+
+
+@pytest.fixture
+def mock_response_organization():
+    return {
+        "kind": "Organization",
+        "metadata": {"name": "test-org", "guid": "mock_org_guid"},
+        "spec": {
+            "users": [
+                {
+                    "guid": "mock_user1_guid",
+                    "emailID": "test.user1@rapyuta-robotics.com",
+                    "roleInOrganization": "viewer",
+                },
+                {
+                    "guid": "mock_user2_guid",
+                    "emailID": "test.user2@rapyuta-robotics.com",
+                    "roleInOrganization": "admin",
+                },
+            ]
+        },
+    }
+
+
+@pytest.fixture
+def organization_body():
+    return {
+        "kind": "Organization",
+        "metadata": {"name": "test-org", "guid": "mock_org_guid"},
+        "spec": {
+            "users": [
+                {
+                    "guid": "mock_user1_guid",
+                    "emailID": "test.user1@rapyuta-robotics.com",
+                    "roleInOrganization": "viewer",
+                },
+                {
+                    "guid": "mock_user2_guid",
+                    "emailID": "test.user2@rapyuta-robotics.com",
+                    "roleInOrganization": "admin",
+                },
+            ]
+        },
+    }
+
+
+@pytest.fixture
 def mock_response_project():
     return {
         "kind": "Project",
