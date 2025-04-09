@@ -1,3 +1,10 @@
+# [0.2.0](https://github.com/rapyuta-robotics/rapyuta-io-sdk-v2/compare/v0.1.0...v0.2.0) (2025-04-09)
+
+
+### Features
+
+* add Organization and User API ([b5eb50d](https://github.com/rapyuta-robotics/rapyuta-io-sdk-v2/commit/b5eb50d004c962ef66607fcab3b653ced5cc6c0a))
+
 # [0.1.0](https://github.com/rapyuta-robotics/rapyuta-io-sdk-v2/compare/v0.0.1...v0.1.0) (2024-12-13)
 
 
