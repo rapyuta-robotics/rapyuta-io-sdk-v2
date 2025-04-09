@@ -4,7 +4,7 @@ from rapyuta_io_sdk_v2 import Client, AsyncClient
 
 # Fixture to initialize the Client
 @pytest.fixture
-def client():
+def client() -> Client:
     client = Client()
     client.config.hosts["v2api_host"] = "https://mock-api.rapyuta.io"
     client.config.auth_token = "mock_token"
@@ -15,7 +15,7 @@ def client():
 
 
 @pytest.fixture
-def async_client():
+def async_client() -> AsyncClient:
     client = AsyncClient()
     client.config.hosts["v2api_host"] = "https://mock-api.rapyuta.io"
     client.config.auth_token = "mock_token"
