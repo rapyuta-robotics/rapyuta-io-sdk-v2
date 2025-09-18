@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2024 Rapyuta Robotics
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -26,7 +25,7 @@ from rapyuta_io_sdk_v2.utils import get_default_app_dir
 
 
 @dataclass
-class Configuration(object):
+class Configuration:
     """Configuration class for the SDK."""
 
     email: str = None
@@ -58,10 +57,10 @@ class Configuration(object):
             default_dir = get_default_app_dir(APP_NAME)
             file_path = os.path.join(default_dir, "config.json")
 
-        with open(file_path, "r") as file:
+        with open(file_path) as file:
             data = json.load(file)
             return cls(
-                email=data.get("email"),
+                email=data.get("email_id"),
                 password=data.get("password"),
                 project_guid=data.get("project_id"),
                 organization_guid=data.get("organization_id"),
