@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2024 Rapyuta Robotics
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,15 +13,34 @@
 # limitations under the License.
 
 import platform
+from typing import Any
 
 import httpx
-from munch import Munch
 
 from rapyuta_io_sdk_v2.config import Configuration
-from rapyuta_io_sdk_v2.utils import handle_and_munchify_response, handle_server_errors
+from rapyuta_io_sdk_v2.pydantic_models import (
+    Secret,
+    StaticRoute,
+    Disk,
+    Deployment,
+    Package,
+    Project,
+    Network,
+    User,
+    ProjectList,
+    DeploymentList,
+    DiskList,
+    NetworkList,
+    PackageList,
+    SecretList,
+    StaticRouteList,
+    ManagedServiceList,
+    Organization,
+)
+from rapyuta_io_sdk_v2.utils import handle_server_errors
 
 
-class AsyncClient(object):
+class AsyncClient:
     """AsyncClient class for the SDK."""
 
     def __init__(self, config=None, **kwargs):
@@ -37,12 +55,7 @@ class AsyncClient(object):
             ),
             headers={
                 "User-Agent": (
-                    "rio-sdk-v2;N/A;{};{};{} {}".format(
-                        platform.processor() or platform.machine(),
-                        platform.system(),
-                        platform.release(),
-                        platform.version(),
-                    )
+                    f"rio-sdk-v2;N/A;{platform.processor() or platform.machine()};{platform.system()};{platform.release()} {platform.version()}"
                 )
             },
         )
@@ -55,12 +68,7 @@ class AsyncClient(object):
             ),
             headers={
                 "User-Agent": (
-                    "rio-sdk-v2;N/A;{};{};{} {}".format(
-                        platform.processor() or platform.machine(),
-                        platform.system(),
-                        platform.release(),
-                        platform.version(),
-                    )
+                    f"rio-sdk-v2;N/A;{platform.processor() or platform.machine()};{platform.system()};{platform.release()} {platform.version()}"
                 )
             },
         )
@@ -106,8 +114,7 @@ class AsyncClient(object):
         token = self.get_auth_token(email, password)
         self.config.auth_token = token
 
-    @handle_and_munchify_response
-    def logout(self, token: str = None) -> Munch:
+    def logout(self, token: str = None) -> dict[str, Any]:
         """Expire the authentication token.
 
         Args:
@@ -117,13 +124,15 @@ class AsyncClient(object):
         if token is None:
             token = self.config.auth_token
 
-        return self.sync_client.post(
+        response = self.sync_client.post(
             url=f"{self.rip_host}/user/logout",
             headers={
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {token}",
             },
         )
+        handle_server_errors(response)
+        return response.json()
 
     def refresh_token(self, token: str = None, set_token: bool = True) -> str:
         """Refresh the authentication token.
@@ -166,8 +175,9 @@ class AsyncClient(object):
         self.config.set_project(project_guid)
 
     # -----------------Organization----------------
-    @handle_and_munchify_response
-    async def get_organization(self, organization_guid: str = None, **kwargs) -> Munch:
+    async def get_organization(
+        self, organization_guid: str = None, **kwargs
+    ) -> Organization:
         """Get an organization by its GUID.
 
         If organization GUID is provided, the current organization GUID will be
@@ -177,69 +187,79 @@ class AsyncClient(object):
             organization_guid (str): user provided organization GUID.
 
         Returns:
-            Munch: Organization details as a Munch object.
+            Organization: Organization details as an Organization object.
         """
-        return await self.c.get(
+        response = await self.c.get(
             url=f"{self.v2api_host}/v2/organizations/{organization_guid}/",
             headers=self.config.get_headers(
                 with_project=False, organization_guid=organization_guid, **kwargs
             ),
         )
+        handle_server_errors(response)
+        validated_result = Organization.model_validate(obj=response.json())
+        return validated_result
 
-    @handle_and_munchify_response
     async def update_organization(
         self, body: dict, organization_guid: str = None, **kwargs
-    ) -> Munch:
+    ) -> Organization:
         """Update an organization by its GUID.
 
         Args:
-            body (object): Organization details
+            body (dict): Organization details
             organization_guid (str, optional): Organization GUID. Defaults to None.
 
         Returns:
-            Munch: Organization details as a Munch object.
+            Organization: Organization details as an Organization object.
         """
-        return await self.c.put(
+        validated_body = Organization.model_validate(obj=body)
+        response = await self.c.put(
             url=f"{self.v2api_host}/v2/organizations/{organization_guid}/",
             headers=self.config.get_headers(
                 with_project=False, organization_guid=organization_guid, **kwargs
             ),
-            json=body,
+            json=validated_body.model_dump(),
         )
+        handle_server_errors(response)
+        validated_result = Organization.model_validate(obj=response.json())
+        return validated_result
 
     # ---------------------User--------------------
-    @handle_and_munchify_response
-    async def get_user(self, **kwargs) -> Munch:
+    async def get_user(self, **kwargs) -> User:
         """Get User details.
 
         Returns:
-            Munch: User details as a Munch object.
+            User: User details as a User object.
         """
-        return await self.c.get(
+        response = await self.c.get(
             url=f"{self.v2api_host}/v2/users/me/",
             headers=self.config.get_headers(with_project=False, **kwargs),
         )
+        handle_server_errors(response)
+        validated_result = User.model_validate(obj=response.json())
+        return validated_result
 
-    @handle_and_munchify_response
-    async def update_user(self, body: dict, **kwargs) -> Munch:
+    async def update_user(self, body: dict, **kwargs) -> User:
         """Update the user details.
 
         Args:
             body (dict): User details
 
         Returns:
-            Munch: User details as a Munch object.
+            User: User details as a User object.
         """
-        return await self.c.put(
+        validated_body = User.model_validate(obj=body)
+        response = await self.c.put(
             url=f"{self.v2api_host}/v2/users/me/",
             headers=self.config.get_headers(
                 with_project=False, with_organization=False, **kwargs
             ),
-            json=body,
+            json=validated_body.model_dump(),
         )
+        handle_server_errors(response)
+        validated_result = User.model_validate(obj=response.json())
+        return validated_result
 
     # ----------------- Projects -----------------
-    @handle_and_munchify_response
     async def list_projects(
         self,
         cont: int = 0,
@@ -247,35 +267,48 @@ class AsyncClient(object):
         label_selector: list[str] = None,
         status: list[str] = None,
         organizations: list[str] = None,
+        name: str = None,
         **kwargs,
-    ) -> Munch:
+    ) -> ProjectList:
         """List all projects in an organization.
 
         Args:
             cont (int, optional): Start index of projects. Defaults to 0.
             limit (int, optional): Number of projects to list. Defaults to 50.
-            label_selector (list[str], optional): Define labelSelector to get projects from. Defaults to None.
-            status (list[str], optional): Define status to get projects from. Defaults to None.
-            organizations (list[str], optional): Define organizations to get projects from. Defaults to None.
+            label_selector (List[str], optional): Define labelSelector to get projects from. Defaults to None.
+            status (List[str], optional): Define status to get projects from. Defaults to None.
+            organizations (List[str], optional): Define organizations to get projects from. Defaults to None.
+            name (str, optional): Define name to get projects from. Defaults to None.
 
         Returns:
-            Munch: List of projects as a Munch object.
+            List of projects as a dictionary.
         """
 
-        return await self.c.get(
+        parameters = {
+            "continue": cont,
+            "limit": limit,
+        }
+        if organizations:
+            parameters["organizations"] = organizations
+        if label_selector:
+            parameters["labelSelector"] = label_selector
+        if status:
+            parameters["status"] = status
+        if name:
+            parameters["name"] = name
+
+        response = await self.c.get(
             url=f"{self.v2api_host}/v2/projects/",
             headers=self.config.get_headers(with_project=False, **kwargs),
-            params={
-                "continue": cont,
-                "limit": limit,
-                "status": status,
-                "organizations": organizations,
-                "labelSelector": label_selector,
-            },
+            params=parameters,
         )
 
-    @handle_and_munchify_response
-    async def get_project(self, project_guid: str = None, **kwargs) -> Munch:
+        handle_server_errors(response)
+
+        validated_result = ProjectList.model_validate(response.json())
+        return validated_result
+
+    async def get_project(self, project_guid: str = None, **kwargs) -> Project:
         """Get a project by its GUID.
 
         If no project or organization GUID is provided,
@@ -289,87 +322,109 @@ class AsyncClient(object):
             ValueError: If organization_guid or project_guid is None
 
         Returns:
-            Munch: Project details as a Munch object.
+            Project details as a dictionary.
         """
         if project_guid is None:
             project_guid = self.config.project_guid
-
         if not project_guid:
             raise ValueError("project_guid is required")
-
-        return await self.c.get(
+        result = await self.c.get(
             url=f"{self.v2api_host}/v2/projects/{project_guid}/",
             headers=self.config.get_headers(with_project=False, **kwargs),
         )
+        handle_server_errors(result)
 
-    @handle_and_munchify_response
-    async def create_project(self, body: dict, **kwargs) -> Munch:
+        validated_result = Project.model_validate(obj=result.json())
+
+        return validated_result
+
+    async def create_project(self, body: dict, **kwargs) -> Project:
         """Create a new project.
 
         Args:
-            body (object): Project details
+            body (dict): Project details
 
         Returns:
-            Munch: Project details as a Munch object.
+            Project details as a dictionary.
         """
+        validated_body = Project.model_validate(obj=body)
 
-        return await self.c.post(
+        result = await self.c.post(
             url=f"{self.v2api_host}/v2/projects/",
             headers=self.config.get_headers(with_project=False, **kwargs),
-            json=body,
+            json=validated_body.model_dump(),
         )
+        handle_server_errors(result)
+        validated_result = Project.model_validate(obj=result.json())
+        return validated_result
 
-    @handle_and_munchify_response
     async def update_project(
         self, body: dict, project_guid: str = None, **kwargs
-    ) -> Munch:
+    ) -> dict[str, Any]:
         """Update a project by its GUID.
 
-        Returns:
-            Munch: Project details as a Munch object.
-        """
+        Args:
+            body (dict): Project details
+            project_guid (str, optional): Project GUID. Defaults to None.
 
-        return await self.c.put(
+        Returns:
+            Project details as a dictionary.
+        """
+        validated_body = Project.model_validate(obj=body)
+
+        result = await self.c.put(
             url=f"{self.v2api_host}/v2/projects/{project_guid}/",
             headers=self.config.get_headers(with_project=False, **kwargs),
-            json=body,
+            json=validated_body.model_dump(),
         )
+        handle_server_errors(result)
+        validated_result = Project.model_validate(result.json())
 
-    @handle_and_munchify_response
-    async def delete_project(self, project_guid: str, **kwargs) -> Munch:
+        return validated_result
+
+    async def delete_project(self, project_guid: str, **kwargs) -> None:
         """Delete a project by its GUID.
 
         Args:
             project_guid (str): Project GUID
 
         Returns:
-            Munch: Project details as a Munch object.
+            None if successful.
         """
-
-        return await self.c.delete(
+        result = await self.c.delete(
             url=f"{self.v2api_host}/v2/projects/{project_guid}/",
             headers=self.config.get_headers(with_project=False, **kwargs),
         )
+        handle_server_errors(result)
+        return None
 
-    @handle_and_munchify_response
     async def update_project_owner(
         self, body: dict, project_guid: str = None, **kwargs
-    ) -> Munch:
+    ) -> dict[str, Any]:
         """Update the owner of a project by its GUID.
 
+        Args:
+            body (dict): Project details
+            project_guid (str, optional): Project GUID. Defaults to None.
+
         Returns:
-            Munch: Project details as a Munch object.
+            Project details as a dictionary.
         """
         project_guid = project_guid or self.config.project_guid
 
-        return await self.c.put(
+        validated_body = Project.model_validate(obj=body)
+
+        result = await self.c.put(
             url=f"{self.v2api_host}/v2/projects/{project_guid}/owner/",
             headers=self.config.get_headers(**kwargs),
-            json=body,
+            json=validated_body.model_dump(),
         )
+        handle_server_errors(result)
+        validated_result = Project.model_validate(result.json())
+
+        return validated_result
 
     # -------------------Package-------------------
-    @handle_and_munchify_response
     async def list_packages(
         self,
         cont: int = 0,
@@ -377,20 +432,19 @@ class AsyncClient(object):
         label_selector: list[str] = None,
         name: str = None,
         **kwargs,
-    ) -> Munch:
+    ) -> PackageList:
         """List all packages in a project.
 
         Args:
             cont (int, optional): Start index of packages. Defaults to 0.
             limit (int, optional): Number of packages to list. Defaults to 50.
-            label_selector (list[str], optional): Define labelSelector to get packages from. Defaults to None.
+            label_selector (List[str], optional): Define labelSelector to get packages from. Defaults to None.
             name (str, optional): Define name to get packages from. Defaults to None.
 
         Returns:
-            Munch: List of packages as a Munch object.
+            List of packages as a dictionary.
         """
-
-        return await self.c.get(
+        result = await self.c.get(
             url=f"{self.v2api_host}/v2/packages/",
             headers=self.config.get_headers(**kwargs),
             params={
@@ -401,25 +455,36 @@ class AsyncClient(object):
             },
         )
 
-    @handle_and_munchify_response
-    async def create_package(self, body: dict, **kwargs) -> Munch:
+        handle_server_errors(response=result)
+        validated_result = PackageList.model_validate(result.json())
+        return validated_result
+
+    async def create_package(self, body: dict, **kwargs) -> Package:
         """Create a new package.
 
         The Payload is the JSON format of the Package Manifest.
         For a documented example, run the rio explain package command.
 
-        Returns:
-            Munch: Package details as a Munch object.
-        """
+        Args:
+            body (dict): Package details
 
-        return await self.c.post(
+        Returns:
+            Package: Package details as a Package object.
+        """
+        validated_body = Package.model_validate(obj=body)
+
+        result = await self.c.post(
             url=f"{self.v2api_host}/v2/packages/",
             headers=self.config.get_headers(**kwargs),
-            json=body,
+            json=validated_body.model_dump(),
         )
 
-    @handle_and_munchify_response
-    async def get_package(self, name: str, version: str = None, **kwargs) -> Munch:
+        handle_server_errors(result)
+        validated_result = Package.model_validate(obj=result.json())
+
+        return validated_result
+
+    async def get_package(self, name: str, version: str = None, **kwargs) -> Package:
         """Get a package by its name.
 
         Args:
@@ -427,32 +492,35 @@ class AsyncClient(object):
             version (str, optional): Package version. Defaults to None.
 
         Returns:
-            Munch: Package details as a Munch object.
+            Package: Package details as a Package object.
         """
-
-        return await self.c.get(
+        response = await self.c.get(
             url=f"{self.v2api_host}/v2/packages/{name}/",
             headers=self.config.get_headers(**kwargs),
             params={"version": version},
         )
+        handle_server_errors(response)
 
-    @handle_and_munchify_response
-    async def delete_package(self, name: str, **kwargs) -> Munch:
+        return Package.model_validate(obj=response.json())
+
+    async def delete_package(self, name: str, version: str, **kwargs) -> None:
         """Delete a package by its name.
 
         Args:
             name (str): Package name
 
         Returns:
-            Munch: Package details as a Munch object.
+            None if successful.
         """
 
-        return await self.c.delete(
+        result = await self.c.delete(
             url=f"{self.v2api_host}/v2/packages/{name}/",
             headers=self.config.get_headers(**kwargs),
+            params={"version": version},
         )
+        handle_server_errors(result)
+        return None
 
-    @handle_and_munchify_response
     async def list_deployments(
         self,
         cont: int = 0,
@@ -468,7 +536,7 @@ class AsyncClient(object):
         phases: list[str] = None,
         regions: list[str] = None,
         **kwargs,
-    ) -> Munch:
+    ) -> DeploymentList:
         """List all deployments in a project.
 
         Args:
@@ -476,20 +544,20 @@ class AsyncClient(object):
             limit (int, optional): Number of deployments to list. Defaults to 50.
             dependencies (bool, optional): Filter by dependencies. Defaults to False.
             device_name (str, optional): Filter deployments by device name. Defaults to None.
-            guids (list[str], optional): Filter by GUIDs. Defaults to None.
-            label_selector (list[str], optional): Define labelSelector to get deployments from. Defaults to None.
+            guids (List[str], optional): Filter by GUIDs. Defaults to None.
+            label_selector (List[str], optional): Define labelSelector to get deployments from. Defaults to None.
             name (str, optional): Define name to get deployments from. Defaults to None.
-            names (list[str], optional): Define names to get deployments from. Defaults to None.
+            names (List[str], optional): Define names to get deployments from. Defaults to None.
             package_name (str, optional): Filter by package name. Defaults to None.
             package_version (str, optional): Filter by package version. Defaults to None.
-            phases (list[str], optional): Filter by phases. Available values : InProgress, Provisioning, Succeeded, FailedToUpdate, FailedToStart, Stopped. Defaults to None.
-            regions (list[str], optional): Filter by regions. Defaults to None.
+            phases (List[str], optional): Filter by phases. Available values : InProgress, Provisioning, Succeeded, FailedToUpdate, FailedToStart, Stopped. Defaults to None.
+            regions (List[str], optional): Filter by regions. Defaults to None.
 
         Returns:
-            Munch: List of deployments as a Munch object.
+            List of deployments as a dictionary.
         """
 
-        return await self.c.get(
+        result = await self.c.get(
             url=f"{self.v2api_host}/v2/deployments/",
             headers=self.config.get_headers(**kwargs),
             params={
@@ -508,97 +576,126 @@ class AsyncClient(object):
             },
         )
 
+        handle_server_errors(response=result)
+
+        validated_result = DeploymentList.model_validate(result.json())
+        return validated_result
+
     # -------------------Deployment-------------------
 
-    @handle_and_munchify_response
-    async def create_deployment(self, body: dict, **kwargs) -> Munch:
+    async def create_deployment(self, body: dict, **kwargs) -> Deployment:
         """Create a new deployment.
 
         Args:
-            body (object): Deployment details
+            body (dict): Deployment details
 
         Returns:
-            Munch: Deployment details as a Munch object.
+            Deployment: Deployment details as a Deployment object.
         """
 
-        return await self.c.post(
+        validated_body = Deployment.model_validate(obj=body)
+
+        result = await self.c.post(
             url=f"{self.v2api_host}/v2/deployments/",
             headers=self.config.get_headers(**kwargs),
-            json=body,
+            json=validated_body.model_dump(),
         )
 
-    @handle_and_munchify_response
-    async def get_deployment(self, name: str, guid: str = None, **kwargs) -> Munch:
+        handle_server_errors(result)
+        validated_result = Deployment.model_validate(obj=result.json())
+        return validated_result
+
+    async def get_deployment(self, name: str, guid: str = None, **kwargs) -> Deployment:
         """Get a deployment by its name.
 
+        Args:
+            name (str): Deployment name
+            guid (str, optional): Deployment GUID. Defaults to None.
+
         Returns:
-            Munch: Deployment details as a Munch object.
+            Deployment: Deployment details as a Deployment object.
         """
 
-        return await self.c.get(
+        result = await self.c.get(
             url=f"{self.v2api_host}/v2/deployments/{name}/",
             headers=self.config.get_headers(**kwargs),
             params={"guid": guid},
         )
 
-    @handle_and_munchify_response
-    async def update_deployment(self, name: str, body: dict, **kwargs) -> Munch:
+        handle_server_errors(response=result)
+
+        validated_result = Deployment.model_validate(obj=result.json())
+
+        return validated_result
+
+    async def update_deployment(self, name: str, body: dict, **kwargs) -> Deployment:
         """Update a deployment by its name.
 
+        Args:
+            name (str): Deployment name
+            body (dict): Deployment details
+
         Returns:
-            Munch: Deployment details as a Munch object.
+            Deployment: Deployment details as a Deployment object.
         """
 
-        return await self.c.put(
+        validated_body = Deployment.model_validate(obj=body)
+        result = await self.c.put(
             url=f"{self.v2api_host}/v2/deployments/{name}/",
             headers=self.config.get_headers(**kwargs),
-            json=body,
+            json=validated_body.model_dump(),
         )
+        handle_server_errors(result)
+        validated_result = Deployment.model_validate(result.json())
+        return validated_result
 
-    @handle_and_munchify_response
-    async def delete_deployment(self, name: str, **kwargs) -> Munch:
+    async def delete_deployment(self, name: str, **kwargs) -> None:
         """Delete a deployment by its name.
 
         Returns:
-            Munch: Deployment details as a Munch object.
+            None if successful.
         """
 
-        return await self.c.delete(
+        result = await self.c.delete(
             url=f"{self.v2api_host}/v2/deployments/{name}/",
             headers=self.config.get_headers(**kwargs),
         )
+        handle_server_errors(result)
+        return None
 
-    @handle_and_munchify_response
-    async def get_deployment_graph(self, name: str, **kwargs) -> Munch:
+    async def get_deployment_graph(self, name: str, **kwargs) -> dict[str, Any]:
         """Get a deployment graph by its name. [Experimental]
 
         Returns:
-            Munch: Deployment graph as a Munch object.
+            Deployment graph as a dictionary.
         """
 
-        return await self.c.get(
+        result = await self.c.get(
             url=f"{self.v2api_host}/v2/deployments/{name}/graph/",
             headers=self.config.get_headers(**kwargs),
         )
+        handle_server_errors(result)
+        return result.json()
 
-    @handle_and_munchify_response
     async def get_deployment_history(
         self, name: str, guid: str = None, **kwargs
-    ) -> Munch:
+    ) -> dict[str, Any]:
         """Get a deployment history by its name.
 
         Returns:
-            Munch: Deployment history as a Munch object.
+            Deployment history as a dictionary.
         """
 
-        return await self.c.get(
+        result = await self.c.get(
             url=f"{self.v2api_host}/v2/deployments/{name}/history/",
             headers=self.config.get_headers(**kwargs),
             params={"guid": guid},
         )
+        handle_server_errors(result)
+        return result.json()
 
     # -------------------Disks-------------------
-    @handle_and_munchify_response
+
     async def list_disks(
         self,
         cont: int = 0,
@@ -608,23 +705,23 @@ class AsyncClient(object):
         regions: list[str] = None,
         status: list[str] = None,
         **kwargs,
-    ) -> Munch:
+    ) -> DiskList:
         """List all disks in a project.
 
         Args:
             cont (int, optional): Start index of disks. Defaults to 0.
-            label_selector (list[str], optional): Define labelSelector to get disks from. Defaults to None.
+            label_selector (List[str], optional): Define labelSelector to get disks from. Defaults to None.
             limit (int, optional): Number of disks to list. Defaults to 50.
-            names (list[str], optional): Define names to get disks from. Defaults to None.
-            regions (list[str], optional): Define regions to get disks from. Defaults to None.
-            status (list[str], optional): Define status to get disks from. Available values : Available, Bound, Released, Failed, Pending.Defaults to None.
+            names (List[str], optional): Define names to get disks from. Defaults to None.
+            regions (List[str], optional): Define regions to get disks from. Defaults to None.
+            status (List[str], optional): Define status to get disks from. Available values : Available, Bound, Released, Failed, Pending.Defaults to None.
 
 
         Returns:
-            Munch: List of disks as a Munch object.
+            List of disks as a dictionary.
         """
 
-        return await self.c.get(
+        result = await self.c.get(
             url=f"{self.v2api_host}/v2/disks/",
             headers=self.config.get_headers(**kwargs),
             params={
@@ -637,54 +734,70 @@ class AsyncClient(object):
             },
         )
 
-    @handle_and_munchify_response
-    async def get_disk(self, name: str, **kwargs) -> Munch:
+        handle_server_errors(response=result)
+        validated_result = DiskList.model_validate(result.json())
+        return validated_result
+
+    async def get_disk(self, name: str, **kwargs) -> Disk:
         """Get a disk by its name.
 
         Args:
             name (str): Disk name
 
         Returns:
-            Munch: Disk details as a Munch object.
+            Disk: Disk details as a Disk object.
         """
 
-        return await self.c.get(
+        result = await self.c.get(
             url=f"{self.v2api_host}/v2/disks/{name}/",
             headers=self.config.get_headers(**kwargs),
         )
+        handle_server_errors(response=result)
 
-    @handle_and_munchify_response
-    async def create_disk(self, body: str, **kwargs) -> Munch:
+        validated_result = Disk.model_validate(obj=result.json())
+
+        return validated_result
+
+    async def create_disk(self, body: dict, **kwargs) -> Disk:
         """Create a new disk.
 
+        Args:
+            body (dict): Disk details
+
         Returns:
-            Munch: Disk details as a Munch object.
+            Disk: Disk details as a Disk object.
         """
 
-        return await self.c.post(
+        validated_body = Disk.model_validate(obj=body)
+
+        result = await self.c.post(
             url=f"{self.v2api_host}/v2/disks/",
             headers=self.config.get_headers(**kwargs),
-            json=body,
+            json=validated_body.model_dump(),
         )
+        handle_server_errors(result)
+        validated_result = Disk.model_validate(obj=result.json())
+        return validated_result
 
-    @handle_and_munchify_response
-    async def delete_disk(self, name: str, **kwargs) -> Munch:
+    async def delete_disk(self, name: str, **kwargs) -> None:
         """Delete a disk by its name.
 
         Args:
             name (str): Disk name
 
         Returns:
-            Munch: Disk details as a Munch object.
+            None if successful.
         """
 
-        return await self.c.delete(
+        result = await self.c.delete(
             url=f"{self.v2api_host}/v2/disks/{name}/",
             headers=self.config.get_headers(**kwargs),
         )
+        handle_server_errors(result)
+        return None
 
     # -------------------Static Routes-------------------
-    @handle_and_munchify_response
+
     async def list_staticroutes(
         self,
         cont: int = 0,
@@ -694,22 +807,22 @@ class AsyncClient(object):
         names: list[str] = None,
         regions: list[str] = None,
         **kwargs,
-    ) -> Munch:
+    ) -> StaticRouteList:
         """List all static routes in a project.
 
         Args:
             cont (int, optional): Start index of static routes. Defaults to 0.
             limit (int, optional): Number of static routes to list. Defaults to 50.
-            guids (list[str], optional): Define guids to get static routes from. Defaults to None.
-            label_selector (list[str], optional): Define labelSelector to get static routes from. Defaults to None.
-            names (list[str], optional): Define names to get static routes from. Defaults to None.
-            regions (list[str], optional): Define regions to get static routes from. Defaults to None.
+            guids (List[str], optional): Define guids to get static routes from. Defaults to None.
+            label_selector (List[str], optional): Define labelSelector to get static routes from. Defaults to None.
+            names (List[str], optional): Define names to get static routes from. Defaults to None.
+            regions (List[str], optional): Define regions to get static routes from. Defaults to None.
 
         Returns:
-            Munch: List of static routes as a Munch object.
+            List of static routes as a dictionary.
         """
 
-        return await self.c.get(
+        result = await self.c.get(
             url=f"{self.v2api_host}/v2/staticroutes/",
             headers=self.config.get_headers(**kwargs),
             params={
@@ -722,38 +835,52 @@ class AsyncClient(object):
             },
         )
 
-    @handle_and_munchify_response
-    async def create_staticroute(self, body: dict, **kwargs) -> Munch:
+        handle_server_errors(response=result)
+        validated_result = StaticRouteList.model_validate(result.json())
+        return validated_result
+
+    async def create_staticroute(self, body: dict, **kwargs) -> StaticRoute:
         """Create a new static route.
 
+        Args:
+            body (dict): Static route details
+
         Returns:
-            Munch: Static route details as a Munch object.
+            StaticRoute: Static route details as a StaticRoute object.
         """
 
-        return await self.c.post(
+        validated_body = StaticRoute.model_validate(obj=body)
+
+        result = await self.c.post(
             url=f"{self.v2api_host}/v2/staticroutes/",
             headers=self.config.get_headers(**kwargs),
-            json=body,
+            json=validated_body.model_dump(),
         )
+        handle_server_errors(result)
+        validated_result = StaticRoute.model_validate(obj=result.json())
+        return validated_result
 
-    @handle_and_munchify_response
-    async def get_staticroute(self, name: str, **kwargs) -> Munch:
+    async def get_staticroute(self, name: str, **kwargs) -> StaticRoute:
         """Get a static route by its name.
 
         Args:
             name (str): Static route name
 
         Returns:
-            Munch: Static route details as a Munch object.
+            StaticRoute: Static route details as a StaticRoute object.
         """
 
-        return await self.c.get(
+        result = await self.c.get(
             url=f"{self.v2api_host}/v2/staticroutes/{name}/",
             headers=self.config.get_headers(**kwargs),
         )
+        handle_server_errors(response=result)
 
-    @handle_and_munchify_response
-    async def update_staticroute(self, name: str, body: dict, **kwargs) -> Munch:
+        validated_result = StaticRoute.model_validate(obj=result.json())
+
+        return validated_result
+
+    async def update_staticroute(self, name: str, body: dict, **kwargs) -> StaticRoute:
         """Update a static route by its name.
 
         Args:
@@ -761,33 +888,40 @@ class AsyncClient(object):
             body (dict): Update details
 
         Returns:
-            Munch: Static route details as a Munch object.
+            StaticRoute: Static route details as a StaticRoute object.
         """
 
-        return await self.c.put(
+        validated_body = StaticRoute.model_validate(obj=body)
+
+        result = await self.c.put(
             url=f"{self.v2api_host}/v2/staticroutes/{name}/",
             headers=self.config.get_headers(**kwargs),
-            json=body,
+            json=validated_body.model_dump(),
         )
+        handle_server_errors(result)
+        validated_result = StaticRoute.model_validate(result.json())
 
-    @handle_and_munchify_response
-    async def delete_staticroute(self, name: str, **kwargs) -> Munch:
+        return validated_result
+
+    async def delete_staticroute(self, name: str, **kwargs) -> None:
         """Delete a static route by its name.
 
         Args:
             name (str): Static route name
 
         Returns:
-            Munch: Static route details as a Munch object.
+            None if successful.
         """
 
-        return await self.c.delete(
+        result = await self.c.delete(
             url=f"{self.v2api_host}/v2/staticroutes/{name}/",
             headers=self.config.get_headers(**kwargs),
         )
+        handle_server_errors(result)
+        return None
 
     # -------------------Networks-------------------
-    @handle_and_munchify_response
+
     async def list_networks(
         self,
         cont: int = 0,
@@ -800,25 +934,25 @@ class AsyncClient(object):
         regions: list[str] = None,
         status: list[str] = None,
         **kwargs,
-    ) -> Munch:
+    ) -> NetworkList:
         """List all networks in a project.
 
         Args:
             cont (int, optional): Start index of networks. Defaults to 0.
             limit (int, optional): Number of networks to list. Defaults to 50.
             device_name (str, optional): Filter networks by device name. Defaults to None.
-            label_selector (list[str], optional): Define labelSelector to get networks from. Defaults to None.
-            names (list[str], optional): Define names to get networks from. Defaults to None.
+            label_selector (List[str], optional): Define labelSelector to get networks from. Defaults to None.
+            names (List[str], optional): Define names to get networks from. Defaults to None.
             network_type (str, optional): Define network type to get networks from. Defaults to None.
-            phases (list[str], optional): Define phases to get networks from. Available values : InProgress, Provisioning, Succeeded, FailedToUpdate, FailedToStart, Stopped. Defaults to None.
-            regions (list[str], optional): Define regions to get networks from. Defaults to None.
-            status (list[str], optional): Define status to get networks from. Available values : Running, Pending, Error, Unknown, Stopped. Defaults to None.
+            phases (List[str], optional): Define phases to get networks from. Available values : InProgress, Provisioning, Succeeded, FailedToUpdate, FailedToStart, Stopped. Defaults to None.
+            regions (List[str], optional): Define regions to get networks from. Defaults to None.
+            status (List[str], optional): Define status to get networks from. Available values : Running, Pending, Error, Unknown, Stopped. Defaults to None.
 
         Returns:
-            Munch: List of networks as a Munch object.
+            List of networks as a dictionary.
         """
 
-        return await self.c.get(
+        result = await self.c.get(
             url=f"{self.v2api_host}/v2/networks/",
             headers=self.config.get_headers(**kwargs),
             params={
@@ -834,54 +968,70 @@ class AsyncClient(object):
             },
         )
 
-    @handle_and_munchify_response
-    async def create_network(self, body: dict, **kwargs) -> Munch:
+        handle_server_errors(response=result)
+        validated_result = NetworkList.model_validate(result.json())
+        return validated_result
+
+    async def create_network(self, body: dict, **kwargs) -> Network:
         """Create a new network.
 
+        Args:
+            body (dict): Network details
+
         Returns:
-            Munch: Network details as a Munch object.
+            Network: Network details as a Network object.
         """
 
-        return await self.c.post(
+        validated_body = Network.model_validate(obj=body)
+
+        result = await self.c.post(
             url=f"{self.v2api_host}/v2/networks/",
             headers=self.config.get_headers(**kwargs),
-            json=body,
+            json=validated_body.model_dump(),
         )
+        handle_server_errors(result)
+        validated_result = Network.model_validate(obj=result.json())
+        return validated_result
 
-    @handle_and_munchify_response
-    async def get_network(self, name: str, **kwargs) -> Munch:
+    async def get_network(self, name: str, **kwargs) -> Network:
         """Get a network by its name.
 
         Args:
             name (str): Network name
 
         Returns:
-            Munch: Network details as a Munch object.
+            Network: Network details as a Network object.
         """
 
-        return await self.c.get(
+        result = await self.c.get(
             url=f"{self.v2api_host}/v2/networks/{name}/",
             headers=self.config.get_headers(**kwargs),
         )
+        handle_server_errors(response=result)
 
-    @handle_and_munchify_response
-    async def delete_network(self, name: str, **kwargs) -> Munch:
+        validated_result = Network.model_validate(obj=result.json())
+
+        return validated_result
+
+    async def delete_network(self, name: str, **kwargs) -> None:
         """Delete a network by its name.
 
         Args:
             name (str): Network name
 
         Returns:
-            Munch: Network details as a Munch object.
+            None if successful.
         """
 
-        return await self.c.delete(
+        result = await self.c.delete(
             url=f"{self.v2api_host}/v2/networks/{name}/",
             headers=self.config.get_headers(**kwargs),
         )
+        handle_server_errors(result)
+        return None
 
     # -------------------Secrets-------------------
-    @handle_and_munchify_response
+
     async def list_secrets(
         self,
         cont: int = 0,
@@ -890,64 +1040,84 @@ class AsyncClient(object):
         names: list[str] = None,
         regions: list[str] = None,
         **kwargs,
-    ) -> Munch:
+    ) -> SecretList:
         """List all secrets in a project.
 
         Args:
             cont (int, optional): Start index of secrets. Defaults to 0.
             limit (int, optional): Number of secrets to list. Defaults to 50.
-            label_selector (list[str], optional): Define labelSelector to get secrets from. Defaults to None.
-            names (list[str], optional): Define names to get secrets from. Defaults to None.
-            regions (list[str], optional): Define regions to get secrets from. Defaults to None.
+            label_selector (List[str], optional): Define labelSelector to get secrets from. Defaults to None.
+            names (List[str], optional): Define names to get secrets from. Defaults to None.
+            regions (List[str], optional): Define regions to get secrets from. Defaults to None.
 
         Returns:
-            Munch: List of secrets as a Munch object.
+            List of secrets as a dictionary.
         """
 
-        return await self.c.get(
+        parameters = {
+            "continue": cont,
+            "limit": limit,
+        }
+        if label_selector is not None:
+            parameters["labelSelector"] = label_selector
+        if names is not None:
+            parameters["names"] = names
+        if regions is not None:
+            parameters["regions"] = regions
+
+        result = await self.c.get(
             url=f"{self.v2api_host}/v2/secrets/",
             headers=self.config.get_headers(**kwargs),
-            params={
-                "continue": cont,
-                "limit": limit,
-                "labelSelector": label_selector,
-                "names": names,
-                "regions": regions,
-            },
+            params=parameters,
         )
 
-    @handle_and_munchify_response
-    async def create_secret(self, body: dict, **kwargs) -> Munch:
+        handle_server_errors(response=result)
+        validated_result = SecretList.model_validate(result.json())
+        return validated_result
+
+    async def create_secret(self, body: dict, **kwargs) -> Secret:
         """Create a new secret.
 
+        Args:
+            body (dict): Secret details
+
         Returns:
-            Munch: Secret details as a Munch object.
+            Secret: Secret details as a Secret object.
         """
 
-        return await self.c.post(
+        validated_body = Secret.model_validate(obj=body)
+
+        result = await self.c.post(
             url=f"{self.v2api_host}/v2/secrets/",
-            headers=self.config.get_headers(*kwargs),
-            json=body,
+            headers=self.config.get_headers(**kwargs),
+            json=validated_body.model_dump(),
         )
 
-    @handle_and_munchify_response
-    async def get_secret(self, name: str, **kwargs) -> Munch:
+        handle_server_errors(result)
+        validated_result = Secret.model_validate(obj=result.json())
+        return validated_result
+
+    async def get_secret(self, name: str, **kwargs) -> Secret:
         """Get a secret by its name.
 
         Args:
             name (str): Secret name
 
         Returns:
-            Munch: Secret details as a Munch object.
+            Secret: Secret details as a Secret object.
         """
 
-        return await self.c.get(
+        result = await self.c.get(
             url=f"{self.v2api_host}/v2/secrets/{name}/",
             headers=self.config.get_headers(**kwargs),
         )
+        handle_server_errors(response=result)
 
-    @handle_and_munchify_response
-    async def update_secret(self, name: str, body: dict, **kwargs) -> Munch:
+        validated_result = Secret.model_validate(obj=result.json())
+
+        return validated_result
+
+    async def update_secret(self, name: str, body: dict, **kwargs) -> Secret:
         """Update a secret by its name.
 
         Args:
@@ -955,33 +1125,170 @@ class AsyncClient(object):
             body (dict): Update details
 
         Returns:
-            Munch: Secret details as a Munch object.
+            Secret: Secret details as a Secret object.
         """
 
-        return await self.c.put(
+        validated_body = Secret.model_validate(obj=body)
+
+        result = await self.c.put(
             url=f"{self.v2api_host}/v2/secrets/{name}/",
             headers=self.config.get_headers(**kwargs),
-            json=body,
+            json=validated_body.model_dump(),
         )
+        handle_server_errors(result)
+        validated_result = Secret.model_validate(result.json())
 
-    @handle_and_munchify_response
-    async def delete_secret(self, name: str, **kwargs) -> Munch:
+        return validated_result
+
+    async def delete_secret(self, name: str, **kwargs) -> None:
         """Delete a secret by its name.
 
         Args:
             name (str): Secret name
 
         Returns:
-            Munch: Secret details as a Munch object.
+            None if successful.
         """
 
-        return await self.c.delete(
+        result = await self.c.delete(
             url=f"{self.v2api_host}/v2/secrets/{name}/",
             headers=self.config.get_headers(**kwargs),
         )
+        handle_server_errors(result)
+        return None
+
+    # -------------------OAuth2 Clients-------------------
+    async def list_oauth2_clients(
+        self,
+        cont: int = 0,
+        limit: int = 50,
+        label_selector: list[str] = None,
+        names: list[str] = None,
+        regions: list[str] = None,
+        **kwargs,
+    ) -> dict[str, Any]:
+        """List all OAuth2 clients in a project.
+
+        Args:
+            cont (int, optional): Start index. Defaults to 0.
+            limit (int, optional): Number to list. Defaults to 50.
+            label_selector (List[str], optional): Label selector. Defaults to None.
+            names (List[str], optional): Names filter. Defaults to None.
+            regions (List[str], optional): Regions filter. Defaults to None.
+
+        Returns:
+            List of OAuth2 clients as a dictionary.
+        """
+        params = {
+            "continue": cont,
+            "limit": limit,
+        }
+        if label_selector is not None:
+            params["labelSelector"] = label_selector
+        if names is not None:
+            params["names"] = names
+        if regions is not None:
+            params["regions"] = regions
+
+        result = await self.c.get(
+            url=f"{self.v2api_host}/v2/oauth2clients/",
+            headers=self.config.get_headers(**kwargs),
+            params=params,
+        )
+        handle_server_errors(result)
+        return result.json()
+
+    async def get_oauth2_client(self, client_id: str, **kwargs) -> dict[str, Any]:
+        """Get an OAuth2 client by its client_id.
+
+        Args:
+            client_id (str): OAuth2 client ID
+
+        Returns:
+            OAuth2 client details as a dictionary.
+        """
+        result = await self.c.get(
+            url=f"{self.v2api_host}/v2/oauth2clients/{client_id}/",
+            headers=self.config.get_headers(**kwargs),
+        )
+        handle_server_errors(result)
+        return result.json()
+
+    async def create_oauth2_client(self, body: dict, **kwargs) -> dict[str, Any]:
+        """Create a new OAuth2 client.
+
+        Args:
+            body (dict): OAuth2 client details
+
+        Returns:
+            OAuth2 client details as a dictionary.
+        """
+        result = await self.c.post(
+            url=f"{self.v2api_host}/v2/oauth2clients/",
+            headers=self.config.get_headers(**kwargs),
+            json=body,
+        )
+        handle_server_errors(result)
+        return result.json()
+
+    async def update_oauth2_client(
+        self, client_id: str, body: dict, **kwargs
+    ) -> dict[str, Any]:
+        """Update an OAuth2 client by its client_id.
+
+        Args:
+            client_id (str): OAuth2 client ID
+            body (dict): Update details
+
+        Returns:
+            OAuth2 client details as a dictionary.
+        """
+        result = await self.c.put(
+            url=f"{self.v2api_host}/v2/oauth2clients/{client_id}/",
+            headers=self.config.get_headers(**kwargs),
+            json=body,
+        )
+        handle_server_errors(result)
+        return result.json()
+
+    async def update_oauth2_client_uris(
+        self, client_id: str, uris: dict, **kwargs
+    ) -> dict[str, Any]:
+        """Update OAuth2 client URIs.
+
+        Args:
+            client_id (str): OAuth2 client ID
+            uris (dict): URIs update payload
+
+        Returns:
+            OAuth2 client details as a dictionary.
+        """
+        result = await self.c.patch(
+            url=f"{self.v2api_host}/v2/oauth2clients/{client_id}/uris/",
+            headers=self.config.get_headers(**kwargs),
+            json=uris,
+        )
+        handle_server_errors(result)
+        return result.json()
+
+    async def delete_oauth2_client(self, client_id: str, **kwargs) -> None:
+        """Delete an OAuth2 client by its client_id.
+
+        Args:
+            client_id (str): OAuth2 client ID
+
+        Returns:
+            None if successful.
+        """
+        result = await self.c.delete(
+            url=f"{self.v2api_host}/v2/oauth2clients/{client_id}/",
+            headers=self.config.get_headers(**kwargs),
+        )
+        handle_server_errors(result)
+        return None
 
     # -------------------Config Trees-------------------
-    @handle_and_munchify_response
+
     async def list_configtrees(
         self,
         cont: int = 0,
@@ -989,20 +1296,20 @@ class AsyncClient(object):
         label_selector: list[str] = None,
         with_project: bool = True,
         **kwargs,
-    ) -> Munch:
+    ) -> dict[str, Any]:
         """List all config trees in a project.
 
         Args:
             cont (int, optional): Start index of config trees. Defaults to 0.
             limit (int, optional): Number of config trees to list. Defaults to 50.
-            label_selector (list[str], optional): Define labelSelector to get config trees from. Defaults to None.
+            label_selector (List[str], optional): Define labelSelector to get config trees from. Defaults to None.
             with_project (bool, optional): Include project details. Defaults to True.
 
         Returns:
-            Munch: List of config trees as a Munch object.
+            List of config trees as a dictionary.
         """
 
-        return await self.c.get(
+        result = await self.c.get(
             url=f"{self.v2api_host}/v2/configtrees/",
             headers=self.config.get_headers(with_project=with_project, **kwargs),
             params={
@@ -1011,11 +1318,12 @@ class AsyncClient(object):
                 "labelSelector": label_selector,
             },
         )
+        handle_server_errors(result)
+        return result.json()
 
-    @handle_and_munchify_response
     async def create_configtree(
         self, body: dict, with_project: bool = True, **kwargs
-    ) -> Munch:
+    ) -> dict[str, Any]:
         """Create a new config tree.
 
         Args:
@@ -1023,16 +1331,17 @@ class AsyncClient(object):
             with_project (bool, optional): Work in the project scope. Defaults to True.
 
         Returns:
-            Munch: Config tree details as a Munch object.
+            Config tree details as a dictionary.
         """
 
-        return await self.c.post(
+        result = await self.c.post(
             url=f"{self.v2api_host}/v2/configtrees/",
             headers=self.config.get_headers(with_project=with_project, **kwargs),
             json=body,
         )
+        handle_server_errors(result)
+        return result.json()
 
-    @handle_and_munchify_response
     async def get_configtree(
         self,
         name: str,
@@ -1042,22 +1351,22 @@ class AsyncClient(object):
         revision: str = None,
         with_project: bool = True,
         **kwargs,
-    ) -> Munch:
+    ) -> dict[str, Any]:
         """Get a config tree by its name.
 
         Args:
             name (str): Config tree name
-            content_types (list[str], optional): Define contentTypes to get config tree from. Defaults to None.
+            content_types (List[str], optional): Define contentTypes to get config tree from. Defaults to None.
             include_data (bool, optional): Include data. Defaults to False.
-            key_prefixes (list[str], optional): Define keyPrefixes to get config tree from. Defaults to None.
+            key_prefixes (List[str], optional): Define keyPrefixes to get config tree from. Defaults to None.
             revision (str, optional): Define revision to get config tree from. Defaults to None.
             with_project (bool, optional): Work in the project scope. Defaults to True.
 
         Returns:
-            Munch: Config tree details as a Munch object.
+            Config tree details as a dictionary.
         """
 
-        return await self.c.get(
+        result = await self.c.get(
             url=f"{self.v2api_host}/v2/configtrees/{name}/",
             headers=self.config.get_headers(with_project=with_project, **kwargs),
             params={
@@ -1067,11 +1376,12 @@ class AsyncClient(object):
                 "revision": revision,
             },
         )
+        handle_server_errors(result)
+        return result.json()
 
-    @handle_and_munchify_response
     async def set_configtree_revision(
         self, name: str, configtree: object, project_guid: str = None, **kwargs
-    ) -> Munch:
+    ) -> dict[str, Any]:
         """Set a config tree revision.
 
         Args:
@@ -1080,19 +1390,20 @@ class AsyncClient(object):
             project_guid (str, optional): Project GUID. async defaults to None.
 
         Returns:
-            Munch: Config tree details as a Munch object.
+            Config tree details as a dictionary.
         """
 
-        return await self.c.put(
+        result = await self.c.put(
             url=f"{self.v2api_host}/v2/configtrees/{name}/",
             headers=self.config.get_headers(project_guid=project_guid, **kwargs),
             json=configtree,
         )
+        handle_server_errors(result)
+        return result.json()
 
-    @handle_and_munchify_response
     async def update_configtree(
         self, name: str, body: dict, with_project: bool = True, **kwargs
-    ) -> Munch:
+    ) -> dict[str, Any]:
         """Update a config tree by its name.
 
         Args:
@@ -1101,32 +1412,36 @@ class AsyncClient(object):
             with_project (bool, optional): Work in the project scope. Defaults to True.
 
         Returns:
-            Munch: Config tree details as a Munch object.
+            Config tree details as a dictionary.
         """
 
-        return await self.c.put(
+        result = await self.c.put(
             url=f"{self.v2api_host}/v2/configtrees/{name}/",
             headers=self.config.get_headers(with_project=with_project, **kwargs),
             json=body,
         )
 
-    @handle_and_munchify_response
-    async def delete_configtree(self, name: str, **kwargs) -> Munch:
+        handle_server_errors(result)
+
+        return result.json()
+
+    async def delete_configtree(self, name: str, **kwargs) -> None:
         """Delete a config tree by its name.
 
         Args:
             name (str): Config tree name
 
         Returns:
-            Munch: Config tree details as a Munch object.
+            None if successful.
         """
 
-        return await self.c.delete(
+        result = await self.c.delete(
             url=f"{self.v2api_host}/v2/configtrees/{name}/",
             headers=self.config.get_headers(**kwargs),
         )
+        handle_server_errors(result)
+        return None
 
-    @handle_and_munchify_response
     async def list_revisions(
         self,
         tree_name: str,
@@ -1135,7 +1450,7 @@ class AsyncClient(object):
         committed: bool = False,
         label_selector: list[str] = None,
         **kwargs,
-    ) -> Munch:
+    ) -> dict[str, Any]:
         """List all revisions of a config tree.
 
         Args:
@@ -1143,27 +1458,32 @@ class AsyncClient(object):
             cont (int, optional): Continue param . Defaults to 0.
             limit (int, optional): Limit param . Defaults to 50.
             committed (bool, optional): Committed. Defaults to False.
-            label_selector (list[str], optional): Define labelSelector to get revisions from. Defaults to None.
+            label_selector (List[str], optional): Define labelSelector to get revisions from. Defaults to None.
 
         Returns:
-            Munch: List of revisions as a Munch object.
+            List of revisions as a dictionary.
         """
 
-        return await self.c.get(
+        parameters = {
+            "continue": cont,
+            "limit": limit,
+            "committed": committed,
+        }
+        if label_selector:
+            parameters["labelSelector"] = label_selector
+
+        result = await self.c.get(
             url=f"{self.v2api_host}/v2/configtrees/{tree_name}/revisions/",
             headers=self.config.get_headers(**kwargs),
-            params={
-                "continue": cont,
-                "limit": limit,
-                "committed": committed,
-                "labelSelector": label_selector,
-            },
+            params=parameters,
         )
 
-    @handle_and_munchify_response
+        handle_server_errors(result)
+        return result.json()
+
     async def create_revision(
         self, name: str, body: dict, project_guid: str = None, **kwargs
-    ) -> Munch:
+    ) -> dict[str, Any]:
         """Create a new revision.
 
         Args:
@@ -1172,19 +1492,21 @@ class AsyncClient(object):
             project_guid (str): Project GUID (optional)
 
         Returns:
-            Munch: Revision details as a Munch object.
+            Revision details as a dictionary.
         """
 
-        return await self.c.post(
+        result = await self.c.post(
             url=f"{self.v2api_host}/v2/configtrees/{name}/revisions/",
             headers=self.config.get_headers(project_guid=project_guid, **kwargs),
             json=body,
         )
 
-    @handle_and_munchify_response
+        handle_server_errors(result)
+        return result.json()
+
     async def put_keys_in_revision(
         self, name: str, revision_id: str, config_values: dict, **kwargs
-    ) -> Munch:
+    ) -> dict[str, Any]:
         """Put keys in a revision.
 
         Args:
@@ -1193,16 +1515,18 @@ class AsyncClient(object):
             config_values (dict): Config values
 
         Returns:
-            Munch: Revision details as a Munch object.
+            Revision details as a dictionary.
         """
 
-        return await self.c.put(
+        result = await self.c.put(
             url=f"{self.v2api_host}/v2/configtrees/{name}/revisions/{revision_id}/keys/",
             headers=self.config.get_headers(**kwargs),
             json=config_values,
         )
 
-    @handle_and_munchify_response
+        handle_server_errors(result)
+        return result.json()
+
     async def commit_revision(
         self,
         tree_name: str,
@@ -1211,7 +1535,7 @@ class AsyncClient(object):
         message: str = None,
         project_guid: str = None,
         **kwargs,
-    ) -> Munch:
+    ) -> dict[str, Any]:
         """Commit a revision.
 
         Args:
@@ -1222,20 +1546,22 @@ class AsyncClient(object):
             project_guid (str, optional): Project GUID. Defaults to None.
 
         Returns:
-            Munch: Revision details as a Munch object.
+            Revision details as a dictionary.
         """
         config_tree_revision = {
             "author": author,
             "message": message,
         }
 
-        return await self.c.patch(
+        result = await self.c.patch(
             url=f"{self.v2api_host}/v2/configtrees/{tree_name}/revisions/{revision_id}/commit/",
             headers=self.config.get_headers(project_guid=project_guid, **kwargs),
             json=config_tree_revision,
         )
 
-    @handle_and_munchify_response
+        handle_server_errors(result)
+        return result.json()
+
     async def get_key_in_revision(
         self,
         tree_name: str,
@@ -1243,7 +1569,7 @@ class AsyncClient(object):
         key: str,
         project_guid: str = None,
         **kwargs,
-    ) -> Munch:
+    ) -> dict[str, Any]:
         """Get a key in a revision.
 
         Args:
@@ -1253,15 +1579,17 @@ class AsyncClient(object):
             project_guid (str, optional): Project GUID. async defaults to None.
 
         Returns:
-            Munch: Key details as a Munch object.
+            Key details as a dictionary.
         """
 
-        return await self.c.get(
+        result = await self.c.get(
             url=f"{self.v2api_host}/v2/configtrees/{tree_name}/revisions/{revision_id}/{key}/",
             headers=self.config.get_headers(project_guid=project_guid, **kwargs),
         )
 
-    @handle_and_munchify_response
+        handle_server_errors(result)
+        return result.json()
+
     async def put_key_in_revision(
         self,
         tree_name: str,
@@ -1269,7 +1597,7 @@ class AsyncClient(object):
         key: str,
         project_guid: str = None,
         **kwargs,
-    ) -> Munch:
+    ) -> dict[str, Any]:
         """Put a key in a revision.
 
         Args:
@@ -1279,15 +1607,16 @@ class AsyncClient(object):
             project_guid (str, optional): Project GUID. async defaults to None.
 
         Returns:
-            Munch: Key details as a Munch object.
+            Key details as a dictionary.
         """
 
-        return await self.c.put(
+        result = await self.c.put(
             url=f"{self.v2api_host}/v2/configtrees/{tree_name}/revisions/{revision_id}/{key}/",
             headers=self.config.get_headers(project_guid=project_guid, **kwargs),
         )
+        handle_server_errors(result)
+        return result.json()
 
-    @handle_and_munchify_response
     async def delete_key_in_revision(
         self,
         tree_name: str,
@@ -1295,7 +1624,7 @@ class AsyncClient(object):
         key: str,
         project_guid: str = None,
         **kwargs,
-    ) -> Munch:
+    ) -> None:
         """Delete a key in a revision.
 
         Args:
@@ -1305,15 +1634,16 @@ class AsyncClient(object):
             project_guid (str, optional): Project GUID. async defaults to None.
 
         Returns:
-            Munch: Key details as a Munch object.
+            None if successful.
         """
 
-        return await self.c.delete(
+        result = await self.c.delete(
             url=f"{self.v2api_host}/v2/configtrees/{tree_name}/revisions/{revision_id}/{key}/",
             headers=self.config.get_headers(project_guid=project_guid, **kwargs),
         )
+        handle_server_errors(result)
+        return None
 
-    @handle_and_munchify_response
     async def rename_key_in_revision(
         self,
         tree_name: str,
@@ -1322,7 +1652,7 @@ class AsyncClient(object):
         config_key_rename: dict,
         project_guid: str = None,
         **kwargs,
-    ) -> Munch:
+    ) -> dict[str, Any]:
         """Rename a key in a revision.
 
         Args:
@@ -1333,30 +1663,35 @@ class AsyncClient(object):
             project_guid (str, optional): Project GUID. async defaults to None.
 
         Returns:
-            Munch: Key details as a Munch object.
+            Key details as a dictionary.
         """
 
-        return await self.c.patch(
+        result = await self.c.patch(
             url=f"{self.v2api_host}/v2/configtrees/{tree_name}/revisions/{revision_id}/{key}/",
             headers=self.config.get_headers(project_guid=project_guid, **kwargs),
             json=config_key_rename,
         )
 
+        handle_server_errors(result)
+        return result.json()
+
     # Managed Service API
-    @handle_and_munchify_response
-    async def list_providers(self) -> Munch:
+
+    async def list_providers(self) -> dict[str, Any]:
         """List all providers.
 
         Returns:
-            Munch: List of providers as a Munch object.
+            List of providers as a dictionary.
         """
 
-        return await self.c.get(
+        result = await self.c.get(
             url=f"{self.v2api_host}/v2/managedservices/providers/",
             headers=self.config.get_headers(with_project=False),
         )
 
-    @handle_and_munchify_response
+        handle_server_errors(result)
+        return result.json()
+
     async def list_instances(
         self,
         cont: int = 0,
@@ -1369,13 +1704,13 @@ class AsyncClient(object):
         Args:
             cont (int, optional): Start index of instances. Defaults to 0.
             limit (int, optional): Number of instances to list. Defaults to 50.
-            label_selector (list[str], optional): Define labelSelector to get instances from. Defaults to None.
-            providers (list[str], optional): Define providers to get instances from. Defaults to None.
+            label_selector (List[str], optional): Define labelSelector to get instances from. Defaults to None.
+            providers (List[str], optional): Define providers to get instances from. Defaults to None.
 
         Returns:
-            Munch: List of instances as a Munch object.
+            List of instances as a dictionary.
         """
-        return await self.c.get(
+        result = await self.c.get(
             url=f"{self.v2api_host}/v2/managedservices/",
             headers=self.config.get_headers(),
             params={
@@ -1386,50 +1721,58 @@ class AsyncClient(object):
             },
         )
 
-    @handle_and_munchify_response
-    async def get_instance(self, name: str) -> Munch:
+        handle_server_errors(result)
+        validate_result = ManagedServiceList.model_validate(result.json())
+        return validate_result
+
+    async def get_instance(self, name: str) -> dict[str, Any]:
         """Get an instance by its name.
 
         Args:
             name (str): Instance name
 
         Returns:
-            Munch: Instance details as a Munch object.
+            Instance details as a dictionary.
         """
 
-        return await self.c.get(
+        result = await self.c.get(
             url=f"{self.v2api_host}/v2/managedservices/{name}/",
             headers=self.config.get_headers(),
         )
 
-    @handle_and_munchify_response
-    async def create_instance(self, body: dict) -> Munch:
+        handle_server_errors(result)
+        return result.json()
+
+    async def create_instance(self, body: dict) -> dict[str, Any]:
         """Create a new instance.
 
         Returns:
-            Munch: Instance details as a Munch object.
+            Instance details as a dictionary.
         """
 
-        return await self.c.post(
+        result = await self.c.post(
             url=f"{self.v2api_host}/v2/managedservices/",
             headers=self.config.get_headers(),
             json=body,
         )
 
-    @handle_and_munchify_response
-    async def delete_instance(self, name: str) -> Munch:
+        handle_server_errors(result)
+        return result.json()
+
+    async def delete_instance(self, name: str) -> None:
         """Delete an instance.
 
         Returns:
-            Munch: Instance details as a Munch object.
+            None if successful.
         """
 
-        return await self.c.delete(
+        result = await self.c.delete(
             url=f"{self.v2api_host}/v2/managedservices/{name}/",
             headers=self.config.get_headers(),
         )
+        handle_server_errors(result)
+        return None
 
-    @handle_and_munchify_response
     async def list_instance_bindings(
         self,
         instance_name: str,
@@ -1443,12 +1786,12 @@ class AsyncClient(object):
             instance_name (str): Instance name.
             cont (int, optional): Start index of instance bindings. Defaults to 0.
             limit (int, optional): Number of instance bindings to list. Defaults to 50.
-            label_selector (list[str], optional): Define labelSelector to get instance bindings from. Defaults to None.
+            label_selector (List[str], optional): Define labelSelector to get instance bindings from. Defaults to None.
 
         Returns:
-            Munch: List of instance bindings as a Munch object.
+            List of instance bindings as a dictionary.
         """
-        return await self.c.get(
+        result = await self.c.get(
             url=f"{self.v2api_host}/v2/managedservices/{instance_name}/bindings/",
             headers=self.config.get_headers(),
             params={
@@ -1458,8 +1801,12 @@ class AsyncClient(object):
             },
         )
 
-    @handle_and_munchify_response
-    async def create_instance_binding(self, instance_name: str, body: dict) -> Munch:
+        handle_server_errors(result)
+        return result.json()
+
+    async def create_instance_binding(
+        self, instance_name: str, body: dict
+    ) -> dict[str, Any]:
         """Create a new instance binding.
 
         Args:
@@ -1467,17 +1814,19 @@ class AsyncClient(object):
             body (object): Instance binding details.
 
         Returns:
-            Munch: Instance binding details as a Munch object.
+            Instance binding details as a dictionary.
         """
 
-        return await self.c.post(
+        result = await self.c.post(
             url=f"{self.v2api_host}/v2/managedservices/{instance_name}/bindings/",
             headers=self.config.get_headers(),
             json=body,
         )
 
-    @handle_and_munchify_response
-    async def get_instance_binding(self, instance_name: str, name: str) -> Munch:
+        handle_server_errors(result)
+        return result.json()
+
+    async def get_instance_binding(self, instance_name: str, name: str) -> dict[str, Any]:
         """Get an instance binding by its name.
 
         Args:
@@ -1485,16 +1834,18 @@ class AsyncClient(object):
             name (str): Instance binding name.
 
         Returns:
-            Munch: Instance binding details as a Munch object.
+            Instance binding details as a dictionary.
         """
 
-        return await self.c.get(
+        result = await self.c.get(
             url=f"{self.v2api_host}/v2/managedservices/{instance_name}/bindings/{name}/",
             headers=self.config.get_headers(),
         )
 
-    @handle_and_munchify_response
-    async def delete_instance_binding(self, instance_name: str, name: str) -> Munch:
+        handle_server_errors(result)
+        return result.json()
+
+    async def delete_instance_binding(self, instance_name: str, name: str) -> None:
         """Delete an instance binding.
 
         Args:
@@ -1502,10 +1853,12 @@ class AsyncClient(object):
             name (str): Instance binding name.
 
         Returns:
-            Munch: Instance binding details as a Munch object.
+            None if successful.
         """
 
-        return await self.c.delete(
+        result = await self.c.delete(
             url=f"{self.v2api_host}/v2/managedservices/{instance_name}/bindings/{name}/",
             headers=self.config.get_headers(),
         )
+        handle_server_errors(result)
+        return None
