@@ -3,6 +3,14 @@ import pytest
 from asyncmock import AsyncMock
 
 # ruff: noqa: F811, F401
+from rapyuta_io_sdk_v2.pydantic_models import (
+    ManagedServiceBinding,
+    ManagedServiceInstanceList,
+    ManagedServiceBindingList,
+    ManagedServiceInstance,
+    ManagedServiceProvider,
+    ManagedServiceProviderList,
+)
 from tests.utils.fixtures import async_client
 from tests.data import (
     managedservice_binding_model_mock,
@@ -30,7 +38,9 @@ async def test_list_providers_success(async_client, mocker: AsyncMock):
     response = await async_client.list_providers()
 
     # Validate the response
-    assert response["items"] == [{"name": "test-provider", "guid": "mock_provider_guid"}]
+    assert isinstance(response, ManagedServiceProviderList)
+    assert isinstance(response.items[0], ManagedServiceProvider)
+    assert response.items[0].name == "test-provider"
 
 
 @pytest.mark.asyncio
@@ -50,6 +60,7 @@ async def test_list_instances_success(
     response = await async_client.list_instances()
 
     # Validate the response
+    assert isinstance(response, ManagedServiceInstanceList)
     assert response.metadata.continue_ == 1
     assert len(response.items) == 1
     instance = response.items[0]
@@ -77,10 +88,11 @@ async def test_get_instance_success(
     response = await async_client.get_instance(name="mock_instance_name")
 
     # Validate the response
-    assert response["metadata"]["guid"] == "mock_instance_guid"
-    assert response["metadata"]["name"] == "test-instance"
-    assert response["kind"] == "ManagedServiceInstance"
-    assert response["spec"]["provider"] == "elasticsearch"
+    assert isinstance(response, ManagedServiceInstance)
+    assert response.metadata.guid == "mock_instance_guid"
+    assert response.metadata.name == "test-instance"
+    assert response.kind == "ManagedServiceInstance"
+    assert response.spec.provider == "elasticsearch"
 
 
 @pytest.mark.asyncio
@@ -97,12 +109,20 @@ async def test_create_instance_success(
     )
 
     # Call the create_instance method
-    response = await async_client.create_instance(body={"name": "test_instance"})
+    response = await async_client.create_instance(
+        body={
+            "apiVersion": "api.rapyuta.io/v2",
+            "metadata": {
+                "name": "test-instance",
+            },
+        }
+    )
 
     # Validate the response
-    assert response["metadata"]["guid"] == "mock_instance_guid"
-    assert response["metadata"]["name"] == "test-instance"
-    assert response["kind"] == "ManagedServiceInstance"
+    assert isinstance(response, ManagedServiceInstance)
+    assert response.metadata.guid == "mock_instance_guid"
+    assert response.metadata.name == "test-instance"
+    assert response.kind == "ManagedServiceInstance"
 
 
 @pytest.mark.asyncio
@@ -137,16 +157,19 @@ async def test_list_instance_bindings_success(
     )
 
     # Call the list_instance_bindings method
-    response = await async_client.list_instance_bindings("mock_instance_name")
+    response = await async_client.list_instance_bindings(
+        instance_name="mock_instance_name"
+    )
 
     # Validate the response
-    assert response["metadata"]["continue"] == 1
-    assert len(response["items"]) == 1
-    binding = response["items"][0]
-    assert binding["metadata"]["guid"] == "mock_instance_binding_guid"
-    assert binding["metadata"]["name"] == "test-instance-binding"
-    assert binding["kind"] == "ManagedServiceBinding"
-    assert binding["spec"]["provider"] == "headscalevpn"
+    assert isinstance(response, ManagedServiceBindingList)
+    assert response.metadata.continue_ == 1
+    assert len(response.items) == 1
+    binding = response.items[0]
+    assert binding.metadata.guid == "mock_instance_binding_guid"
+    assert binding.metadata.name == "test-instance-binding"
+    assert binding.kind == "ManagedServiceBinding"
+    assert binding.spec.provider == "headscalevpn"
 
 
 @pytest.mark.asyncio
@@ -164,14 +187,15 @@ async def test_get_instance_binding_success(
 
     # Call the get_instance_binding method
     response = await async_client.get_instance_binding(
-        name="mock_instance_binding_name", instance_name="mock_instance_name"
+        name="test-instance-binding", instance_name="mock_instance_name"
     )
 
     # Validate the response
-    assert response["metadata"]["guid"] == "mock_instance_binding_guid"
-    assert response["metadata"]["name"] == "test-instance-binding"
-    assert response["kind"] == "ManagedServiceBinding"
-    assert response["spec"]["provider"] == "headscalevpn"
+    assert isinstance(response, ManagedServiceBinding)
+    assert response.metadata.guid == "mock_instance_binding_guid"
+    assert response.metadata.name == "test-instance-binding"
+    assert response.kind == "ManagedServiceBinding"
+    assert response.spec.provider == "headscalevpn"
 
 
 @pytest.mark.asyncio
@@ -189,40 +213,24 @@ async def test_create_instance_binding_success(
 
     # Call the create_instance_binding method
     response = await async_client.create_instance_binding(
-        body={"name": "test_instance_binding"}, instance_name="mock_instance_name"
+        body={
+            "metadata": {
+                "name": "test-instance-binding",
+                "labels": {},
+            },
+            "spec": {
+                "instance": "vpn_instance_value",
+                "provider": "headscalevpn",
+            },
+        },
+        instance_name="mock_instance_name",
     )
 
     # Validate the response
-    assert response["metadata"]["guid"] == "mock_instance_binding_guid"
-    assert response["metadata"]["name"] == "test-instance-binding"
-    assert response["kind"] == "ManagedServiceBinding"
-
-
-@pytest.mark.asyncio
-async def test_delete_instance_binding_success(async_client, mocker: AsyncMock):
-    # Mock the httpx.AsyncClient.delete method
-    mock_delete = mocker.patch("httpx.AsyncClient.delete")
-
-    # Set up the mock response
-    mock_delete.return_value = httpx.Response(
-        status_code=204,
-        json={"success": True},
-    )
-
-    # Call the delete_instance_binding method
-    response = await async_client.delete_instance_binding(
-        name="mock_instance_binding_name", instance_name="mock_instance_name"
-    )
-
-    # Call the create_instance_binding method
-    response = await async_client.create_instance_binding(
-        body={"name": "test_instance_binding"}, instance_name="mock_instance_name"
-    )
-
-    # Validate the response
-    assert response["metadata"]["guid"] == "mock_instance_binding_guid"
-    assert response["metadata"]["name"] == "test-instance-binding"
-    assert response["kind"] == "ManagedServiceBinding"
+    assert isinstance(response, ManagedServiceBinding)
+    assert response.metadata.guid == "mock_instance_binding_guid"
+    assert response.metadata.name == "test-instance-binding"
+    assert response.kind == "ManagedServiceBinding"
 
 
 @pytest.mark.asyncio

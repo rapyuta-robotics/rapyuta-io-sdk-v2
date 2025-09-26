@@ -3,9 +3,6 @@ import pytest
 
 
 from rapyuta_io_sdk_v2.config import Configuration
-from rapyuta_io_sdk_v2.pydantic_models import (
-    ManagedService,
-)
 
 # -------------------- PROJECT --------------------
 
@@ -767,27 +764,6 @@ def managedservicelist_model_mock(managedservice_model_mock):
         },
         "items": [managedservice_model_mock],
     }
-
-
-@pytest.fixture
-def managedservicebinding_model_mock():
-    mock_managedservice = ManagedService(
-        apiVersion="api.rapyuta.io/v2",
-        kind="ManagedServiceBinding",
-        metadata={
-            "guid": "test_instance_binding_guid",
-            "name": "test_instance_binding",
-            "creatorGUID": "creator-guid",
-            "projectGUID": "project-aaaaaaaaaaaaaaaaaaaa",
-            "labels": {"env": "test"},
-        },
-        spec={
-            "provider": "headscalevpn",
-            "config": {"version": "1.0"},
-        },
-    )
-
-    return mock_managedservice.model_dump()
 
 
 @pytest.fixture
