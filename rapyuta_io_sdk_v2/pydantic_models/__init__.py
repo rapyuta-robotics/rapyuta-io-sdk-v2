@@ -6,8 +6,12 @@ from .deployment import Deployment as Deployment, DeploymentList as DeploymentLi
 from .project import Project as Project, ProjectList as ProjectList
 from .network import Network as Network, NetworkList as NetworkList
 from .managedservice import (
-    ManagedService as ManagedService,
-    ManagedServiceList as ManagedServiceList,
+    ManagedServiceProvider as ManagedServiceProvider,
+    ManagedServiceProviderList as ManagedServiceProviderList,
+    ManagedServiceInstance as ManagedServiceInstance,
+    ManagedServiceInstanceList as ManagedServiceInstanceList,
+    ManagedServiceBinding as ManagedServiceBinding,
+    ManagedServiceBindingList as ManagedServiceBindingList,
 )
 from .user import User as User
 from .organization import Organization as Organization

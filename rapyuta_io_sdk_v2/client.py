@@ -34,9 +34,12 @@ from rapyuta_io_sdk_v2.pydantic_models import (
     PackageList,
     SecretList,
     StaticRouteList,
-    ManagedService,
-    ManagedServiceList,
     Organization,
+    ManagedServiceBinding,
+    ManagedServiceBindingList,
+    ManagedServiceInstance,
+    ManagedServiceInstanceList,
+    ManagedServiceProviderList,
 )
 from rapyuta_io_sdk_v2.utils import handle_server_errors
 
@@ -78,7 +81,7 @@ class Client:
         Returns:
             str: authentication token
         """
-        response = self.c.post(
+        result = self.c.post(
             url=f"{self.rip_host}/user/login",
             headers={"Content-Type": "application/json"},
             json={
@@ -86,8 +89,8 @@ class Client:
                 "password": password,
             },
         )
-        handle_server_errors(response)
-        return response.json()["data"].get("token")
+        handle_server_errors(result)
+        return result.json()["data"].get("token")
 
     def login(
         self,
@@ -117,15 +120,15 @@ class Client:
         if token is None:
             token = self.config.auth_token
 
-        response = self.c.post(
+        result = self.c.post(
             url=f"{self.rip_host}/user/logout",
             headers={
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {token}",
             },
         )
-        handle_server_errors(response)
-        return response.json()
+        handle_server_errors(result)
+        return result.json()
 
     def refresh_token(self, token: str = None, set_token: bool = True) -> str:
         """Refresh the authentication token.
@@ -141,15 +144,15 @@ class Client:
         if token is None:
             token = self.config.auth_token
 
-        response = self.c.post(
+        result = self.c.post(
             url=f"{self.rip_host}/refreshtoken",
             headers={"Content-Type": "application/json"},
             json={"token": token},
         )
-        handle_server_errors(response)
+        handle_server_errors(result)
         if set_token:
-            self.config.auth_token = response.json()["data"].get("token")
-        return response.json()["data"].get("token")
+            self.config.auth_token = result.json()["data"].get("token")
+        return result.json()["data"].get("token")
 
     def set_organization(self, organization_guid: str) -> None:
         """Set the organization GUID.
@@ -181,14 +184,14 @@ class Client:
             Organization: Organization details as an Organization object.
         """
 
-        response = self.c.get(
+        result = self.c.get(
             url=f"{self.v2api_host}/v2/organizations/{organization_guid}/",
             headers=self.config.get_headers(
                 with_project=False, organization_guid=organization_guid, **kwargs
             ),
         )
-        handle_server_errors(response)
-        validated_result = Organization.model_validate(obj=response.json())
+        handle_server_errors(result)
+        validated_result = Organization.model_validate(obj=result.json())
         return validated_result
 
     def update_organization(
@@ -206,15 +209,15 @@ class Client:
         from rapyuta_io_sdk_v2.pydantic_models.organization import Organization
 
         validated_body = Organization.model_validate(obj=body)
-        response = self.c.put(
+        result = self.c.put(
             url=f"{self.v2api_host}/v2/organizations/{organization_guid}/",
             headers=self.config.get_headers(
                 with_project=False, organization_guid=organization_guid, **kwargs
             ),
             json=validated_body.model_dump(),
         )
-        handle_server_errors(response)
-        validated_result = Organization.model_validate(obj=response.json())
+        handle_server_errors(result)
+        validated_result = Organization.model_validate(obj=result.json())
         return validated_result
 
     # ---------------------User--------------------
@@ -224,12 +227,12 @@ class Client:
         Returns:
             User: User details as a User object.
         """
-        response = self.c.get(
+        result = self.c.get(
             url=f"{self.v2api_host}/v2/users/me/",
             headers=self.config.get_headers(with_project=False, **kwargs),
         )
-        handle_server_errors(response)
-        validated_result = User.model_validate(obj=response.json())
+        handle_server_errors(result)
+        validated_result = User.model_validate(obj=result.json())
         return validated_result
 
     def update_user(self, body: dict, **kwargs) -> User:
@@ -243,15 +246,15 @@ class Client:
         """
         validated_body = User.model_validate(obj=body)
 
-        response = self.c.put(
+        result = self.c.put(
             url=f"{self.v2api_host}/v2/users/me/",
             headers=self.config.get_headers(
                 with_project=False, with_organization=False, **kwargs
             ),
             json=validated_body.model_dump(),
         )
-        handle_server_errors(response)
-        validated_result = User.model_validate(obj=response.json())
+        handle_server_errors(result)
+        validated_result = User.model_validate(obj=result.json())
         return validated_result
 
     # -------------------Project-------------------
@@ -341,7 +344,7 @@ class Client:
             body (object): Project details
 
         Returns:
-            Project: Project creation response.
+            Project: Project creation result.
         """
         validated_body = Project.model_validate(obj=body)
 
@@ -362,7 +365,7 @@ class Client:
             project_guid (str, optional): Project GUID. Defaults to None.
 
         Returns:
-            Project: Project update response.
+            Project: Project update result.
         """
 
         validated_body = Project.model_validate(obj=body)
@@ -400,7 +403,7 @@ class Client:
         """Update the owner of a project by its GUID.
 
         Returns:
-            Dict[str, Any]: Project owner update response.
+            Dict[str, Any]: Project owner update result.
         """
         project_guid = project_guid or self.config.project_guid
 
@@ -1161,13 +1164,13 @@ class Client:
         if regions is not None:
             params["regions"] = regions
 
-        response = self.c.get(
+        result = self.c.get(
             url=f"{self.v2api_host}/v2/oauth2clients/",
             headers=self.config.get_headers(**kwargs),
             params=params,
         )
-        handle_server_errors(response)
-        return response.json()
+        handle_server_errors(result)
+        return result.json()
 
     def get_oauth2_client(self, client_id: str, **kwargs) -> dict[str, Any]:
         """Get an OAuth2 client by its client_id.
@@ -1178,12 +1181,12 @@ class Client:
         Returns:
             OAuth2 client details as a dictionary.
         """
-        response = self.c.get(
+        result = self.c.get(
             url=f"{self.v2api_host}/v2/oauth2clients/{client_id}/",
             headers=self.config.get_headers(**kwargs),
         )
-        handle_server_errors(response)
-        return response.json()
+        handle_server_errors(result)
+        return result.json()
 
     def create_oauth2_client(self, body: dict, **kwargs) -> dict[str, Any]:
         """Create a new OAuth2 client.
@@ -1194,13 +1197,13 @@ class Client:
         Returns:
             OAuth2 client details as a dictionary.
         """
-        response = self.c.post(
+        result = self.c.post(
             url=f"{self.v2api_host}/v2/oauth2clients/",
             headers=self.config.get_headers(**kwargs),
             json=body,
         )
-        handle_server_errors(response)
-        return response.json()
+        handle_server_errors(result)
+        return result.json()
 
     def update_oauth2_client(
         self, client_id: str, body: dict, **kwargs
@@ -1214,13 +1217,13 @@ class Client:
         Returns:
             OAuth2 client details as a dictionary.
         """
-        response = self.c.put(
+        result = self.c.put(
             url=f"{self.v2api_host}/v2/oauth2clients/{client_id}/",
             headers=self.config.get_headers(**kwargs),
             json=body,
         )
-        handle_server_errors(response)
-        return response.json()
+        handle_server_errors(result)
+        return result.json()
 
     def update_oauth2_client_uris(
         self, client_id: str, uris: dict, **kwargs
@@ -1234,13 +1237,13 @@ class Client:
         Returns:
             OAuth2 client details as a dictionary.
         """
-        response = self.c.patch(
+        result = self.c.patch(
             url=f"{self.v2api_host}/v2/oauth2clients/{client_id}/uris/",
             headers=self.config.get_headers(**kwargs),
             json=uris,
         )
-        handle_server_errors(response)
-        return response.json()
+        handle_server_errors(result)
+        return result.json()
 
     def delete_oauth2_client(self, client_id: str, **kwargs) -> None:
         """Delete an OAuth2 client by its client_id.
@@ -1251,11 +1254,11 @@ class Client:
         Returns:
             None if successful.
         """
-        response = self.c.delete(
+        result = self.c.delete(
             url=f"{self.v2api_host}/v2/oauth2clients/{client_id}/",
             headers=self.config.get_headers(**kwargs),
         )
-        handle_server_errors(response)
+        handle_server_errors(result)
         return None
 
     # -------------------Config Trees-------------------
@@ -1285,13 +1288,13 @@ class Client:
         }
         if label_selector:
             parameters["labelSelector"] = label_selector
-        response = self.c.get(
+        result = self.c.get(
             url=f"{self.v2api_host}/v2/configtrees/",
             headers=self.config.get_headers(with_project=with_project, **kwargs),
             params=parameters,
         )
-        handle_server_errors(response)
-        return response.json()
+        handle_server_errors(result)
+        return result.json()
 
     def create_configtree(
         self, body: dict, with_project: bool = True, **kwargs
@@ -1305,13 +1308,13 @@ class Client:
         Returns:
             Config tree details as a dictionary.
         """
-        response = self.c.post(
+        result = self.c.post(
             url=f"{self.v2api_host}/v2/configtrees/",
             headers=self.config.get_headers(with_project=with_project, **kwargs),
             json=body,
         )
-        handle_server_errors(response)
-        return response.json()
+        handle_server_errors(result)
+        return result.json()
 
     def get_configtree(
         self,
@@ -1336,7 +1339,7 @@ class Client:
         Returns:
             Config tree details as a dictionary.
         """
-        response = self.c.get(
+        result = self.c.get(
             url=f"{self.v2api_host}/v2/configtrees/{name}/",
             headers=self.config.get_headers(with_project=with_project, **kwargs),
             params={
@@ -1346,8 +1349,8 @@ class Client:
                 "revision": revision,
             },
         )
-        handle_server_errors(response)
-        return response.json()
+        handle_server_errors(result)
+        return result.json()
 
     def set_configtree_revision(
         self, name: str, configtree: dict, project_guid: str = None, **kwargs
@@ -1362,13 +1365,13 @@ class Client:
         Returns:
             Config tree details as a dictionary.
         """
-        response = self.c.put(
+        result = self.c.put(
             url=f"{self.v2api_host}/v2/configtrees/{name}/",
             headers=self.config.get_headers(project_guid=project_guid, **kwargs),
             json=configtree,
         )
-        handle_server_errors(response)
-        return response.json()
+        handle_server_errors(result)
+        return result.json()
 
     def update_configtree(
         self, name: str, body: dict, with_project: bool = True, **kwargs
@@ -1383,13 +1386,13 @@ class Client:
         Returns:
             Config tree details as a dictionary.
         """
-        response = self.c.put(
+        result = self.c.put(
             url=f"{self.v2api_host}/v2/configtrees/{name}/",
             headers=self.config.get_headers(with_project=with_project, **kwargs),
             json=body,
         )
-        handle_server_errors(response)
-        return response.json()
+        handle_server_errors(result)
+        return result.json()
 
     def delete_configtree(self, name: str, **kwargs) -> None:
         """Delete a config tree by its name.
@@ -1400,11 +1403,11 @@ class Client:
         Returns:
             None if successful.
         """
-        response = self.c.delete(
+        result = self.c.delete(
             url=f"{self.v2api_host}/v2/configtrees/{name}/",
             headers=self.config.get_headers(**kwargs),
         )
-        handle_server_errors(response)
+        handle_server_errors(result)
         return None
 
     def list_revisions(
@@ -1435,13 +1438,13 @@ class Client:
         }
         if label_selector:
             parameters["labelSelector"] = label_selector
-        response = self.c.get(
+        result = self.c.get(
             url=f"{self.v2api_host}/v2/configtrees/{tree_name}/revisions/",
             headers=self.config.get_headers(**kwargs),
             params=parameters,
         )
-        handle_server_errors(response)
-        return response.json()
+        handle_server_errors(result)
+        return result.json()
 
     def create_revision(
         self, name: str, body: dict, project_guid: str = None, **kwargs
@@ -1456,13 +1459,13 @@ class Client:
         Returns:
             Revision details as a dictionary.
         """
-        response = self.c.post(
+        result = self.c.post(
             url=f"{self.v2api_host}/v2/configtrees/{name}/revisions/",
             headers=self.config.get_headers(project_guid=project_guid, **kwargs),
             json=body,
         )
-        handle_server_errors(response)
-        return response.json()
+        handle_server_errors(result)
+        return result.json()
 
     def put_keys_in_revision(
         self, name: str, revision_id: str, config_values: dict, **kwargs
@@ -1477,13 +1480,13 @@ class Client:
         Returns:
             Revision details as a dictionary.
         """
-        response = self.c.put(
+        result = self.c.put(
             url=f"{self.v2api_host}/v2/configtrees/{name}/revisions/{revision_id}/keys/",
             headers=self.config.get_headers(**kwargs),
             json=config_values,
         )
-        handle_server_errors(response)
-        return response.json()
+        handle_server_errors(result)
+        return result.json()
 
     def commit_revision(
         self,
@@ -1510,13 +1513,13 @@ class Client:
             "author": author,
             "message": message,
         }
-        response = self.c.patch(
+        result = self.c.patch(
             url=f"{self.v2api_host}/v2/configtrees/{tree_name}/revisions/{revision_id}/commit/",
             headers=self.config.get_headers(project_guid=project_guid, **kwargs),
             json=config_tree_revision,
         )
-        handle_server_errors(response)
-        return response.json()
+        handle_server_errors(result)
+        return result.json()
 
     def get_key_in_revision(
         self,
@@ -1537,12 +1540,12 @@ class Client:
         Returns:
             Key details as a dictionary.
         """
-        response = self.c.get(
+        result = self.c.get(
             url=f"{self.v2api_host}/v2/configtrees/{tree_name}/revisions/{revision_id}/{key}/",
             headers=self.config.get_headers(project_guid=project_guid, **kwargs),
         )
-        handle_server_errors(response)
-        return response.json()
+        handle_server_errors(result)
+        return result.json()
 
     def put_key_in_revision(
         self,
@@ -1563,12 +1566,12 @@ class Client:
         Returns:
             Key details as a dictionary.
         """
-        response = self.c.put(
+        result = self.c.put(
             url=f"{self.v2api_host}/v2/configtrees/{tree_name}/revisions/{revision_id}/{key}/",
             headers=self.config.get_headers(project_guid=project_guid, **kwargs),
         )
-        handle_server_errors(response)
-        return response.json()
+        handle_server_errors(result)
+        return result.json()
 
     def delete_key_in_revision(
         self,
@@ -1589,11 +1592,11 @@ class Client:
         Returns:
             None if successful.
         """
-        response = self.c.delete(
+        result = self.c.delete(
             url=f"{self.v2api_host}/v2/configtrees/{tree_name}/revisions/{revision_id}/{key}/",
             headers=self.config.get_headers(project_guid=project_guid, **kwargs),
         )
-        handle_server_errors(response)
+        handle_server_errors(result)
         return None
 
     def rename_key_in_revision(
@@ -1617,13 +1620,13 @@ class Client:
         Returns:
             Key details as a dictionary.
         """
-        response = self.c.patch(
+        result = self.c.patch(
             url=f"{self.v2api_host}/v2/configtrees/{tree_name}/revisions/{revision_id}/{key}/",
             headers=self.config.get_headers(project_guid=project_guid, **kwargs),
             json=config_key_rename,
         )
-        handle_server_errors(response)
-        return response.json()
+        handle_server_errors(result)
+        return result.json()
 
     # Managed Service API
 
@@ -1633,12 +1636,13 @@ class Client:
         Returns:
             List of providers as a dictionary.
         """
-        response = self.c.get(
+        result = self.c.get(
             url=f"{self.v2api_host}/v2/managedservices/providers/",
             headers=self.config.get_headers(with_project=False),
         )
-        handle_server_errors(response)
-        return response.json()
+        handle_server_errors(result)
+        validated_result = ManagedServiceProviderList.model_validate(result.json())
+        return validated_result
 
     def list_instances(
         self,
@@ -1658,7 +1662,7 @@ class Client:
         Returns:
             List of instances as a dictionary.
         """
-        response = self.c.get(
+        result = self.c.get(
             url=f"{self.v2api_host}/v2/managedservices/",
             headers=self.config.get_headers(),
             params={
@@ -1668,9 +1672,9 @@ class Client:
                 "providers": providers,
             },
         )
-        handle_server_errors(response)
-        validate_result = ManagedServiceList.model_validate(response.json())
-        return validate_result
+        handle_server_errors(result)
+        validated_result = ManagedServiceInstanceList.model_validate(result.json())
+        return validated_result
 
     def get_instance(self, name: str) -> dict[str, Any]:
         """Get an instance by its name.
@@ -1681,12 +1685,13 @@ class Client:
         Returns:
             Instance details as a dictionary.
         """
-        response = self.c.get(
+        result = self.c.get(
             url=f"{self.v2api_host}/v2/managedservices/{name}/",
             headers=self.config.get_headers(),
         )
-        handle_server_errors(response)
-        return response.json()
+        handle_server_errors(result)
+        validated_result = ManagedServiceInstance.model_validate(result.json())
+        return validated_result
 
     def create_instance(self, body: dict) -> dict[str, Any]:
         """Create a new instance.
@@ -1694,13 +1699,15 @@ class Client:
         Returns:
             Instance details as a dictionary.
         """
-        response = self.c.post(
+        validated_body = ManagedServiceInstance.model_validate(obj=body)
+        result = self.c.post(
             url=f"{self.v2api_host}/v2/managedservices/",
             headers=self.config.get_headers(),
-            json=body,
+            json=validated_body.model_dump(),
         )
-        handle_server_errors(response)
-        return response.json()
+        handle_server_errors(result)
+        validated_result = ManagedServiceInstance.model_validate(result.json())
+        return validated_result
 
     def delete_instance(self, name: str) -> None:
         """Delete an instance.
@@ -1708,11 +1715,11 @@ class Client:
         Returns:
             None if successful.
         """
-        response = self.c.delete(
+        result = self.c.delete(
             url=f"{self.v2api_host}/v2/managedservices/{name}/",
             headers=self.config.get_headers(),
         )
-        handle_server_errors(response)
+        handle_server_errors(result)
         return None
 
     def list_instance_bindings(
@@ -1733,7 +1740,7 @@ class Client:
         Returns:
             List of instance bindings as a dictionary.
         """
-        response = self.c.get(
+        result = self.c.get(
             url=f"{self.v2api_host}/v2/managedservices/{instance_name}/bindings/",
             headers=self.config.get_headers(),
             params={
@@ -1742,8 +1749,9 @@ class Client:
                 "labelSelector": label_selector,
             },
         )
-        handle_server_errors(response)
-        return response.json()
+        handle_server_errors(result)
+        validated_result = ManagedServiceBindingList.model_validate(result.json())
+        return validated_result
 
     def create_instance_binding(self, instance_name: str, body: dict) -> dict[str, Any]:
         """Create a new instance binding.
@@ -1755,14 +1763,15 @@ class Client:
         Returns:
             Instance binding details as a dictionary.
         """
-        validated_body = ManagedService.model_validate(body)
-        response = self.c.post(
+        validated_body = ManagedServiceBinding.model_validate(body)
+        result = self.c.post(
             url=f"{self.v2api_host}/v2/managedservices/{instance_name}/bindings/",
             headers=self.config.get_headers(),
             json=validated_body.model_dump(),
         )
-        handle_server_errors(response)
-        return response.json()
+        handle_server_errors(result)
+        validated_result = ManagedServiceBinding.model_validate(result.json())
+        return validated_result
 
     def get_instance_binding(self, instance_name: str, name: str) -> dict[str, Any]:
         """Get an instance binding by its name.
@@ -1774,12 +1783,13 @@ class Client:
         Returns:
             Instance binding details as a dictionary.
         """
-        response = self.c.get(
+        result = self.c.get(
             url=f"{self.v2api_host}/v2/managedservices/{instance_name}/bindings/{name}/",
             headers=self.config.get_headers(),
         )
-        handle_server_errors(response)
-        return response.json()
+        handle_server_errors(result)
+        validated_result = ManagedServiceBinding.model_validate(result.json())
+        return validated_result
 
     def delete_instance_binding(self, instance_name: str, name: str) -> None:
         """Delete an instance binding.
@@ -1791,9 +1801,9 @@ class Client:
         Returns:
             None if successful.
         """
-        response = self.c.delete(
+        result = self.c.delete(
             url=f"{self.v2api_host}/v2/managedservices/{instance_name}/bindings/{name}/",
             headers=self.config.get_headers(),
         )
-        handle_server_errors(response)
+        handle_server_errors(result)
         return None

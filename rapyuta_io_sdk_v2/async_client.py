@@ -34,8 +34,12 @@ from rapyuta_io_sdk_v2.pydantic_models import (
     PackageList,
     SecretList,
     StaticRouteList,
-    ManagedServiceList,
     Organization,
+    ManagedServiceBinding,
+    ManagedServiceBindingList,
+    ManagedServiceInstance,
+    ManagedServiceInstanceList,
+    ManagedServiceProviderList,
 )
 from rapyuta_io_sdk_v2.utils import handle_server_errors
 
@@ -85,7 +89,7 @@ class AsyncClient:
         Returns:
             str: authentication token
         """
-        response = self.sync_client.post(
+        result = self.sync_client.post(
             url=f"{self.rip_host}/user/login",
             headers={"Content-Type": "application/json"},
             json={
@@ -93,8 +97,8 @@ class AsyncClient:
                 "password": password,
             },
         )
-        handle_server_errors(response)
-        return response.json()["data"].get("token")
+        handle_server_errors(result)
+        return result.json()["data"].get("token")
 
     def login(
         self,
@@ -124,15 +128,15 @@ class AsyncClient:
         if token is None:
             token = self.config.auth_token
 
-        response = self.sync_client.post(
+        result = self.sync_client.post(
             url=f"{self.rip_host}/user/logout",
             headers={
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {token}",
             },
         )
-        handle_server_errors(response)
-        return response.json()
+        handle_server_errors(result)
+        return result.json()
 
     def refresh_token(self, token: str = None, set_token: bool = True) -> str:
         """Refresh the authentication token.
@@ -148,15 +152,15 @@ class AsyncClient:
         if token is None:
             token = self.config.auth_token
 
-        response = self.sync_client.post(
+        result = self.sync_client.post(
             url=f"{self.rip_host}/refreshtoken",
             headers={"Content-Type": "application/json"},
             json={"token": token},
         )
-        handle_server_errors(response)
+        handle_server_errors(result)
         if set_token:
-            self.config.auth_token = response.json()["data"].get("token")
-        return response.json()["data"].get("token")
+            self.config.auth_token = result.json()["data"].get("token")
+        return result.json()["data"].get("token")
 
     def set_organization(self, organization_guid: str) -> None:
         """Set the organization GUID.
@@ -189,14 +193,14 @@ class AsyncClient:
         Returns:
             Organization: Organization details as an Organization object.
         """
-        response = await self.c.get(
+        result = await self.c.get(
             url=f"{self.v2api_host}/v2/organizations/{organization_guid}/",
             headers=self.config.get_headers(
                 with_project=False, organization_guid=organization_guid, **kwargs
             ),
         )
-        handle_server_errors(response)
-        validated_result = Organization.model_validate(obj=response.json())
+        handle_server_errors(result)
+        validated_result = Organization.model_validate(obj=result.json())
         return validated_result
 
     async def update_organization(
@@ -212,15 +216,15 @@ class AsyncClient:
             Organization: Organization details as an Organization object.
         """
         validated_body = Organization.model_validate(obj=body)
-        response = await self.c.put(
+        result = await self.c.put(
             url=f"{self.v2api_host}/v2/organizations/{organization_guid}/",
             headers=self.config.get_headers(
                 with_project=False, organization_guid=organization_guid, **kwargs
             ),
             json=validated_body.model_dump(),
         )
-        handle_server_errors(response)
-        validated_result = Organization.model_validate(obj=response.json())
+        handle_server_errors(result)
+        validated_result = Organization.model_validate(obj=result.json())
         return validated_result
 
     # ---------------------User--------------------
@@ -230,12 +234,12 @@ class AsyncClient:
         Returns:
             User: User details as a User object.
         """
-        response = await self.c.get(
+        result = await self.c.get(
             url=f"{self.v2api_host}/v2/users/me/",
             headers=self.config.get_headers(with_project=False, **kwargs),
         )
-        handle_server_errors(response)
-        validated_result = User.model_validate(obj=response.json())
+        handle_server_errors(result)
+        validated_result = User.model_validate(obj=result.json())
         return validated_result
 
     async def update_user(self, body: dict, **kwargs) -> User:
@@ -248,15 +252,15 @@ class AsyncClient:
             User: User details as a User object.
         """
         validated_body = User.model_validate(obj=body)
-        response = await self.c.put(
+        result = await self.c.put(
             url=f"{self.v2api_host}/v2/users/me/",
             headers=self.config.get_headers(
                 with_project=False, with_organization=False, **kwargs
             ),
             json=validated_body.model_dump(),
         )
-        handle_server_errors(response)
-        validated_result = User.model_validate(obj=response.json())
+        handle_server_errors(result)
+        validated_result = User.model_validate(obj=result.json())
         return validated_result
 
     # ----------------- Projects -----------------
@@ -297,15 +301,15 @@ class AsyncClient:
         if name:
             parameters["name"] = name
 
-        response = await self.c.get(
+        result = await self.c.get(
             url=f"{self.v2api_host}/v2/projects/",
             headers=self.config.get_headers(with_project=False, **kwargs),
             params=parameters,
         )
 
-        handle_server_errors(response)
+        handle_server_errors(result)
 
-        validated_result = ProjectList.model_validate(response.json())
+        validated_result = ProjectList.model_validate(result.json())
         return validated_result
 
     async def get_project(self, project_guid: str = None, **kwargs) -> Project:
@@ -494,14 +498,14 @@ class AsyncClient:
         Returns:
             Package: Package details as a Package object.
         """
-        response = await self.c.get(
+        result = await self.c.get(
             url=f"{self.v2api_host}/v2/packages/{name}/",
             headers=self.config.get_headers(**kwargs),
             params={"version": version},
         )
-        handle_server_errors(response)
+        handle_server_errors(result)
 
-        return Package.model_validate(obj=response.json())
+        return Package.model_validate(obj=result.json())
 
     async def delete_package(self, name: str, version: str, **kwargs) -> None:
         """Delete a package by its name.
@@ -1690,7 +1694,8 @@ class AsyncClient:
         )
 
         handle_server_errors(result)
-        return result.json()
+        validated_result = ManagedServiceProviderList.model_validate(result.json())
+        return validated_result
 
     async def list_instances(
         self,
@@ -1722,8 +1727,8 @@ class AsyncClient:
         )
 
         handle_server_errors(result)
-        validate_result = ManagedServiceList.model_validate(result.json())
-        return validate_result
+        validated_result = ManagedServiceInstanceList.model_validate(result.json())
+        return validated_result
 
     async def get_instance(self, name: str) -> dict[str, Any]:
         """Get an instance by its name.
@@ -1741,7 +1746,8 @@ class AsyncClient:
         )
 
         handle_server_errors(result)
-        return result.json()
+        validated_result = ManagedServiceInstance.model_validate(result.json())
+        return validated_result
 
     async def create_instance(self, body: dict) -> dict[str, Any]:
         """Create a new instance.
@@ -1757,7 +1763,8 @@ class AsyncClient:
         )
 
         handle_server_errors(result)
-        return result.json()
+        validated_result = ManagedServiceInstance.model_validate(result.json())
+        return validated_result
 
     async def delete_instance(self, name: str) -> None:
         """Delete an instance.
@@ -1802,7 +1809,8 @@ class AsyncClient:
         )
 
         handle_server_errors(result)
-        return result.json()
+        validated_result = ManagedServiceBindingList.model_validate(result.json())
+        return validated_result
 
     async def create_instance_binding(
         self, instance_name: str, body: dict
@@ -1824,7 +1832,8 @@ class AsyncClient:
         )
 
         handle_server_errors(result)
-        return result.json()
+        validated_result = ManagedServiceBinding.model_validate(result.json())
+        return validated_result
 
     async def get_instance_binding(self, instance_name: str, name: str) -> dict[str, Any]:
         """Get an instance binding by its name.
@@ -1843,7 +1852,8 @@ class AsyncClient:
         )
 
         handle_server_errors(result)
-        return result.json()
+        validated_result = ManagedServiceBinding.model_validate(result.json())
+        return validated_result
 
     async def delete_instance_binding(self, instance_name: str, name: str) -> None:
         """Delete an instance binding.
