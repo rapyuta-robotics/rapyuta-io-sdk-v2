@@ -63,8 +63,8 @@ class DiskStatus(BaseModel):
 class Disk(BaseModel):
     """Disk model."""
 
-    apiVersion: str | None
-    kind: str | None
+    apiVersion: str | None = Field(default="apiextensions.rapyuta.io/v1")
+    kind: str | None = Field(default="Disk")
     metadata: BaseMetadata = Field(description="Metadata for the Disk resource")
     spec: DiskSpec = Field(description="Specification for the Disk resource")
     status: DiskStatus | None = Field(default=None)
