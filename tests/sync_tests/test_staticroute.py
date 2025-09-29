@@ -3,7 +3,7 @@ import pytest
 from pytest_mock import MockFixture
 
 # ruff: noqa: F811, F401
-from rapyuta_io_sdk_v2.pydantic_models import StaticRoute, StaticRouteList
+from rapyuta_io_sdk_v2.models import StaticRoute, StaticRouteList
 from tests.utils.fixtures import client
 from tests.data.mock_data import (
     staticroutelist_model_mock as staticroutelist_model_mock,

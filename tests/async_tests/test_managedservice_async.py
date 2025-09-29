@@ -3,7 +3,7 @@ import pytest
 from asyncmock import AsyncMock
 
 # ruff: noqa: F811, F401
-from rapyuta_io_sdk_v2.pydantic_models import (
+from rapyuta_io_sdk_v2.models import (
     ManagedServiceBinding,
     ManagedServiceInstanceList,
     ManagedServiceBindingList,

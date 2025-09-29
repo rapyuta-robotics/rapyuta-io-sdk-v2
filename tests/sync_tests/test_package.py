@@ -3,7 +3,7 @@ import pytest
 from pytest_mock import MockFixture
 
 # ruff: noqa: F811, F401
-from rapyuta_io_sdk_v2.pydantic_models import Package, PackageList
+from rapyuta_io_sdk_v2.models import Package, PackageList
 from tests.utils.fixtures import client
 from tests.data import (
     package_body,

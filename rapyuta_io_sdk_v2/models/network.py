@@ -9,7 +9,7 @@ incorrect fields.
 from typing import Literal
 from pydantic import AliasChoices, BaseModel, Field, field_validator
 
-from rapyuta_io_sdk_v2.pydantic_models.utils import (
+from rapyuta_io_sdk_v2.models.utils import (
     Architecture,
     BaseMetadata,
     BaseList,

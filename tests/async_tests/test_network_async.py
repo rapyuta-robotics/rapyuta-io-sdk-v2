@@ -3,7 +3,7 @@ import pytest
 from pytest_mock import MockFixture
 
 # ruff: noqa: F811, F401
-from rapyuta_io_sdk_v2.pydantic_models import NetworkList, Network
+from rapyuta_io_sdk_v2.models import NetworkList, Network
 from tests.utils.fixtures import async_client
 from tests.data import (
     network_body,

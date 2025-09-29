@@ -9,7 +9,7 @@ incorrect fields.
 from typing import Literal
 from pydantic import BaseModel, Field, field_validator
 
-from rapyuta_io_sdk_v2.pydantic_models.utils import BaseMetadata, BaseList, Runtime
+from rapyuta_io_sdk_v2.models.utils import BaseMetadata, BaseList, Runtime
 
 
 class DiskBound(BaseModel):
@@ -50,6 +50,14 @@ class DiskStatus(BaseModel):
     diskBound: DiskBound | None = Field(
         default=None, description="Disk bound information"
     )
+
+    @field_validator("diskBound", mode="before")
+    @classmethod
+    def normalize_disk_bound(cls, v):
+        """Convert empty dict to None for diskBound field."""
+        if isinstance(v, dict) and not v:
+            return None
+        return v
 
 
 class Disk(BaseModel):

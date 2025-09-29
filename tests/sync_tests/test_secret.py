@@ -3,7 +3,7 @@ import pytest
 from pytest_mock import MockFixture
 
 # ruff: noqa: F811, F401
-from rapyuta_io_sdk_v2.pydantic_models import Secret, SecretList
+from rapyuta_io_sdk_v2.models import Secret, SecretList
 from tests.data.mock_data import secret_body, secret_model_mock, secretlist_model_mock
 from tests.utils.fixtures import client
 

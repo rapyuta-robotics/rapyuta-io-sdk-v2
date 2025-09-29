@@ -18,7 +18,7 @@ from typing import Any
 import httpx
 
 from rapyuta_io_sdk_v2.config import Configuration
-from rapyuta_io_sdk_v2.pydantic_models import (
+from rapyuta_io_sdk_v2.models import (
     Secret,
     StaticRoute,
     Disk,
@@ -206,7 +206,7 @@ class Client:
         Returns:
             Organization: Organization details as an Organization object.
         """
-        from rapyuta_io_sdk_v2.pydantic_models.organization import Organization
+        from rapyuta_io_sdk_v2.models.organization import Organization
 
         validated_body = Organization.model_validate(obj=body)
         result = self.c.put(

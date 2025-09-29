@@ -9,7 +9,7 @@ incorrect fields.
 from typing import Literal
 from pydantic import BaseModel, Field, RootModel, field_validator, model_validator
 
-from rapyuta_io_sdk_v2.pydantic_models.utils import (
+from rapyuta_io_sdk_v2.models.utils import (
     Architecture,
     BaseMetadata,
     BaseList,
@@ -147,7 +147,7 @@ class PackageSpec(BaseModel):
 
 class PackageMetadata(BaseMetadata):
     version: str | None
-    description: str | None
+    description: str | None = Field(default=None)
 
 
 class Package(BaseModel):

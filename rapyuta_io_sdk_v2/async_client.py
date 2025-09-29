@@ -18,7 +18,7 @@ from typing import Any
 import httpx
 
 from rapyuta_io_sdk_v2.config import Configuration
-from rapyuta_io_sdk_v2.pydantic_models import (
+from rapyuta_io_sdk_v2.models import (
     Secret,
     StaticRoute,
     Disk,

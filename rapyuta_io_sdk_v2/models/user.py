@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from pydantic import BaseModel, Field
-from rapyuta_io_sdk_v2.pydantic_models.utils import BaseMetadata, BaseList
+from rapyuta_io_sdk_v2.models.utils import BaseMetadata, BaseList
 
 
 class UserOrganization(BaseModel):

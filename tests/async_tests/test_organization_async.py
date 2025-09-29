@@ -3,7 +3,7 @@ import httpx
 import pytest
 
 # ruff: noqa: F811, F401
-from rapyuta_io_sdk_v2.pydantic_models.organization import Organization
+from rapyuta_io_sdk_v2.models.organization import Organization
 from tests.data.mock_data import mock_response_organization, organization_body
 from tests.utils.fixtures import async_client as client
 
