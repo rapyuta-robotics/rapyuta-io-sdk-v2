@@ -34,12 +34,12 @@ from rapyuta_io_sdk_v2.models import (
     PackageList,
     SecretList,
     StaticRouteList,
-    Organization,
     ManagedServiceBinding,
     ManagedServiceBindingList,
     ManagedServiceInstance,
     ManagedServiceInstanceList,
     ManagedServiceProviderList,
+    Organization,
 )
 from rapyuta_io_sdk_v2.utils import handle_server_errors
 
@@ -191,11 +191,10 @@ class Client:
             ),
         )
         handle_server_errors(result)
-        validated_result = Organization.model_validate(obj=result.json())
-        return validated_result
+        return Organization(**result.json())
 
     def update_organization(
-        self, body: dict, organization_guid: str = None, **kwargs
+        self, body: Organization | dict, organization_guid: str = None, **kwargs
     ) -> Organization:
         """Update an organization by its GUID.
 
@@ -206,19 +205,19 @@ class Client:
         Returns:
             Organization: Organization details as an Organization object.
         """
-        from rapyuta_io_sdk_v2.models.organization import Organization
 
-        validated_body = Organization.model_validate(obj=body)
+        if isinstance(body, dict):
+            body = Organization.model_validate(body)
+
         result = self.c.put(
             url=f"{self.v2api_host}/v2/organizations/{organization_guid}/",
             headers=self.config.get_headers(
                 with_project=False, organization_guid=organization_guid, **kwargs
             ),
-            json=validated_body.model_dump(),
+            json=body.model_dump(),
         )
         handle_server_errors(result)
-        validated_result = Organization.model_validate(obj=result.json())
-        return validated_result
+        return Organization(**result.json())
 
     # ---------------------User--------------------
     def get_user(self, **kwargs) -> User:
@@ -232,10 +231,9 @@ class Client:
             headers=self.config.get_headers(with_project=False, **kwargs),
         )
         handle_server_errors(result)
-        validated_result = User.model_validate(obj=result.json())
-        return validated_result
+        return User(**result.json())
 
-    def update_user(self, body: dict, **kwargs) -> User:
+    def update_user(self, body: User | dict, **kwargs) -> User:
         """Update the user details.
 
         Args:
@@ -244,18 +242,18 @@ class Client:
         Returns:
             User: User details as a User object.
         """
-        validated_body = User.model_validate(obj=body)
+        if isinstance(body, dict):
+            body = User.model_validate(body)
 
         result = self.c.put(
             url=f"{self.v2api_host}/v2/users/me/",
             headers=self.config.get_headers(
                 with_project=False, with_organization=False, **kwargs
             ),
-            json=validated_body.model_dump(),
+            json=body.model_dump(),
         )
         handle_server_errors(result)
-        validated_result = User.model_validate(obj=result.json())
-        return validated_result
+        return User(**result.json())
 
     # -------------------Project-------------------
     def get_project(self, project_guid: str = None, **kwargs) -> Project:
@@ -285,10 +283,7 @@ class Client:
             headers=self.config.get_headers(with_project=False, **kwargs),
         )
         handle_server_errors(result)
-
-        validated_result = Project.model_validate(obj=result.json())
-
-        return validated_result
+        return Project(**result.json())
 
     def list_projects(
         self,
@@ -333,11 +328,9 @@ class Client:
         )
 
         handle_server_errors(response=result)
+        return ProjectList(**result.json())
 
-        validated_result = ProjectList.model_validate(result.json())
-        return validated_result
-
-    def create_project(self, body: dict, **kwargs) -> Project:
+    def create_project(self, body: Project | dict, **kwargs) -> Project:
         """Create a new project.
 
         Args:
@@ -346,18 +339,20 @@ class Client:
         Returns:
             Project: Project creation result.
         """
-        validated_body = Project.model_validate(obj=body)
+        if isinstance(body, dict):
+            body = Project.model_validate(body)
 
         result = self.c.post(
             url=f"{self.v2api_host}/v2/projects/",
             headers=self.config.get_headers(with_project=False, **kwargs),
-            json=validated_body.model_dump(),
+            json=body.model_dump(),
         )
         handle_server_errors(result)
-        validated_result = Project.model_validate(obj=result.json())
-        return validated_result
+        return Project(**result.json())
 
-    def update_project(self, body: dict, project_guid: str = None, **kwargs) -> Project:
+    def update_project(
+        self, body: Project | dict, project_guid: str = None, **kwargs
+    ) -> Project:
         """Update a project by its GUID.
 
         Args:
@@ -367,18 +362,16 @@ class Client:
         Returns:
             Project: Project update result.
         """
-
-        validated_body = Project.model_validate(obj=body)
+        if isinstance(body, dict):
+            body = Project.model_validate(body)
 
         result = self.c.put(
             url=f"{self.v2api_host}/v2/projects/{project_guid}/",
             headers=self.config.get_headers(with_project=False, **kwargs),
-            json=validated_body.model_dump(),
+            json=body.model_dump(),
         )
         handle_server_errors(result)
-        validated_result = Project.model_validate(result.json())
-
-        return validated_result
+        return Project(**result.json())
 
     def delete_project(self, project_guid: str, **kwargs) -> None:
         """Delete a project by its GUID.
@@ -398,7 +391,7 @@ class Client:
         return None
 
     def update_project_owner(
-        self, body: dict, project_guid: str = None, **kwargs
+        self, body: Project | dict, project_guid: str = None, **kwargs
     ) -> dict[str, Any]:
         """Update the owner of a project by its GUID.
 
@@ -407,12 +400,13 @@ class Client:
         """
         project_guid = project_guid or self.config.project_guid
 
-        validated_body = Project.model_validate(obj=body)
+        if isinstance(body, dict):
+            body = Project.model_validate(body)
 
         result = self.c.put(
             url=f"{self.v2api_host}/v2/projects/{project_guid}/owner/",
             headers=self.config.get_headers(**kwargs),
-            json=validated_body.model_dump(),
+            json=body.model_dump(),
         )
         handle_server_errors(result)
         return result
@@ -450,10 +444,9 @@ class Client:
         )
 
         handle_server_errors(response=result)
-        validated_result = PackageList.model_validate(result.json())
-        return validated_result
+        return PackageList(**result.json())
 
-    def create_package(self, body: dict, **kwargs) -> Package:
+    def create_package(self, body: Package | dict, **kwargs) -> Package:
         """Create a new package.
 
         The Payload is the JSON format of the Package Manifest.
@@ -462,19 +455,17 @@ class Client:
         Returns:
             Package: Package details.
         """
-
-        validated_body = Package.model_validate(obj=body)
+        if isinstance(body, dict):
+            body = Package.model_validate(body)
 
         result = self.c.post(
             url=f"{self.v2api_host}/v2/packages/",
             headers=self.config.get_headers(**kwargs),
-            json=validated_body.model_dump(),
+            json=body.model_dump(),
         )
 
         handle_server_errors(result)
-        validated_result = Package.model_validate(obj=result.json())
-
-        return validated_result
+        return Package(**result.json())
 
     def get_package(self, name: str, version: str = None, **kwargs) -> Package:
         """Get a package by its name.
@@ -494,10 +485,7 @@ class Client:
         )
 
         handle_server_errors(response=result)
-
-        validated_result = Package.model_validate(obj=result.json())
-
-        return validated_result
+        return Package(**result.json())
 
     def delete_package(self, name: str, version: str, **kwargs) -> None:
         """Delete a package by its name.
@@ -575,10 +563,9 @@ class Client:
 
         handle_server_errors(response=result)
 
-        validated_result = DeploymentList.model_validate(result.json())
-        return validated_result
+        return DeploymentList(**result.json())
 
-    def create_deployment(self, body: dict, **kwargs) -> Deployment:
+    def create_deployment(self, body: Deployment | dict, **kwargs) -> Deployment:
         """Create a new deployment.
 
         Args:
@@ -587,18 +574,17 @@ class Client:
         Returns:
             Deployment: Deployment details.
         """
-
-        validated_body = Deployment.model_validate(obj=body)
+        if isinstance(body, dict):
+            body = Deployment.model_validate(body)
 
         result = self.c.post(
             url=f"{self.v2api_host}/v2/deployments/",
             headers=self.config.get_headers(**kwargs),
-            json=validated_body.model_dump(),
+            json=body.model_dump(),
         )
 
         handle_server_errors(result)
-        validated_result = Deployment.model_validate(obj=result.json())
-        return validated_result
+        return Deployment(**result.json())
 
     def get_deployment(self, name: str, guid: str = None, **kwargs) -> Deployment:
         """Get a deployment by its name.
@@ -614,27 +600,26 @@ class Client:
         )
 
         handle_server_errors(result)
+        return Deployment(**result.json())
 
-        validated_result = Deployment.model_validate(obj=result.json())
-
-        return validated_result
-
-    def update_deployment(self, name: str, body: dict, **kwargs) -> Deployment:
+    def update_deployment(
+        self, name: str, body: Deployment | dict, **kwargs
+    ) -> Deployment:
         """Update a deployment by its name.
 
         Returns:
             Deployment: Deployment details.
         """
+        if isinstance(body, dict):
+            body = Deployment.model_validate(body)
 
-        validated_body = Deployment.model_validate(obj=body)
         result = self.c.put(
             url=f"{self.v2api_host}/v2/deployments/{name}/",
             headers=self.config.get_headers(**kwargs),
-            json=validated_body.model_dump(),
+            json=body.model_dump(),
         )
         handle_server_errors(result)
-        validated_result = Deployment.model_validate(result.json())
-        return validated_result
+        return Deployment(**result.json())
 
     def delete_deployment(self, name: str, **kwargs) -> None:
         """Delete a deployment by its name.
@@ -719,8 +704,7 @@ class Client:
             },
         )
         handle_server_errors(result)
-        validated_result = DiskList.model_validate(result.json())
-        return validated_result
+        return DiskList(**result.json())
 
     def get_disk(self, name: str, **kwargs) -> Disk:
         """Get a disk by its name.
@@ -737,25 +721,24 @@ class Client:
             headers=self.config.get_headers(**kwargs),
         )
         handle_server_errors(result)
-        validated_result = Disk.model_validate(obj=result.json())
-        return validated_result
+        return Disk(**result.json())
 
-    def create_disk(self, body: dict, **kwargs) -> Disk:
+    def create_disk(self, body: Disk | dict, **kwargs) -> Disk:
         """Create a new disk.
 
         Returns:
             Disk: Disk details.
         """
+        if isinstance(body, dict):
+            body = Disk.model_validate(body)
 
-        validated_body = Disk.model_validate(obj=body)
         result = self.c.post(
             url=f"{self.v2api_host}/v2/disks/",
             headers=self.config.get_headers(**kwargs),
-            json=validated_body.model_dump(),
+            json=body.model_dump(),
         )
         handle_server_errors(result)
-        validated_result = Disk.model_validate(obj=result.json())
-        return validated_result
+        return Disk(**result.json())
 
     def delete_disk(self, name: str, **kwargs) -> None:
         """Delete a disk by its name.
@@ -812,29 +795,25 @@ class Client:
             },
         )
         handle_server_errors(result)
+        return StaticRouteList(**result.json())
 
-        validated_result = StaticRouteList.model_validate(result.json())
-        return validated_result
-
-    def create_staticroute(self, body: dict, **kwargs) -> StaticRoute:
+    def create_staticroute(self, body: StaticRoute | dict, **kwargs) -> StaticRoute:
         """Create a new static route.
 
         Returns:
             StaticRoute: Static route details.
         """
-
-        validated_body = StaticRoute.model_validate(obj=body)
+        if isinstance(body, dict):
+            body = StaticRoute.model_validate(body)
 
         result = self.c.post(
             url=f"{self.v2api_host}/v2/staticroutes/",
             headers=self.config.get_headers(**kwargs),
-            json=validated_body.model_dump(),
+            json=body.model_dump(),
         )
 
         handle_server_errors(result)
-
-        validated_result = StaticRoute.model_validate(obj=result.json())
-        return validated_result
+        return StaticRoute(**result.json())
 
     def get_staticroute(self, name: str, **kwargs) -> StaticRoute:
         """Get a static route by its name.
@@ -851,11 +830,11 @@ class Client:
             headers=self.config.get_headers(**kwargs),
         )
         handle_server_errors(result)
+        return StaticRoute(**result.json())
 
-        validated_result = StaticRoute.model_validate(obj=result.json())
-        return validated_result
-
-    def update_staticroute(self, name: str, body: dict, **kwargs) -> StaticRoute:
+    def update_staticroute(
+        self, name: str, body: StaticRoute | dict, **kwargs
+    ) -> StaticRoute:
         """Update a static route by its name.
 
         Args:
@@ -865,20 +844,17 @@ class Client:
         Returns:
             StaticRoute: Static route details.
         """
-
-        validated_body = StaticRoute.model_validate(obj=body)
+        if isinstance(body, dict):
+            body = StaticRoute.model_validate(body)
 
         result = self.c.put(
             url=f"{self.v2api_host}/v2/staticroutes/{name}/",
             headers=self.config.get_headers(**kwargs),
-            json=validated_body.model_dump(),
+            json=body.model_dump(),
         )
 
         handle_server_errors(result)
-
-        validated_result = StaticRoute.model_validate(result.json())
-
-        return validated_result
+        return StaticRoute(**result.json())
 
     def delete_staticroute(self, name: str, **kwargs) -> None:
         """Delete a static route by its name.
@@ -945,27 +921,24 @@ class Client:
         )
 
         handle_server_errors(result)
+        return NetworkList(**result.json())
 
-        validated_result = NetworkList.model_validate(result.json())
-        return validated_result
-
-    def create_network(self, body: dict, **kwargs) -> Network:
+    def create_network(self, body: Network | dict, **kwargs) -> Network:
         """Create a new network.
 
         Returns:
             Network: Network details.
         """
-
-        validated_body = Network.model_validate(obj=body)
+        if isinstance(body, dict):
+            body = Network.model_validate(body)
 
         result = self.c.post(
             url=f"{self.v2api_host}/v2/networks/",
             headers=self.config.get_headers(**kwargs),
-            json=validated_body.model_dump(),
+            json=body.model_dump(),
         )
         handle_server_errors(result)
-        validated_result = Network.model_validate(obj=result.json())
-        return validated_result
+        return Network(**result.json())
 
     def get_network(self, name: str, **kwargs) -> Network:
         """Get a network by its name.
@@ -982,9 +955,7 @@ class Client:
             headers=self.config.get_headers(**kwargs),
         )
         handle_server_errors(result)
-
-        validated_result = Network.model_validate(obj=result.json())
-        return validated_result
+        return Network(**result.json())
 
     def delete_network(self, name: str, **kwargs) -> None:
         """Delete a network by its name.
@@ -1045,29 +1016,25 @@ class Client:
         )
 
         handle_server_errors(result)
+        return SecretList(**result.json())
 
-        validated_result = SecretList.model_validate(result.json())
-        return validated_result
-
-    def create_secret(self, body: dict, **kwargs) -> Secret:
+    def create_secret(self, body: Secret | dict, **kwargs) -> Secret:
         """Create a new secret.
 
         Returns:
             Secret: Secret details.
         """
-
-        validated_body = Secret.model_validate(obj=body)
+        if isinstance(body, dict):
+            body = Secret.model_validate(body)
 
         result = self.c.post(
             url=f"{self.v2api_host}/v2/secrets/",
             headers=self.config.get_headers(**kwargs),
-            json=validated_body.model_dump(),
+            json=body.model_dump(),
         )
 
         handle_server_errors(result)
-
-        validated_result = Secret.model_validate(obj=result.json())
-        return validated_result
+        return Secret(**result.json())
 
     def get_secret(self, name: str, **kwargs) -> Secret:
         """Get a secret by its name.
@@ -1084,12 +1051,9 @@ class Client:
             headers=self.config.get_headers(**kwargs),
         )
         handle_server_errors(response=result)
+        return Secret(**result.json())
 
-        validated_result = Secret.model_validate(obj=result.json())
-
-        return validated_result
-
-    def update_secret(self, name: str, body: dict, **kwargs) -> Secret:
+    def update_secret(self, name: str, body: Secret | dict, **kwargs) -> Secret:
         """Update a secret by its name.
 
         Args:
@@ -1099,20 +1063,17 @@ class Client:
         Returns:
             Secret: Secret details.
         """
-
-        validated_body = Secret.model_validate(obj=body)
+        if isinstance(body, dict):
+            body = Secret.model_validate(body)
 
         result = self.c.put(
             url=f"{self.v2api_host}/v2/secrets/{name}/",
             headers=self.config.get_headers(**kwargs),
-            json=validated_body.model_dump(),
+            json=body.model_dump(),
         )
 
         handle_server_errors(response=result)
-
-        validated_result = Secret.model_validate(result.json())
-
-        return validated_result
+        return Secret(**result.json())
 
     def delete_secret(self, name: str, **kwargs) -> None:
         """Delete a secret by its name.
@@ -1630,7 +1591,7 @@ class Client:
 
     # Managed Service API
 
-    def list_providers(self) -> dict[str, Any]:
+    def list_providers(self) -> ManagedServiceProviderList:
         """List all providers.
 
         Returns:
@@ -1641,8 +1602,7 @@ class Client:
             headers=self.config.get_headers(with_project=False),
         )
         handle_server_errors(result)
-        validated_result = ManagedServiceProviderList.model_validate(result.json())
-        return validated_result
+        return ManagedServiceProviderList(**result.json())
 
     def list_instances(
         self,
@@ -1650,7 +1610,7 @@ class Client:
         limit: int = 50,
         label_selector: list[str] = None,
         providers: list[str] = None,
-    ):
+    ) -> ManagedServiceInstanceList:
         """List all instances in a project.
 
         Args:
@@ -1673,10 +1633,9 @@ class Client:
             },
         )
         handle_server_errors(result)
-        validated_result = ManagedServiceInstanceList.model_validate(result.json())
-        return validated_result
+        return ManagedServiceInstanceList(**result.json())
 
-    def get_instance(self, name: str) -> dict[str, Any]:
+    def get_instance(self, name: str) -> ManagedServiceInstance:
         """Get an instance by its name.
 
         Args:
@@ -1690,24 +1649,26 @@ class Client:
             headers=self.config.get_headers(),
         )
         handle_server_errors(result)
-        validated_result = ManagedServiceInstance.model_validate(result.json())
-        return validated_result
+        return ManagedServiceInstance(**result.json())
 
-    def create_instance(self, body: dict) -> dict[str, Any]:
+    def create_instance(
+        self, body: ManagedServiceInstance | dict
+    ) -> ManagedServiceInstance:
         """Create a new instance.
 
         Returns:
-            Instance details as a dictionary.
+            Instance details as a ManagedServiceInstance object.
         """
-        validated_body = ManagedServiceInstance.model_validate(obj=body)
+        if isinstance(body, dict):
+            body = ManagedServiceInstance.model_validate(body)
+
         result = self.c.post(
             url=f"{self.v2api_host}/v2/managedservices/",
             headers=self.config.get_headers(),
-            json=validated_body.model_dump(),
+            json=body.model_dump(),
         )
         handle_server_errors(result)
-        validated_result = ManagedServiceInstance.model_validate(result.json())
-        return validated_result
+        return ManagedServiceInstance(**result.json())
 
     def delete_instance(self, name: str) -> None:
         """Delete an instance.
@@ -1728,7 +1689,7 @@ class Client:
         cont: int = 0,
         limit: int = 50,
         label_selector: list[str] = None,
-    ):
+    ) -> ManagedServiceBindingList:
         """List all instance bindings in a project.
 
         Args:
@@ -1750,10 +1711,11 @@ class Client:
             },
         )
         handle_server_errors(result)
-        validated_result = ManagedServiceBindingList.model_validate(result.json())
-        return validated_result
+        return ManagedServiceBindingList(**result.json())
 
-    def create_instance_binding(self, instance_name: str, body: dict) -> dict[str, Any]:
+    def create_instance_binding(
+        self, instance_name: str, body: ManagedServiceBinding | dict
+    ) -> ManagedServiceBinding:
         """Create a new instance binding.
 
         Args:
@@ -1763,17 +1725,20 @@ class Client:
         Returns:
             Instance binding details as a dictionary.
         """
-        validated_body = ManagedServiceBinding.model_validate(body)
+        if isinstance(body, dict):
+            body = ManagedServiceBinding.model_validate(body)
+
         result = self.c.post(
             url=f"{self.v2api_host}/v2/managedservices/{instance_name}/bindings/",
             headers=self.config.get_headers(),
-            json=validated_body.model_dump(),
+            json=body.model_dump(),
         )
         handle_server_errors(result)
-        validated_result = ManagedServiceBinding.model_validate(result.json())
-        return validated_result
+        return ManagedServiceBinding(**result.json())
 
-    def get_instance_binding(self, instance_name: str, name: str) -> dict[str, Any]:
+    def get_instance_binding(
+        self, instance_name: str, name: str
+    ) -> ManagedServiceBinding:
         """Get an instance binding by its name.
 
         Args:
@@ -1788,8 +1753,7 @@ class Client:
             headers=self.config.get_headers(),
         )
         handle_server_errors(result)
-        validated_result = ManagedServiceBinding.model_validate(result.json())
-        return validated_result
+        return ManagedServiceBinding(**result.json())
 
     def delete_instance_binding(self, instance_name: str, name: str) -> None:
         """Delete an instance binding.
