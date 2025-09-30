@@ -9,28 +9,16 @@ incorrect fields.
 from typing import Literal
 from pydantic import BaseModel, Field, model_validator
 
-from rapyuta_io_sdk_v2.models.utils import BaseMetadata, BaseList
+from rapyuta_io_sdk_v2.models.utils import BaseList, BaseMetadata, BaseObject, Subject
 
 
-class RoleSpec(str):
-    pass
-
-
-class User(BaseModel):
-    emailID: str
-    firstName: str | None = None
-    lastName: str | None = None
-    userGUID: str | None = None
-    role: Literal["admin", "viewer"] | None = Field(default="viewer")
-
-
-class UserGroup(BaseModel):
-    name: str
-    userGroupGUID: str | None = None
-    role: Literal["admin", "viewer"] | None = Field(default="viewer")
+class ProjectMember(BaseModel):
+    subject: Subject
+    roleNames: list[str]
 
 
 class FeaturesVPN(BaseModel):
+    enabled: bool | None = None
     subnets: list[str] | None = None
     enabled: bool = Field(default=False)
 
@@ -41,11 +29,35 @@ class FeaturesTracing(BaseModel):
 
 class FeaturesDockerCache(BaseModel):
     enabled: bool = Field(default=False)
-    proxyDevice: str | None = None
-    proxyInterface: str | None = None
-    registrySecret: str | None = None
-    registryURL: str | None = None
-    dataDirectory: str | None = Field(default="/opt/rapyuta/volumes/docker-cache/")
+    proxy_device: str | None = Field(default=None, serialization_alias="proxyDevice")
+    proxy_interface: str | None = Field(
+        default=None, serialization_alias="proxyInterface"
+    )
+    registry_secret: str | None = Field(
+        default=None, serialization_alias="registrySecret"
+    )
+    registry_url: str | None = Field(default=None, serialization_alias="registryURL")
+    data_directory: str | None = Field(
+        default="/opt/rapyuta/volumes/docker-cache/", serialization_alias="dataDirectory"
+    )
+
+    @model_validator(mode="after")
+    def validate_enabled_requires_all_fields(self) -> Self:
+        if self.enabled:
+            required_fields = [
+                "proxy_device",
+                "proxy_interface",
+                "registry_secret",
+                "registry_url",
+            ]
+            missing_fields = [
+                field for field in required_fields if getattr(self, field) is None
+            ]
+
+            if missing_fields:
+                raise ValueError(
+                    f"Following fields should be present if docker_cache is enabled: {', '.join(missing_fields)}"
+                )
 
     @model_validator(mode="after")
     def validate_data_directory(self):
@@ -56,42 +68,31 @@ class FeaturesDockerCache(BaseModel):
 
 class Features(BaseModel):
     vpn: FeaturesVPN | None = None
-    tracing: FeaturesTracing | None = None
     dockerCache: FeaturesDockerCache | None = None
 
 
 class ProjectSpec(BaseModel):
-    users: list[User] | None = None
-    userGroups: list[UserGroup] | None = None
+    members: list[ProjectMember] | None = None
     features: Features | None = None
 
 
 class ProjectStatus(BaseModel):
-    status: str | None = None
-    vpn: str | None = None
-    tracing: str | None = None
+    status: Literal["Pending", "Error", "Success", "Deleting", "Unknown"]
+    error: str | None = None
+    vpn: Literal["Success", "Error", "Disabled"]
+    tracing: Literal["Success", "Error", "Disabled"]
 
 
-class Metadata(BaseMetadata):
-    """Metadata for Project resource."""
-
-    pass
-
-
-class Project(BaseModel):
+class Project(BaseObject):
     """Project model."""
 
-    apiVersion: str | None = None
-    kind: str | None = None
-    metadata: BaseMetadata | None = None
-    spec: ProjectSpec | None = None
+    kind: Literal["Project"] | None = "Project"
+    metadata: BaseMetadata
+    spec: ProjectSpec
     status: ProjectStatus | None = None
 
 
 class ProjectList(BaseList[Project]):
-    """List of projects using BaseList."""
-
-    pass
     """List of Project resources."""
 
     pass

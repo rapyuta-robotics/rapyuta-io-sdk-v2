@@ -71,10 +71,12 @@ class Configuration:
     def get_headers(
         self,
         with_organization: bool = True,
-        organization_guid: str = None,
+        organization_guid: str | None = None,
         with_project: bool = True,
-        project_guid: str = None,
-    ) -> dict:
+        project_guid: str | None = None,
+        with_group: bool = False,
+        group_guid: str | None = None,
+    ) -> dict[str, str]:
         """Get the headers for the configuration.
 
         Args:
@@ -95,8 +97,11 @@ class Configuration:
             headers["organizationguid"] = organization_guid
 
         project_guid = project_guid or self.project_guid
-        if with_project and project_guid is not None:
+        if with_project and project_guid:
             headers["project"] = project_guid
+
+        if with_group and group_guid:
+            headers["groupguid"] = group_guid
 
         custom_client_request_id = os.getenv("REQUEST_ID")
         if custom_client_request_id:
