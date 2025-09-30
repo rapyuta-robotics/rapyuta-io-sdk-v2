@@ -18,7 +18,7 @@ from typing import Any
 import httpx
 
 from rapyuta_io_sdk_v2.config import Configuration
-from rapyuta_io_sdk_v2.models import (
+from rapyuta_io_sdk_v2 import (
     Secret,
     StaticRoute,
     Disk,
@@ -41,6 +41,14 @@ from rapyuta_io_sdk_v2.models import (
     ManagedServiceProviderList,
     Organization,
     Daemon,
+    UserList,
+    UserGroupList,
+    UserGroup,
+    Role,
+    RoleBinding,
+    RoleBindingList,
+    RoleList,
+    OAuth2UpdateURI,
 )
 from rapyuta_io_sdk_v2.utils import handle_server_errors
 
@@ -625,9 +633,7 @@ class Client:
         handle_server_errors(result)
         return Deployment(**result.json())
 
-    def update_deployment(
-        self, name: str, body: Deployment | dict, **kwargs
-    ) -> Deployment:
+    def update_deployment(self, body: Deployment | dict, **kwargs) -> Deployment:
         """Update a deployment by its name.
 
         Returns:
@@ -637,7 +643,7 @@ class Client:
             body = Deployment.model_validate(body)
 
         result = self.c.put(
-            url=f"{self.v2api_host}/v2/deployments/{deployment.metadata.name}/",
+            url=f"{self.v2api_host}/v2/deployments/{body.metadata.name}/",
             headers=self.config.get_headers(**kwargs),
             json=body.model_dump(),
         )
