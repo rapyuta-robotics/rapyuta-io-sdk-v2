@@ -20,7 +20,7 @@ from munch import Munch
 from yaml import safe_load
 
 from rapyuta_io_sdk_v2.config import Configuration
-from rapyuta_io_sdk_v2.models import (
+from rapyuta_io_sdk_v2 import (
     Secret,
     StaticRoute,
     Disk,
@@ -43,6 +43,14 @@ from rapyuta_io_sdk_v2.models import (
     ManagedServiceProviderList,
     Organization,
     Daemon,
+    UserList,
+    UserGroupList,
+    UserGroup,
+    Role,
+    RoleBinding,
+    RoleBindingList,
+    RoleList,
+    OAuth2UpdateURI,
 )
 from rapyuta_io_sdk_v2.utils import handle_server_errors
 
@@ -628,9 +636,7 @@ class Client:
         handle_server_errors(result)
         return Deployment(**result.json())
 
-    def update_deployment(
-        self, name: str, body: Deployment | dict, **kwargs
-    ) -> Deployment:
+    def update_deployment(self, body: Deployment | dict, **kwargs) -> Deployment:
         """Update a deployment by its name.
 
         Returns:
