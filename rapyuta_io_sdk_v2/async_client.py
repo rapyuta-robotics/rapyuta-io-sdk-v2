@@ -20,7 +20,7 @@ from munch import Munch
 from yaml import safe_load
 
 from rapyuta_io_sdk_v2.config import Configuration
-from rapyuta_io_sdk_v2.models import (
+from rapyuta_io_sdk_v2 import (
     Secret,
     StaticRoute,
     Disk,
@@ -43,6 +43,13 @@ from rapyuta_io_sdk_v2.models import (
     ManagedServiceProviderList,
     Organization,
     Daemon,
+    UserList,
+    UserGroupList,
+    UserGroup,
+    Role,
+    RoleBinding,
+    RoleBindingList,
+    RoleList,
 )
 from rapyuta_io_sdk_v2.utils import handle_server_errors
 
@@ -232,7 +239,34 @@ class AsyncClient:
         return Organization(**result.json())
 
     # ---------------------User--------------------
-    async def get_user(self, **kwargs) -> User:
+    async def list_users(
+        self,
+        organization_guid: str | None = None,
+        guid: str | None = None,
+        cont: int = 0,
+        limit: int = 50,
+        **kwargs,
+    ) -> UserList:
+        parameters: dict[str, Any] = {
+            "continue": cont,
+            "limit": limit,
+        }
+        if guid:
+            parameters["guid"] = guid
+
+        result = await self.c.get(
+            url=f"{self.v2api_host}/v2/users/",
+            headers=self.config.get_headers(
+                with_project=False, organization_guid=organization_guid, **kwargs
+            ),
+            params=parameters,
+        )
+
+        handle_server_errors(result)
+
+        return UserList(**result.json())
+
+    async def get_myself(self, **kwargs) -> User:
         """Get User details.
 
         Returns:
@@ -240,10 +274,21 @@ class AsyncClient:
         """
         result = await self.c.get(
             url=f"{self.v2api_host}/v2/users/me/",
-            headers=self.config.get_headers(with_project=False, **kwargs),
+            headers=self.config.get_headers(
+                with_project=False, with_organization=False, **kwargs
+            ),
         )
         handle_server_errors(result)
         return User(**result.json())
+
+    # Alias for backward compatibility
+    async def get_user(self, **kwargs) -> User:
+        """Get User details. (Alias for get_myself)
+
+        Returns:
+            User: User details as a User object.
+        """
+        return await self.get_myself(**kwargs)
 
     async def update_user(self, body: User | dict, **kwargs) -> User:
         """Update the user details.
@@ -1882,3 +1927,227 @@ class AsyncClient:
         )
         handle_server_errors(result)
         return None
+
+    # -------------------Usergroup-------------------
+    async def list_user_groups(
+        self,
+        cont: int = 0,
+        limit: int = 50,
+        label_selector: list[str] | None = None,
+        name: str | None = None,
+        **kwargs,
+    ) -> UserGroupList:
+        parameters: dict[str, Any] = {
+            "continue": cont,
+            "limit": limit,
+        }
+        if label_selector:
+            parameters["labelSelector"] = label_selector
+        if name:
+            parameters["name"] = name
+
+        result = await self.c.get(
+            url=f"{self.v2api_host}/v2/usergroups/",
+            headers=self.config.get_headers(with_project=False, **kwargs),
+            params=parameters,
+        )
+
+        handle_server_errors(response=result)
+
+        return UserGroupList(**result.json())
+
+    async def get_user_group(
+        self, group_name: str, group_guid: str, **kwargs
+    ) -> UserGroup:
+        result = await self.c.get(
+            url=f"{self.v2api_host}/v2/usergroups/{group_name}/",
+            headers=self.config.get_headers(
+                with_project=False, with_group=True, group_guid=group_guid, **kwargs
+            ),
+        )
+        handle_server_errors(result)
+
+        return UserGroup(**result.json())
+
+    async def create_user_group(self, user_group: UserGroup, **kwargs) -> UserGroup:
+        result = await self.c.post(
+            url=f"{self.v2api_host}/v2/usergroups/",
+            headers=self.config.get_headers(with_project=False, **kwargs),
+            json=user_group.model_dump(),
+        )
+        handle_server_errors(result)
+
+        return UserGroup(**result.json())
+
+    async def update_user_group(self, user_group: UserGroup, **kwargs) -> UserGroup:
+        result = await self.c.put(
+            url=f"{self.v2api_host}/v2/usergroups/{user_group.metadata.name}/",
+            headers=self.config.get_headers(
+                with_project=False,
+                with_group=True,
+                group_guid=user_group.metadata.guid,
+                **kwargs,
+            ),
+            json=user_group.model_dump(),
+        )
+        handle_server_errors(result)
+
+        return UserGroup(**result.json())
+
+    async def delete_user_group(self, group_name: str, group_guid: str, **kwargs) -> None:
+        result = await self.c.delete(
+            url=f"{self.v2api_host}/v2/usergroups/{group_name}/",
+            headers=self.config.get_headers(
+                with_project=False, with_group=True, group_guid=group_guid, **kwargs
+            ),
+        )
+        handle_server_errors(result)
+
+    # -------------------Roles-------------------
+    async def list_roles(
+        self,
+        cont: int = 0,
+        limit: int = 50,
+        label_selector: list[str] | None = None,
+        name: str | None = None,
+        **kwargs,
+    ) -> RoleList:
+        parameters: dict[str, Any] = {
+            "continue": cont,
+            "limit": limit,
+        }
+        if label_selector:
+            parameters["labelSelector"] = label_selector
+        if name:
+            parameters["name"] = name
+
+        result = await self.c.get(
+            url=f"{self.v2api_host}/v2/roles/",
+            headers=self.config.get_headers(with_project=False, **kwargs),
+            params=parameters,
+        )
+
+        handle_server_errors(result)
+
+        return RoleList(**result.json())
+
+    async def get_role(self, role_name: str, **kwargs) -> Role:
+        result = await self.c.get(
+            url=f"{self.v2api_host}/v2/roles/{role_name}/",
+            headers=self.config.get_headers(with_project=False, **kwargs),
+        )
+        handle_server_errors(result)
+
+        return Role(**result.json())
+
+    async def create_role(self, role: Role, **kwargs) -> Role:
+        result = await self.c.post(
+            url=f"{self.v2api_host}/v2/roles/",
+            headers=self.config.get_headers(with_project=False, **kwargs),
+            json=role.model_dump(),
+        )
+        handle_server_errors(result)
+
+        return Role(**result.json())
+
+    async def update_role(self, role: Role, **kwargs) -> Role:
+        result = await self.c.put(
+            url=f"{self.v2api_host}/v2/roles/{role.metadata.name}/",
+            headers=self.config.get_headers(with_project=False, **kwargs),
+            json=role.model_dump(),
+        )
+        handle_server_errors(result)
+
+        return Role(**result.json())
+
+    async def delete_role(self, role_name: str, **kwargs) -> None:
+        result = await self.c.delete(
+            url=f"{self.v2api_host}/v2/roles/{role_name}/",
+            headers=self.config.get_headers(with_project=False, **kwargs),
+        )
+        handle_server_errors(result)
+
+    # -------------------RoleBindings-------------------
+    async def list_role_bindings(
+        self,
+        cont: int = 0,
+        limit: int = 50,
+        label_selector: list[str] | None = None,
+        role_names: list[str] | None = None,
+        subject_guids: list[str] | None = None,
+        subject_names: list[str] | None = None,
+        subject_kinds: list[str] | None = None,
+        domain_guids: list[str] | None = None,
+        domain_names: list[str] | None = None,
+        domain_kinds: list[str] | None = None,
+        guids: list[str] | None = None,
+        **kwargs,
+    ) -> RoleBindingList:
+        parameters: dict[str, Any] = {
+            "continue": cont,
+            "limit": limit,
+        }
+        if label_selector:
+            parameters["labelSelector"] = label_selector
+        if role_names:
+            parameters["roleNames"] = role_names
+        if subject_guids:
+            parameters["subjectGUIDS"] = subject_guids
+        if subject_names:
+            parameters["subjectNames"] = subject_names
+        if subject_kinds:
+            parameters["subjectKinds"] = subject_kinds
+        if domain_guids:
+            parameters["domainGUIDS"] = domain_guids
+        if domain_names:
+            parameters["domainNames"] = domain_names
+        if domain_kinds:
+            parameters["domainKinds"] = domain_kinds
+        if guids:
+            parameters["guids"] = guids
+
+        result = await self.c.get(
+            url=f"{self.v2api_host}/v2/role-bindings/",
+            headers=self.config.get_headers(with_project=False, **kwargs),
+            params=parameters,
+        )
+
+        handle_server_errors(result)
+
+        return RoleBindingList(**result.json())
+
+    async def get_role_binding(self, binding_guid: str, **kwargs) -> RoleBinding:
+        result = await self.c.get(
+            url=f"{self.v2api_host}/v2/role-bindings/{binding_guid}/",
+            headers=self.config.get_headers(with_project=False, **kwargs),
+        )
+        handle_server_errors(result)
+
+        return RoleBinding(**result.json())
+
+    async def create_role_binding(self, binding: RoleBinding, **kwargs) -> RoleBinding:
+        result = await self.c.post(
+            url=f"{self.v2api_host}/v2/role-bindings/",
+            headers=self.config.get_headers(with_project=False, **kwargs),
+            json=binding.model_dump(),
+        )
+        handle_server_errors(result)
+
+        return RoleBinding(**result.json())
+
+    async def update_role_binding(self, binding: Role, **kwargs) -> RoleBinding:
+        result = await self.c.put(
+            url=f"{self.v2api_host}/v2/roles/{binding.metadata.guid}/",
+            headers=self.config.get_headers(with_project=False, **kwargs),
+            json=binding.model_dump(),
+        )
+        handle_server_errors(result)
+
+        return RoleBinding(**result.json())
+
+    async def delete_role_binding(self, binding_guid: str, **kwargs) -> None:
+        result = await self.c.delete(
+            url=f"{self.v2api_host}/v2/role-bindings/{binding_guid}/",
+            headers=self.config.get_headers(with_project=False, **kwargs),
+        )
+        handle_server_errors(result)
