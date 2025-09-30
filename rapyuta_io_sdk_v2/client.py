@@ -20,7 +20,7 @@ from munch import Munch
 from yaml import safe_load
 
 from rapyuta_io_sdk_v2.config import Configuration
-from rapyuta_io_sdk_v2 import (
+from rapyuta_io_sdk_v2.models import (
     Secret,
     StaticRoute,
     Disk,
@@ -63,7 +63,7 @@ class Client:
         **kwargs: Additional keyword arguments.
     """
 
-    def __init__(self, config: Configuration | None = None, **kwargs):
+    def __init__(self, config: Configuration | None = None, **kwargs) -> None:
         self.config = config or Configuration()
         timeout = kwargs.get("timeout", 10)
         self.c = httpx.Client(
@@ -203,7 +203,10 @@ class Client:
         return Organization(**result.json())
 
     def update_organization(
-        self, body: Organization | dict, organization_guid: str = None, **kwargs
+        self,
+        body: Organization | dict[str, Any],
+        organization_guid: str | None = None,
+        **kwargs,
     ) -> Organization:
         """Update an organization by its GUID.
 
@@ -271,7 +274,7 @@ class Client:
         handle_server_errors(result)
         return User(**result.json())
 
-    def update_user(self, body: User | dict, **kwargs) -> User:
+    def update_user(self, body: User | dict[str, Any], **kwargs) -> User:
         """Update the user details.
 
         Args:
@@ -364,7 +367,7 @@ class Client:
         handle_server_errors(response=result)
         return ProjectList(**result.json())
 
-    def create_project(self, body: Project | dict, **kwargs) -> Project:
+    def create_project(self, body: Project | dict[str, Any], **kwargs) -> Project:
         """Create a new project.
 
         Args:
@@ -389,7 +392,7 @@ class Client:
         return Project(**result.json())
 
     def update_project(
-        self, body: Project | dict, project_guid: str = None, **kwargs
+        self, body: Project | dict[str, Any], project_guid: str | None = None, **kwargs
     ) -> Project:
         """Update a project by its GUID.
 
@@ -444,7 +447,7 @@ class Client:
             json=body,
         )
         handle_server_errors(result)
-        return result
+        return result.json()
 
     # -------------------Package-------------------
     def list_packages(
@@ -481,7 +484,7 @@ class Client:
         handle_server_errors(response=result)
         return PackageList(**result.json())
 
-    def create_package(self, body: Package | dict, **kwargs) -> Package:
+    def create_package(self, body: Package | dict[str, Any], **kwargs) -> Package:
         """Create a new package.
 
         The Payload is the JSON format of the Package Manifest.
@@ -502,7 +505,7 @@ class Client:
         handle_server_errors(result)
         return Package(**result.json())
 
-    def get_package(self, name: str, version: str = None, **kwargs) -> Package:
+    def get_package(self, name: str, version: str | None = None, **kwargs) -> Package:
         """Get a package by its name.
 
         Args:
@@ -599,7 +602,9 @@ class Client:
 
         return DeploymentList(**result.json())
 
-    def create_deployment(self, body: Deployment | dict, **kwargs) -> Deployment:
+    def create_deployment(
+        self, body: Deployment | dict[str, Any], **kwargs
+    ) -> Deployment:
         """Create a new deployment.
 
         Args:
@@ -636,7 +641,9 @@ class Client:
         handle_server_errors(result)
         return Deployment(**result.json())
 
-    def update_deployment(self, body: Deployment | dict, **kwargs) -> Deployment:
+    def update_deployment(
+        self, body: Deployment | dict[str, Any], **kwargs
+    ) -> Deployment:
         """Update a deployment by its name.
 
         Returns:
@@ -765,7 +772,7 @@ class Client:
         handle_server_errors(result)
         return Disk(**result.json())
 
-    def create_disk(self, body: Disk | dict, **kwargs) -> Disk:
+    def create_disk(self, body: Disk | dict[str, Any], **kwargs) -> Disk:
         """Create a new disk.
 
         Returns:
@@ -858,7 +865,9 @@ class Client:
         handle_server_errors(result)
         return StaticRouteList(**result.json())
 
-    def create_staticroute(self, body: StaticRoute | dict, **kwargs) -> StaticRoute:
+    def create_staticroute(
+        self, body: StaticRoute | dict[str, Any], **kwargs
+    ) -> StaticRoute:
         """Create a new static route.
 
         Returns:
@@ -894,7 +903,7 @@ class Client:
         return StaticRoute(**result.json())
 
     def update_staticroute(
-        self, name: str, body: StaticRoute | dict, **kwargs
+        self, name: str, body: StaticRoute | dict[str, Any], **kwargs
     ) -> StaticRoute:
         """Update a static route by its name.
 
@@ -983,7 +992,7 @@ class Client:
         handle_server_errors(result)
         return NetworkList(**result.json())
 
-    def create_network(self, body: Network | dict, **kwargs) -> Network:
+    def create_network(self, body: Network | dict[str, Any], **kwargs) -> Network:
         """Create a new network.
 
         Returns:
@@ -1077,7 +1086,7 @@ class Client:
         handle_server_errors(result)
         return SecretList(**result.json())
 
-    def create_secret(self, body: Secret | dict, **kwargs) -> Secret:
+    def create_secret(self, body: Secret | dict[str, Any], **kwargs) -> Secret:
         """Create a new secret.
 
         Returns:
@@ -1112,7 +1121,7 @@ class Client:
         handle_server_errors(response=result)
         return Secret(**result.json())
 
-    def update_secret(self, name: str, body: Secret | dict, **kwargs) -> Secret:
+    def update_secret(self, name: str, body: Secret | dict[str, Any], **kwargs) -> Secret:
         """Update a secret by its name.
 
         Args:
@@ -1714,7 +1723,7 @@ class Client:
         return ManagedServiceInstance(**result.json())
 
     def create_instance(
-        self, body: ManagedServiceInstance | dict
+        self, body: ManagedServiceInstance | dict[str, Any]
     ) -> ManagedServiceInstance:
         """Create a new instance.
 
@@ -1775,7 +1784,7 @@ class Client:
         return ManagedServiceBindingList(**result.json())
 
     def create_instance_binding(
-        self, instance_name: str, body: ManagedServiceBinding | dict
+        self, instance_name: str, body: ManagedServiceBinding | dict[str, Any]
     ) -> ManagedServiceBinding:
         """Create a new instance binding.
 
