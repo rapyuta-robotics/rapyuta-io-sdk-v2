@@ -1,13 +1,10 @@
 """Pydantic models for ManagedService resource."""
 
 from typing import Any, Literal
+
 from pydantic import BaseModel, Field
 
-from rapyuta_io_sdk_v2.models.utils import BaseMetadata, BaseList, ListMeta
-
-
-ManagedServiceStatus = Literal["Pending", "Error", "Success", "Deleting", "Unknown"]
-
+from rapyuta_io_sdk_v2.models.utils import BaseList, BaseMetadata, ListMeta
 
 # --- ManagedServiceProvider Models ---
 
@@ -15,7 +12,7 @@ ManagedServiceStatus = Literal["Pending", "Error", "Success", "Deleting", "Unkno
 class ManagedServiceProvider(BaseModel):
     """Managed service provider model."""
 
-    name: str | None = Field(default=None, description="Name of the provider")
+    name: str = Field(description="Name of the provider")
 
 
 class ManagedServiceProviderList(BaseModel):
@@ -33,9 +30,7 @@ class ManagedServiceProviderList(BaseModel):
 class ManagedServiceInstanceSpec(BaseModel):
     """Specification for ManagedServiceInstance resource."""
 
-    provider: str | None = Field(
-        default=None, description="The provider for the managed service"
-    )
+    provider: str = Field(description="The provider for the managed service")
     config: Any = Field(
         default=None, description="Configuration object for the managed service as JSON"
     )
@@ -44,13 +39,13 @@ class ManagedServiceInstanceSpec(BaseModel):
 class ManagedServiceInstanceStatus(BaseModel):
     """Status for ManagedServiceInstance resource."""
 
-    status: ManagedServiceStatus | None = Field(
+    status: Literal["Pending", "Error", "Success", "Deleting", "Unknown"] | None = Field(
         default=None, description="Current status of the managed service"
     )
     error: str | None = Field(
         default=None, description="Error message if any", alias="errorMessage"
     )
-    provider: Any = Field(
+    provider: dict[str, Any] | None = Field(
         default=None, description="Provider-specific status information as JSON"
     )
 
@@ -69,7 +64,7 @@ class ManagedServiceInstance(BaseModel):
     )
 
 
-class ManagedServiceInstanceListOption(BaseList):
+class ManagedServiceInstanceListOption(BaseList[ManagedServiceInstance]):
     """List options for ManagedServiceInstance."""
 
     providers: list[str] | None = Field(default=None, description="Filter by providers")
@@ -115,9 +110,7 @@ class ManagedServiceBinding(BaseModel):
     apiVersion: str | None = Field(default=None, description="API version")
     kind: str | None = Field(default=None, description="Resource kind")
     metadata: BaseMetadata = Field(description="Resource metadata")
-    spec: ManagedServiceBindingSpec | None = Field(
-        default=None, description="Binding specification"
-    )
+    spec: ManagedServiceBindingSpec = Field(description="Binding specification")
     status: ManagedServiceBindingStatus | None = Field(
         default=None, description="Binding status"
     )

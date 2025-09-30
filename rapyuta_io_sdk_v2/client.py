@@ -1,4 +1,4 @@
-# Copyright 2024 Rapyuta Robotics
+# Copyright 2025 Rapyuta Robotics
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -55,7 +55,7 @@ class Client:
         **kwargs: Additional keyword arguments.
     """
 
-    def __init__(self, config: Configuration = None, **kwargs):
+    def __init__(self, config: Configuration | None = None, **kwargs):
         self.config = config or Configuration()
         timeout = kwargs.get("timeout", 10)
         self.c = httpx.Client(
@@ -95,11 +95,7 @@ class Client:
         handle_server_errors(result)
         return result.json()["data"].get("token")
 
-    def login(
-        self,
-        email: str,
-        password: str,
-    ) -> None:
+    def login(self, email: str, password: str) -> None:
         """Get the authentication token for the user.
 
         Args:
@@ -113,7 +109,7 @@ class Client:
         token = self.get_auth_token(email, password)
         self.config.auth_token = token
 
-    def logout(self, token: str = None) -> dict[str, Any]:
+    def logout(self, token: str | None = None) -> None:
         """Expire the authentication token.
 
         Args:
@@ -131,9 +127,8 @@ class Client:
             },
         )
         handle_server_errors(result)
-        return result.json()
 
-    def refresh_token(self, token: str = None, set_token: bool = True) -> str:
+    def refresh_token(self, token: str | None = None, set_token: bool = True) -> str:
         """Refresh the authentication token.
 
         Args:
@@ -174,7 +169,9 @@ class Client:
         self.config.set_project(project_guid)
 
     # -----------------Organization----------------
-    def get_organization(self, organization_guid: str = None, **kwargs) -> Organization:
+    def get_organization(
+        self, organization_guid: str | None = None, **kwargs
+    ) -> Organization:
         """Get an organization by its GUID.
 
         If organization GUID is provided, the current organization GUID will be
@@ -186,6 +183,7 @@ class Client:
         Returns:
             Organization: Organization details as an Organization object.
         """
+        organization_guid = organization_guid or self.config.organization_guid
 
         result = self.c.get(
             url=f"{self.v2api_host}/v2/organizations/{organization_guid}/",
@@ -223,7 +221,34 @@ class Client:
         return Organization(**result.json())
 
     # ---------------------User--------------------
-    def get_user(self, **kwargs) -> User:
+    def list_users(
+        self,
+        organization_guid: str | None = None,
+        guid: str | None = None,
+        cont: int = 0,
+        limit: int = 50,
+        **kwargs,
+    ) -> UserList:
+        parameters: dict[str, Any] = {
+            "continue": cont,
+            "limit": limit,
+        }
+        if guid:
+            parameters["guid"] = guid
+
+        result = self.c.get(
+            url=f"{self.v2api_host}/v2/users/",
+            headers=self.config.get_headers(
+                with_project=False, organization_guid=organization_guid, **kwargs
+            ),
+            params=parameters,
+        )
+
+        handle_server_errors(result)
+
+        return UserList(**result.json())
+
+    def get_myself(self, **kwargs) -> User:
         """Get User details.
 
         Returns:
@@ -231,7 +256,9 @@ class Client:
         """
         result = self.c.get(
             url=f"{self.v2api_host}/v2/users/me/",
-            headers=self.config.get_headers(with_project=False, **kwargs),
+            headers=self.config.get_headers(
+                with_project=False, with_organization=False, **kwargs
+            ),
         )
         handle_server_errors(result)
         return User(**result.json())
@@ -259,7 +286,7 @@ class Client:
         return User(**result.json())
 
     # -------------------Project-------------------
-    def get_project(self, project_guid: str = None, **kwargs) -> Project:
+    def get_project(self, project_guid: str | None = None, **kwargs) -> Project:
         """Get a project by its GUID.
 
         If no project or organization GUID is provided,
@@ -275,11 +302,7 @@ class Client:
         Returns:
             Project: Project details as a Project object.
         """
-        if project_guid is None:
-            project_guid = self.config.project_guid
-
-        if not project_guid:
-            raise ValueError("project_guid is required")
+        project_guid = project_guid or self.config.project_guid
 
         result = self.c.get(
             url=f"{self.v2api_host}/v2/projects/{project_guid}/",
@@ -292,10 +315,10 @@ class Client:
         self,
         cont: int = 0,
         limit: int = 50,
-        label_selector: list[str] = None,
-        status: list[str] = None,
-        organizations: list[str] = None,
-        name: str = None,
+        label_selector: list[str] | None = None,
+        status: list[str] | None = None,
+        organizations: list[str] | None = None,
+        name: str | None = None,
         **kwargs,
     ) -> ProjectList:
         """List all projects in an organization.
@@ -311,7 +334,7 @@ class Client:
             Dict[str, Any]: List of projects with items validated as Project objects.
         """
 
-        parameters = {
+        parameters: dict[str, Any] = {
             "continue": cont,
             "limit": limit,
         }
@@ -420,8 +443,8 @@ class Client:
         self,
         cont: int = 0,
         limit: int = 50,
-        label_selector: list[str] = None,
-        name: str = None,
+        label_selector: list[str] | None = None,
+        name: str | None = None,
         **kwargs,
     ) -> PackageList:
         """List all packages in a project.
@@ -507,7 +530,6 @@ class Client:
             params={"version": version},
         )
         handle_server_errors(result)
-        return None
 
     # -------------------Deployment-------------------
     def list_deployments(
@@ -515,15 +537,15 @@ class Client:
         cont: int = 0,
         limit: int = 50,
         dependencies: bool = False,
-        device_name: str = None,
-        guids: list[str] = None,
-        label_selector: list[str] = None,
-        name: str = None,
-        names: list[str] = None,
-        package_name: str = None,
-        package_version: str = None,
-        phases: list[str] = None,
-        regions: list[str] = None,
+        device_name: str | None = None,
+        guids: list[str] | None = None,
+        label_selector: list[str] | None = None,
+        name: str | None = None,
+        names: list[str] | None = None,
+        package_name: str | None = None,
+        package_version: str | None = None,
+        phases: list[str] | None = None,
+        regions: list[str] | None = None,
         **kwargs,
     ) -> DeploymentList:
         """List all deployments in a project.
@@ -590,7 +612,7 @@ class Client:
         handle_server_errors(result)
         return Deployment(**result.json())
 
-    def get_deployment(self, name: str, guid: str = None, **kwargs) -> Deployment:
+    def get_deployment(self, name: str, guid: str | None = None, **kwargs) -> Deployment:
         """Get a deployment by its name.
 
         Returns:
@@ -637,7 +659,6 @@ class Client:
             headers=self.config.get_headers(**kwargs),
         )
         handle_server_errors(result)
-        return None
 
     def get_deployment_graph(self, name: str, **kwargs) -> dict[str, Any]:
         """Get a deployment graph by its name. [Experimental]
@@ -651,10 +672,10 @@ class Client:
             headers=self.config.get_headers(**kwargs),
         )
         handle_server_errors(result)
-        return result
+        return result.json()
 
     def get_deployment_history(
-        self, name: str, guid: str = None, **kwargs
+        self, name: str, guid: str | None = None, **kwargs
     ) -> dict[str, Any]:
         """Get a deployment history by its name.
 
@@ -668,7 +689,7 @@ class Client:
             params={"guid": guid},
         )
         handle_server_errors(result)
-        return result
+        return result.json()
 
     def stream_deployment_logs(self, name: str, executable: str, replica: int = 0):
         url = f"{self.v2api_host}/v2/deployments/{name}/logs/?replica={replica}&executable={executable}"
@@ -685,11 +706,11 @@ class Client:
     def list_disks(
         self,
         cont: int = 0,
-        label_selector: list[str] = None,
+        label_selector: list[str] | None = None,
         limit: int = 50,
-        names: list[str] = None,
-        regions: list[str] = None,
-        status: list[str] = None,
+        names: list[str] | None = None,
+        regions: list[str] | None = None,
+        status: list[str] | None = None,
         **kwargs,
     ) -> DiskList:
         """List all disks in a project.
@@ -770,7 +791,6 @@ class Client:
             headers=self.config.get_headers(**kwargs),
         )
         handle_server_errors(result)
-        return None
 
     # -------------------Device--------------------------
 
@@ -797,10 +817,10 @@ class Client:
         self,
         cont: int = 0,
         limit: int = 50,
-        guids: list[str] = None,
-        label_selector: list[str] = None,
-        names: list[str] = None,
-        regions: list[str] = None,
+        guids: list[str] | None = None,
+        label_selector: list[str] | None = None,
+        names: list[str] | None = None,
+        regions: list[str] | None = None,
         **kwargs,
     ) -> StaticRouteList:
         """List all static routes in a project.
@@ -906,20 +926,19 @@ class Client:
             headers=self.config.get_headers(**kwargs),
         )
         handle_server_errors(result)
-        return None
 
     # -------------------Networks-------------------
     def list_networks(
         self,
         cont: int = 0,
         limit: int = 50,
-        device_name: str = None,
-        label_selector: list[str] = None,
-        names: list[str] = None,
-        network_type: str = None,
-        phases: list[str] = None,
-        regions: list[str] = None,
-        status: list[str] = None,
+        device_name: str | None = None,
+        label_selector: list[str] | None = None,
+        names: list[str] | None = None,
+        network_type: str | None = None,
+        phases: list[str] | None = None,
+        regions: list[str] | None = None,
+        status: list[str] | None = None,
         **kwargs,
     ) -> NetworkList:
         """List all networks in a project.
@@ -1007,7 +1026,6 @@ class Client:
             headers=self.config.get_headers(**kwargs),
         )
         handle_server_errors(result)
-        return None
 
     # -------------------Secrets-------------------
 
@@ -1015,9 +1033,9 @@ class Client:
         self,
         cont: int = 0,
         limit: int = 50,
-        label_selector: list[str] = None,
-        names: list[str] = None,
-        regions: list[str] = None,
+        label_selector: list[str] | None = None,
+        names: list[str] | None = None,
+        regions: list[str] | None = None,
         **kwargs,
     ) -> SecretList:
         """List all secrets in a project.
@@ -1033,7 +1051,7 @@ class Client:
             List of secrets as a dictionary.
         """
 
-        parameters = {
+        parameters: dict[str, Any] = {
             "continue": cont,
             "limit": limit,
         }
@@ -1125,16 +1143,15 @@ class Client:
             headers=self.config.get_headers(**kwargs),
         )
         handle_server_errors(result)
-        return None
 
     # -------------------OAuth2 Clients-------------------
     def list_oauth2_clients(
         self,
         cont: int = 0,
         limit: int = 50,
-        label_selector: list[str] = None,
-        names: list[str] = None,
-        regions: list[str] = None,
+        label_selector: list[str] | None = None,
+        names: list[str] | None = None,
+        regions: list[str] | None = None,
         **kwargs,
     ) -> dict[str, Any]:
         """List all OAuth2 clients in a project.
@@ -1149,7 +1166,7 @@ class Client:
         Returns:
             List of OAuth2 clients as a dictionary.
         """
-        params = {
+        params: dict[str, Any] = {
             "continue": cont,
             "limit": limit,
         }
@@ -1184,7 +1201,7 @@ class Client:
         handle_server_errors(result)
         return result.json()
 
-    def create_oauth2_client(self, body: dict, **kwargs) -> dict[str, Any]:
+    def create_oauth2_client(self, body: dict[str, Any], **kwargs) -> dict[str, Any]:
         """Create a new OAuth2 client.
 
         Args:
@@ -1194,7 +1211,7 @@ class Client:
             OAuth2 client details as a dictionary.
         """
         result = self.c.post(
-            url=f"{self.v2api_host}/v2/oauth2clients/",
+            url=f"{self.v2api_host}/v2/oauth2/clients/",
             headers=self.config.get_headers(**kwargs),
             json=body,
         )
@@ -1202,7 +1219,7 @@ class Client:
         return result.json()
 
     def update_oauth2_client(
-        self, client_id: str, body: dict, **kwargs
+        self, client_id: str, body: dict[str, Any], **kwargs
     ) -> dict[str, Any]:
         """Update an OAuth2 client by its client_id.
 
@@ -1214,7 +1231,7 @@ class Client:
             OAuth2 client details as a dictionary.
         """
         result = self.c.put(
-            url=f"{self.v2api_host}/v2/oauth2clients/{client_id}/",
+            url=f"{self.v2api_host}/v2/oauth2/clients/{client_id}/",
             headers=self.config.get_headers(**kwargs),
             json=body,
         )
@@ -1222,7 +1239,7 @@ class Client:
         return result.json()
 
     def update_oauth2_client_uris(
-        self, client_id: str, uris: dict, **kwargs
+        self, client_id: str, update: OAuth2UpdateURI, **kwargs
     ) -> dict[str, Any]:
         """Update OAuth2 client URIs.
 
@@ -1234,9 +1251,9 @@ class Client:
             OAuth2 client details as a dictionary.
         """
         result = self.c.patch(
-            url=f"{self.v2api_host}/v2/oauth2clients/{client_id}/uris/",
+            url=f"{self.v2api_host}/v2/oauth2/clients/{client_id}/uris/",
             headers=self.config.get_headers(**kwargs),
-            json=uris,
+            json=update.model_dump(),
         )
         handle_server_errors(result)
         return result.json()
@@ -1251,11 +1268,10 @@ class Client:
             None if successful.
         """
         result = self.c.delete(
-            url=f"{self.v2api_host}/v2/oauth2clients/{client_id}/",
+            url=f"{self.v2api_host}/v2/oauth2/clients/{client_id}/",
             headers=self.config.get_headers(**kwargs),
         )
         handle_server_errors(result)
-        return None
 
     # -------------------Config Trees-------------------
 
@@ -1263,7 +1279,7 @@ class Client:
         self,
         cont: int = 0,
         limit: int = 50,
-        label_selector: list[str] = None,
+        label_selector: list[str] | None = None,
         with_project: bool = True,
         **kwargs,
     ) -> dict[str, Any]:
@@ -1278,7 +1294,7 @@ class Client:
         Returns:
             List of config trees as a dictionary.
         """
-        parameters = {
+        parameters: dict[str, Any] = {
             "continue": cont,
             "limit": limit,
         }
@@ -1293,7 +1309,7 @@ class Client:
         return result.json()
 
     def create_configtree(
-        self, body: dict, with_project: bool = True, **kwargs
+        self, body: dict[str, Any], with_project: bool = True, **kwargs
     ) -> dict[str, Any]:
         """Create a new config tree.
 
@@ -1315,10 +1331,10 @@ class Client:
     def get_configtree(
         self,
         name: str,
-        content_types: list[str] = None,
+        content_types: list[str] | None = None,
         include_data: bool = False,
-        key_prefixes: list[str] = None,
-        revision: str = None,
+        key_prefixes: list[str] | None = None,
+        revision: str | None = None,
         with_project: bool = True,
         **kwargs,
     ) -> dict[str, Any]:
@@ -1349,7 +1365,11 @@ class Client:
         return result.json()
 
     def set_configtree_revision(
-        self, name: str, configtree: dict, project_guid: str = None, **kwargs
+        self,
+        name: str,
+        configtree: dict[str, Any],
+        project_guid: str | None = None,
+        **kwargs,
     ) -> dict[str, Any]:
         """Set a config tree revision.
 
@@ -1370,7 +1390,7 @@ class Client:
         return result.json()
 
     def update_configtree(
-        self, name: str, body: dict, with_project: bool = True, **kwargs
+        self, name: str, body: dict[str, Any], with_project: bool = True, **kwargs
     ) -> dict[str, Any]:
         """Update a config tree by its name.
 
@@ -1404,7 +1424,6 @@ class Client:
             headers=self.config.get_headers(**kwargs),
         )
         handle_server_errors(result)
-        return None
 
     def list_revisions(
         self,
@@ -1412,7 +1431,7 @@ class Client:
         cont: int = 0,
         limit: int = 50,
         committed: bool = False,
-        label_selector: list[str] = None,
+        label_selector: list[str] | None = None,
         **kwargs,
     ) -> dict[str, Any]:
         """List all revisions of a config tree.
@@ -1427,7 +1446,7 @@ class Client:
         Returns:
             List of revisions as a dictionary.
         """
-        parameters = {
+        parameters: dict[str, Any] = {
             "continue": cont,
             "limit": limit,
             "committed": committed,
@@ -1443,7 +1462,7 @@ class Client:
         return result.json()
 
     def create_revision(
-        self, name: str, body: dict, project_guid: str = None, **kwargs
+        self, name: str, body: dict[str, Any], project_guid: str | None = None, **kwargs
     ) -> dict[str, Any]:
         """Create a new revision.
 
@@ -1464,7 +1483,7 @@ class Client:
         return result.json()
 
     def put_keys_in_revision(
-        self, name: str, revision_id: str, config_values: dict, **kwargs
+        self, name: str, revision_id: str, config_values: dict[str, Any], **kwargs
     ) -> dict[str, Any]:
         """Put keys in a revision.
 
@@ -1488,9 +1507,9 @@ class Client:
         self,
         tree_name: str,
         revision_id: str,
-        author: str = None,
-        message: str = None,
-        project_guid: str = None,
+        author: str | None = None,
+        message: str | None = None,
+        project_guid: str | None = None,
         **kwargs,
     ) -> dict[str, Any]:
         """Commit a revision.
@@ -1522,7 +1541,7 @@ class Client:
         tree_name: str,
         revision_id: str,
         key: str,
-        project_guid: str = None,
+        project_guid: str | None = None,
         **kwargs,
     ):
         """Get a key in a revision.
@@ -1551,7 +1570,7 @@ class Client:
         tree_name: str,
         revision_id: str,
         key: str,
-        project_guid: str = None,
+        project_guid: str | None = None,
         **kwargs,
     ) -> dict[str, Any]:
         """Put a key in a revision.
@@ -1577,7 +1596,7 @@ class Client:
         tree_name: str,
         revision_id: str,
         key: str,
-        project_guid: str = None,
+        project_guid: str | None = None,
         **kwargs,
     ) -> None:
         """Delete a key in a revision.
@@ -1596,15 +1615,14 @@ class Client:
             headers=self.config.get_headers(project_guid=project_guid, **kwargs),
         )
         handle_server_errors(result)
-        return None
 
     def rename_key_in_revision(
         self,
         tree_name: str,
         revision_id: str,
         key: str,
-        config_key_rename: dict,
-        project_guid: str = None,
+        config_key_rename: dict[str, Any],
+        project_guid: str | None = None,
         **kwargs,
     ) -> dict[str, Any]:
         """Rename a key in a revision.
@@ -1719,7 +1737,6 @@ class Client:
             headers=self.config.get_headers(),
         )
         handle_server_errors(result)
-        return None
 
     def list_instance_bindings(
         self,
@@ -1808,4 +1825,225 @@ class Client:
             headers=self.config.get_headers(),
         )
         handle_server_errors(result)
-        return None
+
+    # -------------------Usergroup-------------------
+    def list_user_groups(
+        self,
+        cont: int = 0,
+        limit: int = 50,
+        label_selector: list[str] | None = None,
+        name: str | None = None,
+        **kwargs,
+    ) -> UserGroupList:
+        parameters: dict[str, Any] = {
+            "continue": cont,
+            "limit": limit,
+        }
+        if label_selector:
+            parameters["labelSelector"] = label_selector
+        if name:
+            parameters["name"] = name
+
+        result = self.c.get(
+            url=f"{self.v2api_host}/v2/usergroups/",
+            headers=self.config.get_headers(with_project=False, **kwargs),
+            params=parameters,
+        )
+
+        handle_server_errors(response=result)
+
+        return UserGroupList(**result.json())
+
+    def get_user_group(self, group_name: str, group_guid: str, **kwargs) -> UserGroup:
+        result = self.c.get(
+            url=f"{self.v2api_host}/v2/usergroups/{group_name}/",
+            headers=self.config.get_headers(
+                with_project=False, with_group=True, group_guid=group_guid, **kwargs
+            ),
+        )
+        handle_server_errors(result)
+
+        return UserGroup(**result.json())
+
+    def create_user_group(self, user_group: UserGroup, **kwargs) -> UserGroup:
+        result = self.c.post(
+            url=f"{self.v2api_host}/v2/usergroups/",
+            headers=self.config.get_headers(with_project=False, **kwargs),
+            json=user_group.model_dump(),
+        )
+        handle_server_errors(result)
+
+        return UserGroup(**result.json())
+
+    def update_user_group(self, user_group: UserGroup, **kwargs) -> UserGroup:
+        result = self.c.put(
+            url=f"{self.v2api_host}/v2/usergroups/{user_group.metadata.name}/",
+            headers=self.config.get_headers(
+                with_project=False,
+                with_group=True,
+                group_guid=user_group.metadata.guid,
+                **kwargs,
+            ),
+            json=user_group.model_dump(),
+        )
+        handle_server_errors(result)
+
+        return UserGroup(**result.json())
+
+    def delete_user_group(self, group_name: str, group_guid: str, **kwargs) -> None:
+        result = self.c.delete(
+            url=f"{self.v2api_host}/v2/usergroups/{group_name}/",
+            headers=self.config.get_headers(
+                with_project=False, with_group=True, group_guid=group_guid, **kwargs
+            ),
+        )
+        handle_server_errors(result)
+
+    # -------------------Roles-------------------
+    def list_roles(
+        self,
+        cont: int = 0,
+        limit: int = 50,
+        label_selector: list[str] | None = None,
+        name: str | None = None,
+        **kwargs,
+    ) -> RoleList:
+        parameters: dict[str, Any] = {
+            "continue": cont,
+            "limit": limit,
+        }
+        if label_selector:
+            parameters["labelSelector"] = label_selector
+        if name:
+            parameters["name"] = name
+
+        result = self.c.get(
+            url=f"{self.v2api_host}/v2/roles/",
+            headers=self.config.get_headers(with_project=False, **kwargs),
+            params=parameters,
+        )
+
+        handle_server_errors(result)
+
+        return RoleList(**result.json())
+
+    def get_role(self, role_name: str, **kwargs) -> Role:
+        result = self.c.get(
+            url=f"{self.v2api_host}/v2/roles/{role_name}/",
+            headers=self.config.get_headers(with_project=False, **kwargs),
+        )
+        handle_server_errors(result)
+
+        return Role(**result.json())
+
+    def create_role(self, role: Role, **kwargs) -> Role:
+        result = self.c.post(
+            url=f"{self.v2api_host}/v2/roles/",
+            headers=self.config.get_headers(with_project=False, **kwargs),
+            json=role.model_dump(),
+        )
+        handle_server_errors(result)
+
+        return Role(**result.json())
+
+    def update_role(self, role: Role, **kwargs) -> Role:
+        result = self.c.put(
+            url=f"{self.v2api_host}/v2/roles/{role.metadata.name}/",
+            headers=self.config.get_headers(with_project=False, **kwargs),
+            json=role.model_dump(),
+        )
+        handle_server_errors(result)
+
+        return Role(**result.json())
+
+    def delete_role(self, role_name: str, **kwargs) -> None:
+        result = self.c.delete(
+            url=f"{self.v2api_host}/v2/roles/{role_name}/",
+            headers=self.config.get_headers(with_project=False, **kwargs),
+        )
+        handle_server_errors(result)
+
+    # -------------------RoleBindings-------------------
+    def list_role_bindings(
+        self,
+        cont: int = 0,
+        limit: int = 50,
+        label_selector: list[str] | None = None,
+        role_names: list[str] | None = None,
+        subject_guids: list[str] | None = None,
+        subject_names: list[str] | None = None,
+        subject_kinds: list[str] | None = None,
+        domain_guids: list[str] | None = None,
+        domain_names: list[str] | None = None,
+        domain_kinds: list[str] | None = None,
+        guids: list[str] | None = None,
+        **kwargs,
+    ) -> RoleBindingList:
+        parameters: dict[str, Any] = {
+            "continue": cont,
+            "limit": limit,
+        }
+        if label_selector:
+            parameters["labelSelector"] = label_selector
+        if role_names:
+            parameters["roleNames"] = role_names
+        if subject_guids:
+            parameters["subjectGUIDS"] = subject_guids
+        if subject_names:
+            parameters["subjectNames"] = subject_names
+        if subject_kinds:
+            parameters["subjectKinds"] = subject_kinds
+        if domain_guids:
+            parameters["domainGUIDS"] = domain_guids
+        if domain_names:
+            parameters["domainNames"] = domain_names
+        if domain_kinds:
+            parameters["domainKinds"] = domain_kinds
+        if guids:
+            parameters["guids"] = guids
+
+        result = self.c.get(
+            url=f"{self.v2api_host}/v2/role-bindings/",
+            headers=self.config.get_headers(with_project=False, **kwargs),
+            params=parameters,
+        )
+
+        handle_server_errors(result)
+
+        return RoleBindingList(**result.json())
+
+    def get_role_binding(self, binding_guid: str, **kwargs) -> RoleBinding:
+        result = self.c.get(
+            url=f"{self.v2api_host}/v2/role-bindings/{binding_guid}/",
+            headers=self.config.get_headers(with_project=False, **kwargs),
+        )
+        handle_server_errors(result)
+
+        return RoleBinding(**result.json())
+
+    def create_role_binding(self, binding: RoleBinding, **kwargs) -> RoleBinding:
+        result = self.c.post(
+            url=f"{self.v2api_host}/v2/role-bindings/",
+            headers=self.config.get_headers(with_project=False, **kwargs),
+            json=binding.model_dump(),
+        )
+        handle_server_errors(result)
+
+        return RoleBinding(**result.json())
+
+    def update_role_binding(self, binding: Role, **kwargs) -> RoleBinding:
+        result = self.c.put(
+            url=f"{self.v2api_host}/v2/roles/{binding.metadata.guid}/",
+            headers=self.config.get_headers(with_project=False, **kwargs),
+            json=binding.model_dump(),
+        )
+        handle_server_errors(result)
+
+        return RoleBinding(**result.json())
+
+    def delete_role_binding(self, binding_guid: str, **kwargs) -> None:
+        result = self.c.delete(
+            url=f"{self.v2api_host}/v2/role-bindings/{binding_guid}/",
+            headers=self.config.get_headers(with_project=False, **kwargs),
+        )
+        handle_server_errors(result)

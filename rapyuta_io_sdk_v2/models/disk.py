@@ -6,15 +6,11 @@ providing validation for Disk resources to help users identify missing or
 incorrect fields.
 """
 
-from typing import Literal
+from typing import Any, Literal
+
 from pydantic import BaseModel, Field, field_validator
 
-from rapyuta_io_sdk_v2.models.utils import BaseMetadata, BaseList, Runtime
-
-
-class DiskBound(BaseModel):
-    deployment_guid: str | None
-    deployment_name: str | None
+from rapyuta_io_sdk_v2.models.utils import BaseList, BaseMetadata, BaseObject, Runtime
 
 
 class DiskSpec(BaseModel):
@@ -23,48 +19,48 @@ class DiskSpec(BaseModel):
     runtime: Runtime = Field(
         default="cloud", description="Runtime environment for the disk"
     )
-    capacity: int | float | None = Field(default=None, description="Disk capacity in GB")
+    capacity: int = Field(multiple_of=2, ge=4, le=512)
 
-    @field_validator("capacity")
-    @classmethod
-    def validate_capacity(cls, v):
-        """Validate disk capacity against allowed values."""
-        if v is not None:
-            allowed_capacities = [4, 8, 16, 32, 64, 128, 256, 512]
-            if v not in allowed_capacities:
-                raise ValueError(
-                    f"Disk capacity must be one of: {allowed_capacities}. Got: {v}"
-                )
-        return v
+
+class DiskBound(BaseModel):
+    deployment_guid: str | None
+    deployment_name: str | None
 
 
 class DiskStatus(BaseModel):
     status: Literal["Available", "Bound", "Released", "Failed", "Pending"]
-    capacityUsed: float | None = Field(
-        default=None, description="Used disk capacity in GB"
+    capacity_used: float | None = Field(
+        default=None,
+        description="Used disk capacity in GB",
+        serialization_alias="capacityUsed",
     )
-    capacityAvailable: float | None = Field(
-        default=None, description="Available disk capacity in GB"
+    capacity_available: float | None = Field(
+        default=None,
+        description="Available disk capacity in GB",
+        serialization_alias="capacityAvailable",
     )
-    errorCode: str | None = Field(default=None, description="Error code if any")
-    diskBound: DiskBound | None = Field(
-        default=None, description="Disk bound information"
+    error_code: str | None = Field(
+        default=None, description="Error code if any", serialization_alias="errorCode"
+    )
+    disk_bound: DiskBound | None = Field(
+        default=None,
+        description="Disk bound information",
+        serialization_alias="diskBound",
     )
 
-    @field_validator("diskBound", mode="before")
-    @classmethod
-    def normalize_disk_bound(cls, v):
+    @field_validator("disk_bound", mode="before")
+    @staticmethod
+    def normalize_disk_bound(value: Any) -> dict[str, Any] | None:
         """Convert empty dict to None for diskBound field."""
-        if isinstance(v, dict) and not v:
+        if isinstance(value, dict) and not value:
             return None
-        return v
+        return value
 
 
-class Disk(BaseModel):
+class Disk(BaseObject):
     """Disk model."""
 
-    apiVersion: str | None = Field(default="apiextensions.rapyuta.io/v1")
-    kind: str | None = Field(default="Disk")
+    kind: Literal["Disk"] | None = "Disk"
     metadata: BaseMetadata = Field(description="Metadata for the Disk resource")
     spec: DiskSpec = Field(description="Specification for the Disk resource")
     status: DiskStatus | None = Field(default=None)

@@ -1,11 +1,15 @@
-from pydantic import BaseModel, Field
+from typing import Generic, Literal, Self, TypeVar
 
-
-from typing import Generic, Literal, TypeVar
-
+from pydantic import AliasChoices, BaseModel, Field, model_validator
 
 # Type variable for generic list items
 T = TypeVar("T")
+
+
+class BaseObject(BaseModel):
+    api_version: Literal["api.rapyuta.io/v2", "apiextensions.rapyuta.io/v1"] = Field(
+        default="api.rapyuta.io/v2", serialization_alias="apiVersion"
+    )
 
 
 class BaseMetadata(BaseModel):
@@ -89,10 +93,33 @@ class BaseList(BaseModel, Generic[T]):
 
 
 class Depends(BaseModel):
-    kind: str
-    nameOrGUID: str  # Keep for backward compatibility, but add GUID field
-    wait: bool | None = None
-    version: str | None = None
+    name_or_guid: str = Field(validation_alias=AliasChoices("nameOrGuid", "nameOrGUID"))
+
+
+class PackageDepends(Depends):
+    kind: Literal["Package", "package"] = "Package"
+    version: str
+
+
+class DiskDepends(Depends):
+    kind: Literal["Disk", "disk"] = "Disk"
+
+
+class StaticRouteDepends(Depends):
+    kind: Literal["StaticRoute", "staticroute"] = "StaticRoute"
+
+
+class NetworkDepends(Depends):
+    kind: Literal["Network", "network"] = "Network"
+
+
+class DeviceDepends(Depends):
+    kind: Literal["Device", "device"] = "Device"
+
+
+class DeploymentDepends(Depends):
+    kind: Literal["Deployment", "deployment"] = "Deployment"
+    wait: bool = False
 
 
 RestartPolicy = Literal["always", "never", "onfailure"]
@@ -111,3 +138,29 @@ DeploymentPhase = Literal[
     "Stopped",
 ]
 Architecture = Literal["amd64", "arm32v7", "arm64v8"]
+
+
+class Subject(BaseModel):
+    kind: Literal["User", "UserGroup", "ServiceAccount"] | None = None
+    name: str | None = None
+    guid: str | None = None
+
+    @model_validator(mode="after")
+    def ensure_name_or_guid(self) -> Self:
+        if self.name is None and self.guid is None:
+            raise ValueError("either 'name' or 'guid' should be specified")
+
+        return self
+
+
+class Domain(BaseModel):
+    kind: Literal["UserGroup", "Project", "Organization"] | None = None
+    name: str | None = None
+    guid: str | None = None
+
+    @model_validator(mode="after")
+    def ensure_name_or_guid(self) -> Self:
+        if self.name is None and self.guid is None:
+            raise ValueError("either 'name' or 'guid' should be specified")
+
+        return self

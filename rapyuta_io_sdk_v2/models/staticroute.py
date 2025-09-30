@@ -6,34 +6,36 @@ providing validation for StaticRoute resources to help users identify missing or
 incorrect fields.
 """
 
+import re
 from typing import Literal
+
 from pydantic import BaseModel, Field, field_validator
 
-from .utils import BaseList, BaseMetadata
-import re
+from .utils import BaseList, BaseMetadata, BaseObject
 
 
 class StaticRouteSpec(BaseModel):
     """Specification for StaticRoute resource."""
 
     url: str | None = Field(default=None, description="URL for the static route")
-    sourceIPRange: list[str] | None = Field(
-        default=None, description="List of source IP ranges in CIDR notation"
+    source_ip_range: list[str] | None = Field(
+        default=None,
+        description="List of source IP ranges in CIDR notation",
+        serialization_alias="sourceIPRange",
     )
 
-    @field_validator("sourceIPRange")
-    @classmethod
-    def validate_ip_ranges(cls, v):
+    @field_validator("source_ip_range")
+    @staticmethod
+    def validate_ip_ranges(v: list[str] | None) -> list[str] | None:
         """Validate IP range format (CIDR notation)."""
+        ip_pattern = (
+            r"^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}(?:/([1-9]|1\d|2\d|3[0-2]))?$"
+        )
         if v is not None:
-            ip_pattern = (
-                r"^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}(?:/([1-9]|1\d|2\d|3[0-2]))?$"
-            )
             for ip_range in v:
                 if not re.match(ip_pattern, ip_range):
                     raise ValueError(
-                        f"Invalid IP range format: {ip_range}. "
-                        "Must be a valid CIDR notation (e.g., 192.168.1.0/24)"
+                        f"Invalid IP range format: {ip_range}. Must be a valid CIDR notation (e.g., 192.168.1.0/24)"
                     )
         return v
 
@@ -44,15 +46,19 @@ class StaticRouteStatus(BaseModel):
     status: Literal["Available", "Unavailable"] | None = Field(
         default=None, description="Status of the static route"
     )
-    packageID: str | None = Field(
-        default=None, description="Package ID associated with the static route"
+    package_guid: str | None = Field(
+        default=None,
+        description="Package ID associated with the static route",
+        serialization_alias="packageID",
     )
-    deploymentID: str | None = Field(
-        default=None, description="Deployment ID associated with the static route"
+    deployment_guid: str | None = Field(
+        default=None,
+        description="Deployment ID associated with the static route",
+        serialization_alias="deploymentID",
     )
 
 
-class StaticRoute(BaseModel):
+class StaticRoute(BaseObject):
     """
     StaticRoute resource model for validation.
 
@@ -61,12 +67,8 @@ class StaticRoute(BaseModel):
     A named route for the Deployment endpoint.
     """
 
-    apiVersion: Literal["apiextensions.rapyuta.io/v1", "api.rapyuta.io/v2"] = Field(
-        default="api.rapyuta.io/v2",
-        description="API version for the StaticRoute resource",
-    )
     kind: Literal["StaticRoute"] = Field(
-        description="Resource kind, must be 'StaticRoute'"
+        default="StaticRoute", description="Resource kind, must be 'StaticRoute'"
     )
     metadata: BaseMetadata = Field(description="Metadata for the StaticRoute resource")
     spec: StaticRouteSpec | None = Field(
