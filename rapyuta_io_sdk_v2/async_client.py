@@ -338,7 +338,7 @@ class AsyncClient:
             List of projects as a dictionary.
         """
 
-        parameters = {
+        parameters: dict[str, Any] = {
             "continue": cont,
             "limit": limit,
         }
@@ -448,7 +448,7 @@ class AsyncClient:
 
     async def update_project_owner(
         self, body: Project | dict[str, Any], project_guid: str | None = None, **kwargs
-    ) -> dict[str, Any]:
+    ) -> Project:
         """Update the owner of a project by its GUID.
 
         Args:
@@ -476,7 +476,7 @@ class AsyncClient:
         self,
         cont: int = 0,
         limit: int = 50,
-        label_selector: list[str] = None,
+        label_selector: list[str] | None = None,
         name: str | None = None,
         **kwargs,
     ) -> PackageList:
@@ -574,14 +574,14 @@ class AsyncClient:
         limit: int = 50,
         dependencies: bool = False,
         device_name: str | None = None,
-        guids: list[str] = None,
-        label_selector: list[str] = None,
+        guids: list[str] | None = None,
+        label_selector: list[str] | None = None,
         name: str | None = None,
-        names: list[str] = None,
+        names: list[str] | None = None,
         package_name: str | None = None,
         package_version: str | None = None,
-        phases: list[str] = None,
-        regions: list[str] = None,
+        phases: list[str] | None = None,
+        regions: list[str] | None = None,
         **kwargs,
     ) -> DeploymentList:
         """List all deployments in a project.
@@ -748,11 +748,11 @@ class AsyncClient:
     async def list_disks(
         self,
         cont: int = 0,
-        label_selector: list[str] = None,
+        label_selector: list[str] | None = None,
         limit: int = 50,
-        names: list[str] = None,
-        regions: list[str] = None,
-        status: list[str] = None,
+        names: list[str] | None = None,
+        regions: list[str] | None = None,
+        status: list[str] | None = None,
         **kwargs,
     ) -> DiskList:
         """List all disks in a project.
@@ -867,10 +867,10 @@ class AsyncClient:
         self,
         cont: int = 0,
         limit: int = 50,
-        guids: list[str] = None,
-        label_selector: list[str] = None,
-        names: list[str] = None,
-        regions: list[str] = None,
+        guids: list[str] | None = None,
+        label_selector: list[str] | None = None,
+        names: list[str] | None = None,
+        regions: list[str] | None = None,
         **kwargs,
     ) -> StaticRouteList:
         """List all static routes in a project.
@@ -990,12 +990,12 @@ class AsyncClient:
         cont: int = 0,
         limit: int = 50,
         device_name: str | None = None,
-        label_selector: list[str] = None,
-        names: list[str] = None,
+        label_selector: list[str] | None = None,
+        names: list[str] | None = None,
         network_type: str | None = None,
-        phases: list[str] = None,
-        regions: list[str] = None,
-        status: list[str] = None,
+        phases: list[str] | None = None,
+        regions: list[str] | None = None,
+        status: list[str] | None = None,
         **kwargs,
     ) -> NetworkList:
         """List all networks in a project.
@@ -1095,9 +1095,9 @@ class AsyncClient:
         self,
         cont: int = 0,
         limit: int = 50,
-        label_selector: list[str] = None,
-        names: list[str] = None,
-        regions: list[str] = None,
+        label_selector: list[str] | None = None,
+        names: list[str] | None = None,
+        regions: list[str] | None = None,
         **kwargs,
     ) -> SecretList:
         """List all secrets in a project.
@@ -1113,7 +1113,7 @@ class AsyncClient:
             List of secrets as a dictionary.
         """
 
-        parameters = {
+        parameters: dict[str, Any] = {
             "continue": cont,
             "limit": limit,
         }

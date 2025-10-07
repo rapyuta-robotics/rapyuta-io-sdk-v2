@@ -14,7 +14,7 @@
 
 from typing import Literal, Self
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import AliasChoices, BaseModel, Field, model_validator
 
 from rapyuta_io_sdk_v2.models.utils import BaseList, BaseMetadata, BaseObject
 
@@ -25,8 +25,8 @@ class UserOrganization(BaseModel):
     guid: str | None = None
     name: str | None = None
     creator: str | None = None
-    short_guid: str | None = Field(serialization_alias="shortGUID")
-    role_names: list[str]
+    short_guid: str | None = Field(alias="shortGUID")
+    role_names: list[str] | None = Field(alias="roleNames")
 
     @model_validator(mode="after")
     def ensure_name_or_guid(self) -> Self:
@@ -43,10 +43,10 @@ class UserProject(BaseModel):
     name: str | None = None
     creator: str | None = None
     organization_creator_guid: str | None = Field(
-        serialization_alias="organizationCreatorGUID"
+        validation_alias=AliasChoices("organizationCreator")
     )
-    organization_guid: str | None = Field(serialization_alias="organizationGUID")
-    role_names: list[str]
+    organization_guid: str | None = Field(alias="organizationGUID")
+    role_names: list[str] | None = Field(alias="roleNames")
 
     @model_validator(mode="after")
     def ensure_name_or_guid(self) -> Self:
@@ -62,11 +62,9 @@ class UserUserGroup(BaseModel):
     guid: str | None = None
     name: str | None = None
     creator: str | None = None
-    organization_creator_guid: str | None = Field(
-        serialization_alias="organizationCreatorGUID"
-    )
-    organization_guid: str | None = Field(serialization_alias="organizationGUID")
-    role_names: list[str]
+    organization_creator_guid: str | None = Field(alias="organizationCreatorGUID")
+    organization_guid: str | None = Field(alias="organizationGUID")
+    role_names: list[str] = Field(alias="roleNames")
 
     @model_validator(mode="after")
     def ensure_name_or_guid(self) -> Self:
@@ -79,16 +77,14 @@ class UserUserGroup(BaseModel):
 class UserSpec(BaseModel):
     """User specification model."""
 
-    first_name: str | None = Field(default=None, serialization_alias="firstName")
-    last_name: str | None = Field(default=None, serialization_alias="lastName")
-    email_id: str | None = Field(default=None, serialization_alias="emailID")
+    first_name: str | None = Field(default=None, alias="firstName")
+    last_name: str | None = Field(default=None, alias="lastName")
+    email_id: str | None = Field(default=None, alias="emailID")
     password: str | None = None
 
     organizations: list[UserOrganization] | None = None
     projects: list[UserProject] | None = None
-    user_groups: list[UserUserGroup] | None = Field(
-        default=None, serialization_alias="userGroups"
-    )
+    user_groups: list[UserUserGroup] | None = Field(default=None, alias="userGroups")
 
 
 class User(BaseObject):
