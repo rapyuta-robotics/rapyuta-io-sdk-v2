@@ -1,4 +1,7 @@
 # Deployment and DeploymentList mocks using pydantic models
+from typing import Any
+
+
 import pytest
 
 
@@ -8,7 +11,7 @@ from rapyuta_io_sdk_v2.config import Configuration
 
 
 @pytest.fixture
-def mock_response_project():
+def mock_response_project() -> dict[str, Any]:
     return {
         "kind": "Project",
         "metadata": {"name": "test-project", "guid": "mock_project_guid"},
@@ -19,7 +22,7 @@ def mock_response_project():
 
 
 @pytest.fixture
-def project_body():
+def project_body() -> dict[str, Any]:
     return {
         "apiVersion": "api.rapyuta.io/v2",
         "kind": "Project",
@@ -35,7 +38,7 @@ def project_body():
 
 
 @pytest.fixture
-def project_model_mock():
+def project_model_mock() -> dict[str, Any]:
     return {
         "apiVersion": "api.rapyuta.io/v2",
         "kind": "Project",
@@ -52,7 +55,7 @@ def project_model_mock():
 
 
 @pytest.fixture
-def projectlist_model_mock(project_model_mock):
+def projectlist_model_mock(project_model_mock) -> dict[str, Any]:
     return {
         "metadata": {
             "continue": 1,
@@ -65,7 +68,7 @@ def projectlist_model_mock(project_model_mock):
 
 
 @pytest.fixture
-def package_body():
+def package_body() -> dict[str, Any]:
     return {
         "apiVersion": "apiextensions.rapyuta.io/v1",
         "kind": "Package",
@@ -81,7 +84,7 @@ def package_body():
 
 
 @pytest.fixture
-def cloud_package_model_mock():
+def cloud_package_model_mock() -> dict[str, Any]:
     return {
         "apiVersion": "apiextensions.rapyuta.io/v1",
         "kind": "Package",
@@ -131,7 +134,7 @@ def cloud_package_model_mock():
 
 
 @pytest.fixture
-def device_package_model_mock():
+def device_package_model_mock() -> dict[str, Any]:
     return {
         "apiVersion": "apiextensions.rapyuta.io/v1",
         "kind": "Package",
@@ -176,7 +179,9 @@ def device_package_model_mock():
 
 
 @pytest.fixture
-def packagelist_model_mock(cloud_package_model_mock, device_package_model_mock):
+def packagelist_model_mock(
+    cloud_package_model_mock, device_package_model_mock
+) -> dict[str, Any]:
     return {
         "metadata": {
             "continue": 1,
@@ -189,7 +194,7 @@ def packagelist_model_mock(cloud_package_model_mock, device_package_model_mock):
 
 
 @pytest.fixture
-def deployment_body():
+def deployment_body() -> dict[str, Any]:
     # Updated to match device_deployment_model_mock keys and values, but only using keys present in deployment_body
     return {
         "apiVersion": "apiextensions.rapyuta.io/v1",
@@ -217,7 +222,7 @@ def deployment_body():
 
 
 @pytest.fixture
-def cloud_deployment_model_mock():
+def cloud_deployment_model_mock() -> dict[str, Any]:
     return {
         "kind": "Deployment",
         "apiVersion": "api.rapyuta.io/v2",
@@ -278,7 +283,7 @@ def cloud_deployment_model_mock():
 
 
 @pytest.fixture
-def device_deployment_model_mock():
+def device_deployment_model_mock() -> dict[str, Any]:
     return {
         "kind": "Deployment",
         "apiVersion": "api.rapyuta.io/v2",
@@ -335,7 +340,9 @@ def device_deployment_model_mock():
 
 
 @pytest.fixture
-def deploymentlist_model_mock(cloud_deployment_model_mock, device_deployment_model_mock):
+def deploymentlist_model_mock(
+    cloud_deployment_model_mock, device_deployment_model_mock
+) -> dict[str, Any]:
     return {
         "metadata": {
             "continue": 123,
@@ -348,7 +355,7 @@ def deploymentlist_model_mock(cloud_deployment_model_mock, device_deployment_mod
 
 
 @pytest.fixture
-def disk_body():
+def disk_body() -> dict[str, Any]:
     return {
         "apiVersion": "apiextensions.rapyuta.io/v1",
         "kind": "Disk",
@@ -364,7 +371,7 @@ def disk_body():
 
 
 @pytest.fixture
-def disk_model_mock():
+def disk_model_mock() -> dict[str, Any]:
     return {
         "kind": "Disk",
         "apiVersion": "api.rapyuta.io/v2",
@@ -392,7 +399,7 @@ def disk_model_mock():
 
 
 @pytest.fixture
-def disklist_model_mock(disk_model_mock):
+def disklist_model_mock(disk_model_mock) -> dict[str, Any]:
     return {
         "metadata": {
             "continue": 1,
@@ -405,7 +412,7 @@ def disklist_model_mock(disk_model_mock):
 
 
 @pytest.fixture
-def secret_body():
+def secret_body() -> dict[str, Any]:
     return {
         "apiVersion": "apiextensions.rapyuta.io/v1",
         "kind": "Secret",
@@ -426,7 +433,7 @@ def secret_body():
 
 
 @pytest.fixture
-def secret_model_mock():
+def secret_model_mock() -> dict[str, Any]:
     return {
         "apiVersion": "api.rapyuta.io/v2",
         "kind": "Secret",
@@ -458,7 +465,7 @@ def secret_model_mock():
 
 
 @pytest.fixture
-def secretlist_model_mock(secret_model_mock):
+def secretlist_model_mock(secret_model_mock) -> dict[str, Any]:
     return {
         "metadata": {
             "continue": 1,
@@ -471,7 +478,7 @@ def secretlist_model_mock(secret_model_mock):
 
 
 @pytest.fixture
-def staticroute_body():
+def staticroute_body() -> dict[str, Any]:
     return {
         "apiVersion": "apiextensions.rapyuta.io/v1",
         "kind": "StaticRoute",
@@ -484,7 +491,7 @@ def staticroute_body():
 
 
 @pytest.fixture
-def staticroute_model_mock():
+def staticroute_model_mock() -> dict[str, Any]:
     return {
         "kind": "StaticRoute",
         "apiVersion": "api.rapyuta.io/v2",
@@ -514,7 +521,7 @@ def staticroute_model_mock():
 
 
 @pytest.fixture
-def staticroutelist_model_mock(staticroute_model_mock):
+def staticroutelist_model_mock(staticroute_model_mock) -> dict[str, Any]:
     return {
         "metadata": {
             "continue": 1,
@@ -527,7 +534,7 @@ def staticroutelist_model_mock(staticroute_model_mock):
 
 
 @pytest.fixture
-def network_body():
+def network_body() -> dict[str, Any]:
     return {
         "apiVersion": "apiextensions.rapyuta.io/v1",
         "kind": "Network",
@@ -545,7 +552,7 @@ def network_body():
 
 
 @pytest.fixture
-def network_model_mock():
+def network_model_mock() -> dict[str, Any]:
     return {
         "apiVersion": "apiextensions.rapyuta.io/v1",
         "kind": "Network",
@@ -582,7 +589,7 @@ def network_model_mock():
 
 
 @pytest.fixture
-def networklist_model_mock(network_model_mock):
+def networklist_model_mock(network_model_mock) -> dict[str, Any]:
     return {
         "metadata": {
             "continue": 1,
@@ -595,7 +602,7 @@ def networklist_model_mock(network_model_mock):
 
 
 @pytest.fixture
-def configtree_body():
+def configtree_body() -> dict[str, Any]:
     return {
         "apiVersion": "apiextensions.rapyuta.io/v1",
         "kind": "ConfigTree",
@@ -610,7 +617,7 @@ def configtree_body():
 
 
 @pytest.fixture
-def mock_response_user():
+def mock_response_user() -> dict[str, Any]:
     return {
         "kind": "User",
         "metadata": {"name": "test user", "guid": "mock_user_guid"},
@@ -657,7 +664,7 @@ def mock_response_user():
 
 
 @pytest.fixture
-def user_body():
+def user_body() -> dict[str, Any]:
     return {
         "emailID": "test.user@example.com",
         "firstName": "Test",
@@ -671,7 +678,7 @@ def user_body():
 
 
 @pytest.fixture
-def mock_response_organization():
+def mock_response_organization() -> dict[str, Any]:
     return {
         "metadata": {
             "name": "test-org",
@@ -707,7 +714,7 @@ def mock_response_organization():
 
 
 @pytest.fixture
-def organization_body():
+def organization_body() -> dict[str, Any]:
     return {
         "metadata": {
             "name": "test-org",
@@ -738,7 +745,7 @@ def organization_body():
 
 
 @pytest.fixture
-def managedservice_model_mock():
+def managedservice_model_mock() -> dict[str, Any]:
     return {
         "apiVersion": "api.rapyuta.io/v2",
         "kind": "ManagedServiceInstance",
@@ -757,7 +764,7 @@ def managedservice_model_mock():
 
 
 @pytest.fixture
-def managedservicelist_model_mock(managedservice_model_mock):
+def managedservicelist_model_mock(managedservice_model_mock) -> dict[str, Any]:
     return {
         "metadata": {
             "continue": 1,
@@ -767,7 +774,9 @@ def managedservicelist_model_mock(managedservice_model_mock):
 
 
 @pytest.fixture
-def managedservicebindinglist_model_mock(managedservice_binding_model_mock):
+def managedservicebindinglist_model_mock(
+    managedservice_binding_model_mock,
+) -> dict[str, Any]:
     return {
         "metadata": {
             "continue": 1,
@@ -777,7 +786,7 @@ def managedservicebindinglist_model_mock(managedservice_binding_model_mock):
 
 
 @pytest.fixture
-def managedservice_binding_model_mock():
+def managedservice_binding_model_mock() -> dict[str, Any]:
     return {
         "apiVersion": "api.rapyuta.io/v2",
         "kind": "ManagedServiceBinding",
@@ -799,7 +808,7 @@ def managedservice_binding_model_mock():
 
 
 @pytest.fixture
-def mock_config():
+def mock_config() -> dict[str, Any]:
     return {
         "project_id": "mock_project_guid",
         "organization_id": "mock_org_guid",
@@ -808,7 +817,7 @@ def mock_config():
 
 
 @pytest.fixture
-def config_obj():
+def config_obj() -> Configuration:
     return Configuration(
         project_guid="mock_project_guid",
         organization_guid="mock_org_guid",
