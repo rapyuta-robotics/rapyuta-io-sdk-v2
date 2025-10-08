@@ -11,6 +11,10 @@ from rapyuta_io_sdk_v2.models.utils import (
 )
 
 
+class RoleBindingMetadata(BaseMetadata):
+    name: None = Field(default=None, exclude=True)
+
+
 class RoleRef(BaseModel):
     kind: Literal["Role"] = "Role"
     name: str | None = None
@@ -25,14 +29,14 @@ class RoleRef(BaseModel):
 
 
 class RoleBindingSpec(BaseModel):
-    role_ref: RoleRef = Field(serialization_alias="roleRef")
+    role_ref: RoleRef = Field(alias="roleRef")
     domain: Domain
     subject: Subject
 
 
 class RoleBinding(BaseObject):
     kind: Literal["RoleBinding"] | None = "RoleBinding"
-    metadata: BaseMetadata
+    metadata: RoleBindingMetadata
     spec: RoleBindingSpec
 
 

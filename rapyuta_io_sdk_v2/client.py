@@ -317,7 +317,9 @@ class Client:
 
         result = self.c.get(
             url=f"{self.v2api_host}/v2/projects/{project_guid}/",
-            headers=self.config.get_headers(with_project=False, **kwargs),
+            headers=self.config.get_headers(
+                with_project=True, project_guid=project_guid, **kwargs
+            ),
         )
         handle_server_errors(result)
         return Project(**result.json())

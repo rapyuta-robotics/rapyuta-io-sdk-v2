@@ -32,20 +32,20 @@ class DiskStatus(BaseModel):
     capacity_used: float | None = Field(
         default=None,
         description="Used disk capacity in GB",
-        serialization_alias="capacityUsed",
+        alias="capacityUsed",
     )
     capacity_available: float | None = Field(
         default=None,
         description="Available disk capacity in GB",
-        serialization_alias="capacityAvailable",
+        alias="capacityAvailable",
     )
     error_code: str | None = Field(
-        default=None, description="Error code if any", serialization_alias="errorCode"
+        default=None, description="Error code if any", alias="errorCode"
     )
     disk_bound: DiskBound | None = Field(
         default=None,
         description="Disk bound information",
-        serialization_alias="diskBound",
+        alias="diskBound",
     )
 
     @field_validator("disk_bound", mode="before")

@@ -29,16 +29,12 @@ class FeaturesTracing(BaseModel):
 
 class FeaturesDockerCache(BaseModel):
     enabled: bool = Field(default=False)
-    proxy_device: str | None = Field(default=None, serialization_alias="proxyDevice")
-    proxy_interface: str | None = Field(
-        default=None, serialization_alias="proxyInterface"
-    )
-    registry_secret: str | None = Field(
-        default=None, serialization_alias="registrySecret"
-    )
-    registry_url: str | None = Field(default=None, serialization_alias="registryURL")
+    proxy_device: str | None = Field(default=None, alias="proxyDevice")
+    proxy_interface: str | None = Field(default=None, alias="proxyInterface")
+    registry_secret: str | None = Field(default=None, alias="registrySecret")
+    registry_url: str | None = Field(default=None, alias="registryURL")
     data_directory: str | None = Field(
-        default="/opt/rapyuta/volumes/docker-cache/", serialization_alias="dataDirectory"
+        default="/opt/rapyuta/volumes/docker-cache/", alias="dataDirectory"
     )
 
     @model_validator(mode="after")
@@ -79,8 +75,8 @@ class ProjectSpec(BaseModel):
 class ProjectStatus(BaseModel):
     status: Literal["Pending", "Error", "Success", "Deleting", "Unknown"]
     error: str | None = None
-    vpn: Literal["Success", "Error", "Disabled"]
-    tracing: Literal["Success", "Error", "Disabled"]
+    vpn: Literal["Success", "Error", "Disabled", "Pending"]
+    tracing: Literal["Success", "Error", "Disabled", "Pending"]
 
 
 class Project(BaseObject):

@@ -21,7 +21,7 @@ class StaticRouteSpec(BaseModel):
     source_ip_range: list[str] | None = Field(
         default=None,
         description="List of source IP ranges in CIDR notation",
-        serialization_alias="sourceIPRange",
+        alias="sourceIPRange",
     )
 
     @field_validator("source_ip_range")
@@ -49,12 +49,12 @@ class StaticRouteStatus(BaseModel):
     package_guid: str | None = Field(
         default=None,
         description="Package ID associated with the static route",
-        serialization_alias="packageID",
+        alias="packageID",
     )
     deployment_guid: str | None = Field(
         default=None,
         description="Deployment ID associated with the static route",
-        serialization_alias="deploymentID",
+        alias="deploymentID",
     )
 
 
