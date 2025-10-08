@@ -8,7 +8,7 @@ T = TypeVar("T")
 
 class BaseObject(BaseModel):
     api_version: Literal["api.rapyuta.io/v2", "apiextensions.rapyuta.io/v1"] = Field(
-        default="api.rapyuta.io/v2", serialization_alias="apiVersion"
+        default="api.rapyuta.io/v2", alias="apiVersion"
     )
 
 
