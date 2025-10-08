@@ -43,9 +43,9 @@ class EnvArgsSpec(BaseModel):
 class DeploymentVolume(BaseModel):
     """Unified volume spec matching Go DeploymentVolume struct."""
 
-    exec_name: str | None = Field(default=None, serialization_alias="execName")
-    mount_path: str | None = Field(default=None, serialization_alias="mountPath")
-    sub_path: str | None = Field(default=None, serialization_alias="subPath")
+    exec_name: str | None = Field(default=None, alias="execName")
+    mount_path: str | None = Field(default=None, alias="mountPath")
+    sub_path: str | None = Field(default=None, alias="subPath")
     uid: int | None = None
     gid: int | None = None
     perm: int | None = None
@@ -219,11 +219,9 @@ class Dependencies(BaseModel):
 class DeploymentStatus(BaseModel):
     phase: DeploymentPhase | None = None
     status: DeploymentStatusType | None = None
-    error_codes: list[str] | None = Field(
-        default=None, alias="error_codes", serialization_alias="errorCodes"
-    )
+    error_codes: list[str] | None = Field(default=None, alias="errorCodes")
     executables_status: dict[str, ExecutableStatus] | None = Field(
-        default=None, alias="executables_status", serialization_alias="executablesStatus"
+        default=None, alias="executablesStatus"
     )
     dependencies: Dependencies | None = None
 

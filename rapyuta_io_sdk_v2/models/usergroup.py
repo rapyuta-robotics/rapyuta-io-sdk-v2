@@ -23,7 +23,7 @@ class UserGroupBinding(BaseModel):
 
 class UserGroupSpec(BaseModel):
     description: str | None = None
-    members_count: int | None = Field(default=None, serialization_alias="membersCount")
+    members_count: int | None = Field(default=None, alias="membersCount")
     members: list[UserGroupMember] | None = None
     roles: list[UserGroupBinding] | None = None
 
