@@ -15,3 +15,4 @@ from .managedservice import (
 )
 from .user import User as User
 from .organization import Organization as Organization
+from .daemons import Daemon as Daemon

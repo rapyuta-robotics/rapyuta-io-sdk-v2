@@ -40,6 +40,7 @@ from rapyuta_io_sdk_v2.models import (
     ManagedServiceInstanceList,
     ManagedServiceProviderList,
     Organization,
+    Daemon,
 )
 from rapyuta_io_sdk_v2.utils import handle_server_errors
 
@@ -785,6 +786,26 @@ class AsyncClient:
         )
         handle_server_errors(result)
         return None
+
+        # -------------------Device--------------------------
+
+    async def get_device_daemons(self, device_guid: str):
+        """
+        Retrieve the list of daemons associated with a specific device.
+
+        Args:
+            device_guid (str): The unique identifier (GUID) of the device.
+
+        Returns:
+            dict: The JSON response containing information about the device's daemons.
+        """
+        result = await self.c.get(
+            url=f"{self.v2api_host}/v2/devices/daemons/{device_guid}/",
+            headers=self.config.get_headers(),
+        )
+
+        handle_server_errors(response=result)
+        return Daemon(**result.json())
 
     # -------------------Static Routes-------------------
 
