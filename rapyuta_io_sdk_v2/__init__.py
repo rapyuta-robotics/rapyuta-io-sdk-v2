@@ -24,6 +24,8 @@ from rapyuta_io_sdk_v2.models import (
     RoleList as RoleList,
     RoleBinding as RoleBinding,
     RoleBindingList as RoleBindingList,
+    BulkRoleBindingUpdate as BulkRoleBindingUpdate,
+    BulkRoleBindingCreate as BulkRoleBindingCreate,
     Secret as Secret,
     SecretList as SecretList,
     StaticRoute as StaticRoute,
@@ -32,6 +34,7 @@ from rapyuta_io_sdk_v2.models import (
     UserList as UserList,
     UserGroup as UserGroup,
     UserGroupList as UserGroupList,
+    Daemon as Daemon,
 )
 from rapyuta_io_sdk_v2.utils import walk_pages as walk_pages
 

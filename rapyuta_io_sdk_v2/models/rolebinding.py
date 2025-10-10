@@ -40,5 +40,14 @@ class RoleBinding(BaseObject):
     spec: RoleBindingSpec
 
 
+class BulkRoleBindingUpdate(BaseModel):
+    new_bindings: list[RoleBinding] = Field(alias="newBindings")
+    old_bindings: list[RoleBinding] = Field(alias="oldBindings")
+
+
+class BulkRoleBindingCreate(BaseModel):
+    bindings: list[RoleBinding]
+
+
 class RoleBindingList(BaseList[RoleBinding]):
     pass
