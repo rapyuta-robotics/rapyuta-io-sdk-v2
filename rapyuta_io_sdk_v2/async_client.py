@@ -49,6 +49,8 @@ from rapyuta_io_sdk_v2.models import (
     Role,
     RoleBinding,
     RoleBindingList,
+    BulkRoleBindingUpdate,
+    BulkRoleBindingCreate,
     RoleList,
 )
 from rapyuta_io_sdk_v2.utils import handle_server_errors
@@ -2053,7 +2055,9 @@ class AsyncClient:
 
         return Role(**result.json())
 
-    async def create_role(self, role: Role, **kwargs) -> Role:
+    async def create_role(self, role: Role | dict, **kwargs) -> Role:
+        if isinstance(role, dict):
+            role = Role.model_validate(role)
         result = await self.c.post(
             url=f"{self.v2api_host}/v2/roles/",
             headers=self.config.get_headers(with_project=False, **kwargs),
@@ -2138,7 +2142,11 @@ class AsyncClient:
 
         return RoleBinding(**result.json())
 
-    async def create_role_binding(self, binding: RoleBinding, **kwargs) -> RoleBinding:
+    async def create_role_binding(
+        self, binding: BulkRoleBindingCreate | dict, **kwargs
+    ) -> RoleBinding:
+        if isinstance(binding, dict):
+            binding = BulkRoleBindingCreate.model_validate(binding)
         result = await self.c.post(
             url=f"{self.v2api_host}/v2/role-bindings/",
             headers=self.config.get_headers(with_project=False, **kwargs),
@@ -2146,9 +2154,16 @@ class AsyncClient:
         )
         handle_server_errors(result)
 
-        return RoleBinding(**result.json())
+        try:
+            return RoleBinding(**result.json())
+        except Exception:
+            return result.json()
 
-    async def update_role_binding(self, binding: Role, **kwargs) -> RoleBinding:
+    async def update_role_binding(
+        self, binding: BulkRoleBindingUpdate | dict, **kwargs
+    ) -> RoleBinding:
+        if isinstance(binding, dict):
+            binding = BulkRoleBindingUpdate.model_validate(binding)
         result = await self.c.put(
             url=f"{self.v2api_host}/v2/roles/{binding.metadata.guid}/",
             headers=self.config.get_headers(with_project=False, **kwargs),
@@ -2156,7 +2171,10 @@ class AsyncClient:
         )
         handle_server_errors(result)
 
-        return RoleBinding(**result.json())
+        try:
+            return RoleBinding(**result.json())
+        except Exception:
+            return result.json()
 
     async def delete_role_binding(self, binding_guid: str, **kwargs) -> None:
         result = await self.c.delete(

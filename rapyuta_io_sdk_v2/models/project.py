@@ -75,8 +75,8 @@ class ProjectSpec(BaseModel):
 class ProjectStatus(BaseModel):
     status: Literal["Pending", "Error", "Success", "Deleting", "Unknown"]
     error: str | None = None
-    vpn: Literal["Success", "Error", "Disabled", "Pending"]
-    tracing: Literal["Success", "Error", "Disabled", "Pending"]
+    vpn: Literal["Success", "Error", "Disabled", "Pending"] | None = None
+    tracing: Literal["Success", "Error", "Disabled", "Pending"] | None = None
 
 
 class Project(BaseObject):
