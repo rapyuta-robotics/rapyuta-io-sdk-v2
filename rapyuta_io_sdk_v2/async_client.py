@@ -22,6 +22,7 @@ from yaml import safe_load
 from rapyuta_io_sdk_v2.config import Configuration
 from rapyuta_io_sdk_v2.models import (
     Secret,
+    SecretCreate,
     StaticRoute,
     Disk,
     Deployment,
@@ -1147,7 +1148,7 @@ class AsyncClient:
         handle_server_errors(response=result)
         return SecretList(**result.json())
 
-    async def create_secret(self, body: Secret | dict[str, Any], **kwargs) -> Secret:
+    async def create_secret(self, body: SecretCreate | dict[str, Any], **kwargs) -> Secret:
         """Create a new secret.
 
         Args:
@@ -1157,7 +1158,7 @@ class AsyncClient:
             Secret: Secret details as a Secret object.
         """
         if isinstance(body, dict):
-            body = Secret.model_validate(body)
+            body = SecretCreate.model_validate(body)
 
         result = await self.c.post(
             url=f"{self.v2api_host}/v2/secrets/",

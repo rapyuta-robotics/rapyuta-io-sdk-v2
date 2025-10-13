@@ -65,6 +65,15 @@ class FeaturesDockerCache(BaseModel):
 class Features(BaseModel):
     vpn: FeaturesVPN | None = None
     dockerCache: FeaturesDockerCache | None = None
+    
+class ProjectMetadata(BaseMetadata):
+    @model_validator(mode="after")
+    def validate_project_name(self):
+        if not (3 <= len(self.name) <= 63):
+            raise ValueError("Project name length must be between 3 and 63 characters.")
+        if self.name.startswith("project-"):
+            raise ValueError('Project name should not start with the prefix "project-".')
+        return self
 
 
 class ProjectSpec(BaseModel):
@@ -83,7 +92,7 @@ class Project(BaseObject):
     """Project model."""
 
     kind: Literal["Project"] | None = "Project"
-    metadata: BaseMetadata
+    metadata: ProjectMetadata
     spec: ProjectSpec
     status: ProjectStatus | None = None
 

@@ -72,6 +72,7 @@ from rapyuta_io_sdk_v2.models.rolebinding import (
 from rapyuta_io_sdk_v2.models.secret import (
     Secret as Secret,
     SecretList as SecretList,
+    SecretCreate as SecretCreate
 )
 
 # Static Route models

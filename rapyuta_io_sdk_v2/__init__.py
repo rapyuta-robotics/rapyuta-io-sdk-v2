@@ -28,6 +28,7 @@ from rapyuta_io_sdk_v2.models import (
     BulkRoleBindingCreate as BulkRoleBindingCreate,
     Secret as Secret,
     SecretList as SecretList,
+    SecretCreate as SecretCreate,
     StaticRoute as StaticRoute,
     StaticRouteList as StaticRouteList,
     User as User,
