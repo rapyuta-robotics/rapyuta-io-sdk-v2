@@ -22,6 +22,7 @@ from yaml import safe_load
 from rapyuta_io_sdk_v2.config import Configuration
 from rapyuta_io_sdk_v2.models import (
     Secret,
+    SecretCreate,
     StaticRoute,
     Disk,
     Deployment,
@@ -228,7 +229,7 @@ class Client:
             headers=self.config.get_headers(
                 with_project=False, organization_guid=organization_guid, **kwargs
             ),
-            json=body.model_dump(),
+            json=body.model_dump(by_alias=True),
         )
         handle_server_errors(result)
         return Organization(**result.json())
@@ -293,7 +294,7 @@ class Client:
             headers=self.config.get_headers(
                 with_project=False, with_organization=False, **kwargs
             ),
-            json=body.model_dump(),
+            json=body.model_dump(by_alias=True),
         )
         handle_server_errors(result)
         return User(**result.json())
@@ -387,10 +388,8 @@ class Client:
 
         result = self.c.post(
             url=f"{self.v2api_host}/v2/projects/",
-            headers=self.config.get_headers(
-                organization_guid=org_guid, with_project=False, **kwargs
-            ),
-            json=body.model_dump(),
+            headers=self.config.get_headers(with_project=False, **kwargs),
+            json=body.model_dump(by_alias=True),
         )
         handle_server_errors(result)
         return Project(**result.json())
@@ -413,7 +412,7 @@ class Client:
         result = self.c.put(
             url=f"{self.v2api_host}/v2/projects/{project_guid}/",
             headers=self.config.get_headers(with_project=False, **kwargs),
-            json=body.model_dump(),
+            json=body.model_dump(by_alias=True),
         )
         handle_server_errors(result)
         return Project(**result.json())
@@ -430,7 +429,9 @@ class Client:
 
         result = self.c.delete(
             url=f"{self.v2api_host}/v2/projects/{project_guid}/",
-            headers=self.config.get_headers(with_project=False, **kwargs),
+            headers=self.config.get_headers(
+                with_project=True, project_guid=project_guid, **kwargs
+            ),
         )
         handle_server_errors(result)
         return None
@@ -503,7 +504,7 @@ class Client:
         result = self.c.post(
             url=f"{self.v2api_host}/v2/packages/",
             headers=self.config.get_headers(**kwargs),
-            json=body.model_dump(),
+            json=body.model_dump(by_alias=True),
         )
 
         handle_server_errors(result)
@@ -623,7 +624,7 @@ class Client:
         result = self.c.post(
             url=f"{self.v2api_host}/v2/deployments/",
             headers=self.config.get_headers(**kwargs),
-            json=body.model_dump(),
+            json=body.model_dump(by_alias=True),
         )
 
         handle_server_errors(result)
@@ -659,7 +660,7 @@ class Client:
         result = self.c.patch(
             url=f"{self.v2api_host}/v2/deployments/{name}/",
             headers=self.config.get_headers(**kwargs),
-            json=body.model_dump(),
+            json=body.model_dump(by_alias=True),
         )
         handle_server_errors(result)
         return Deployment(**result.json())
@@ -788,7 +789,7 @@ class Client:
         result = self.c.post(
             url=f"{self.v2api_host}/v2/disks/",
             headers=self.config.get_headers(**kwargs),
-            json=body.model_dump(),
+            json=body.model_dump(by_alias=True),
         )
         handle_server_errors(result)
         return Disk(**result.json())
@@ -883,7 +884,7 @@ class Client:
         result = self.c.post(
             url=f"{self.v2api_host}/v2/staticroutes/",
             headers=self.config.get_headers(**kwargs),
-            json=body.model_dump(),
+            json=body.model_dump(by_alias=True),
         )
 
         handle_server_errors(result)
@@ -924,7 +925,7 @@ class Client:
         result = self.c.put(
             url=f"{self.v2api_host}/v2/staticroutes/{name}/",
             headers=self.config.get_headers(**kwargs),
-            json=body.model_dump(),
+            json=body.model_dump(by_alias=True),
         )
 
         handle_server_errors(result)
@@ -1008,7 +1009,7 @@ class Client:
         result = self.c.post(
             url=f"{self.v2api_host}/v2/networks/",
             headers=self.config.get_headers(**kwargs),
-            json=body.model_dump(),
+            json=body.model_dump(by_alias=True),
         )
         handle_server_errors(result)
         return Network(**result.json())
@@ -1090,19 +1091,19 @@ class Client:
         handle_server_errors(result)
         return SecretList(**result.json())
 
-    def create_secret(self, body: Secret | dict[str, Any], **kwargs) -> Secret:
+    def create_secret(self, body: SecretCreate | dict[str, Any], **kwargs) -> Secret:
         """Create a new secret.
 
         Returns:
             Secret: Secret details.
         """
         if isinstance(body, dict):
-            body = Secret.model_validate(body)
+            body = SecretCreate.model_validate(body)
 
         result = self.c.post(
             url=f"{self.v2api_host}/v2/secrets/",
             headers=self.config.get_headers(**kwargs),
-            json=body.model_dump(),
+            json=body.model_dump(by_alias=True),
         )
 
         handle_server_errors(result)
@@ -1141,7 +1142,7 @@ class Client:
         result = self.c.put(
             url=f"{self.v2api_host}/v2/secrets/{name}/",
             headers=self.config.get_headers(**kwargs),
-            json=body.model_dump(),
+            json=body.model_dump(by_alias=True),
         )
 
         handle_server_errors(response=result)
@@ -1272,7 +1273,7 @@ class Client:
         result = self.c.patch(
             url=f"{self.v2api_host}/v2/oauth2/clients/{client_id}/uris/",
             headers=self.config.get_headers(**kwargs),
-            json=update.model_dump(),
+            json=update.model_dump(by_alias=True),
         )
         handle_server_errors(result)
         return result.json()
@@ -1740,7 +1741,7 @@ class Client:
         result = self.c.post(
             url=f"{self.v2api_host}/v2/managedservices/",
             headers=self.config.get_headers(),
-            json=body.model_dump(),
+            json=body.model_dump(by_alias=True),
         )
         handle_server_errors(result)
         return ManagedServiceInstance(**result.json())
@@ -1805,7 +1806,7 @@ class Client:
         result = self.c.post(
             url=f"{self.v2api_host}/v2/managedservices/{instance_name}/bindings/",
             headers=self.config.get_headers(),
-            json=body.model_dump(),
+            json=body.model_dump(by_alias=True),
         )
         handle_server_errors(result)
         return ManagedServiceBinding(**result.json())
@@ -1888,7 +1889,7 @@ class Client:
         result = self.c.post(
             url=f"{self.v2api_host}/v2/usergroups/",
             headers=self.config.get_headers(with_project=False, **kwargs),
-            json=user_group.model_dump(),
+            json=user_group.model_dump(by_alias=True),
         )
         handle_server_errors(result)
 
@@ -1903,7 +1904,7 @@ class Client:
                 group_guid=user_group.metadata.guid,
                 **kwargs,
             ),
-            json=user_group.model_dump(),
+            json=user_group.model_dump(by_alias=True),
         )
         handle_server_errors(result)
 
@@ -1961,7 +1962,7 @@ class Client:
         result = self.c.post(
             url=f"{self.v2api_host}/v2/roles/",
             headers=self.config.get_headers(with_project=False, **kwargs),
-            json=role.model_dump(),
+            json=role.model_dump(by_alias=True),
         )
         handle_server_errors(result)
 
@@ -1971,7 +1972,7 @@ class Client:
         result = self.c.put(
             url=f"{self.v2api_host}/v2/roles/{role.metadata.name}/",
             headers=self.config.get_headers(with_project=False, **kwargs),
-            json=role.model_dump(),
+            json=role.model_dump(by_alias=True),
         )
         handle_server_errors(result)
 
@@ -2050,7 +2051,7 @@ class Client:
         result = self.c.post(
             url=f"{self.v2api_host}/v2/role-bindings/",
             headers=self.config.get_headers(with_project=False, **kwargs),
-            json=binding.model_dump(),
+            json=binding.model_dump(by_alias=True),
         )
         handle_server_errors(result)
         try:
@@ -2066,7 +2067,7 @@ class Client:
         result = self.c.put(
             url=f"{self.v2api_host}/v2/roles/{binding.metadata.guid}/",
             headers=self.config.get_headers(with_project=False, **kwargs),
-            json=binding.model_dump(),
+            json=binding.model_dump(by_alias=True),
         )
         handle_server_errors(result)
 
