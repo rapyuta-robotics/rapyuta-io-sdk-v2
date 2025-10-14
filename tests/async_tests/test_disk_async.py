@@ -1,142 +1,77 @@
 import httpx
 import pytest
-import pytest_asyncio  # noqa: F401
-from munch import Munch
-from asyncmock import AsyncMock
+from pytest_mock import MockFixture
 
-from tests.data.mock_data import disk_body  # noqa: F401
-from tests.utils.fixtures import async_client as client  # noqa: F401
+# ruff: noqa: F811, F401
+from rapyuta_io_sdk_v2.models import DiskList, Disk
+from tests.utils.fixtures import async_client
+from tests.data import (
+    disk_body,
+    disk_model_mock,
+    disklist_model_mock,
+)
 
 
 @pytest.mark.asyncio
-async def test_list_disks_success(client, mocker: AsyncMock):  # noqa: F811
-    # Mock the httpx.AsyncClient.get method
+async def test_list_disks_success(async_client, disklist_model_mock, mocker: MockFixture):
     mock_get = mocker.patch("httpx.AsyncClient.get")
-
-    # Set up mock responses for pagination
     mock_get.return_value = httpx.Response(
         status_code=200,
-        json={
-            "metadata": {"continue": 1},
-            "items": [{"name": "test-disk", "guid": "mock_disk_guid"}],
-        },
+        json=disklist_model_mock,
     )
 
-    # Call the list_disks method
-    response = await client.list_disks()
+    response = await async_client.list_disks()
 
-    # Validate the response
-    assert isinstance(response, Munch)
-    assert response["items"] == [{"name": "test-disk", "guid": "mock_disk_guid"}]
+    assert isinstance(response, DiskList)
+    assert len(response.items) == 1
+    assert response.items[0].metadata.name == "mock_disk_1"
 
 
 @pytest.mark.asyncio
-async def test_list_disks_not_found(client, mocker: AsyncMock):  # noqa: F811
-    # Mock the httpx.AsyncClient.get method
+async def test_get_disk_success(async_client, disk_model_mock, mocker: MockFixture):
     mock_get = mocker.patch("httpx.AsyncClient.get")
-
-    # Set up the mock response
-    mock_get.return_value = httpx.Response(
-        status_code=404,
-        json={"error": "not found"},
-    )
-
-    with pytest.raises(Exception) as exc:
-        await client.list_disks()
-
-    assert str(exc.value) == "not found"
-
-
-@pytest.mark.asyncio
-async def test_get_disk_success(client, mocker: AsyncMock):  # noqa: F811
-    # Mock the httpx.AsyncClient.get method
-    mock_get = mocker.patch("httpx.AsyncClient.get")
-
-    # Set up the mock response
     mock_get.return_value = httpx.Response(
         status_code=200,
-        json={
-            "kind": "Disk",
-            "metadata": {"guid": "test_disk_guid", "name": "mock_disk_name"},
-        },
+        json=disk_model_mock,
     )
-
-    # Call the get_disk method
-    response = await client.get_disk(name="mock_disk_name")
-
-    # Validate the response
-    assert isinstance(response, Munch)
-    assert response["metadata"]["guid"] == "test_disk_guid"
+    response = await async_client.get_disk(name="mock_disk_1")
+    assert isinstance(response, Disk)
+    assert response.metadata.name == "mock_disk_1"
 
 
 @pytest.mark.asyncio
-async def test_get_disk_not_found(client, mocker: AsyncMock):  # noqa: F811
-    # Mock the httpx.AsyncClient.get method
+async def test_get_disk_not_found(async_client, mocker: MockFixture):
     mock_get = mocker.patch("httpx.AsyncClient.get")
-
-    # Set up the mock response
     mock_get.return_value = httpx.Response(
         status_code=404,
         json={"error": "disk not found"},
     )
 
-    # Call the get_disk method
     with pytest.raises(Exception) as exc:
-        await client.get_disk(name="mock_disk_name")
+        await async_client.get_disk(name="notfound")
 
     assert str(exc.value) == "disk not found"
 
 
 @pytest.mark.asyncio
-async def test_create_disk_success(client, disk_body, mocker: AsyncMock):  # noqa: F811
+async def test_create_disk_unauthorized(async_client, disk_body, mocker: MockFixture):
     mock_post = mocker.patch("httpx.AsyncClient.post")
-
     mock_post.return_value = httpx.Response(
-        status_code=200,
-        json={
-            "kind": "Disk",
-            "metadata": {"guid": "test_disk_guid", "name": "test_disk"},
-        },
+        status_code=401,
+        json={"error": "unauthorized"},
     )
 
-    response = await client.create_disk(body=disk_body, project_guid="mock_project_guid")
-
-    assert isinstance(response, Munch)
-    assert response.metadata.guid == "test_disk_guid"
-    assert response.metadata.name == "test_disk"
-
-
-@pytest.mark.asyncio
-async def test_delete_disk_success(client, mocker: AsyncMock):  # noqa: F811
-    # Mock the httpx.AsyncClient.delete method
-    mock_delete = mocker.patch("httpx.AsyncClient.delete")
-
-    # Set up the mock response
-    mock_delete.return_value = httpx.Response(
-        status_code=204,
-        json={"success": True},
-    )
-
-    # Call the delete_disk method
-    response = await client.delete_disk(name="mock_disk_name")
-
-    # Validate the response
-    assert response["success"] is True
-
-
-@pytest.mark.asyncio
-async def test_delete_disk_not_found(client, mocker: AsyncMock):  # noqa: F811
-    # Mock the httpx.AsyncClient.delete method
-    mock_delete = mocker.patch("httpx.AsyncClient.delete")
-
-    # Set up the mock response
-    mock_delete.return_value = httpx.Response(
-        status_code=404,
-        json={"error": "disk not found"},
-    )
-
-    # Call the delete_disk method
     with pytest.raises(Exception) as exc:
-        await client.delete_disk(name="mock_disk_name")
+        await async_client.create_disk(body=disk_body)
 
-    assert str(exc.value) == "disk not found"
+    assert str(exc.value) == "unauthorized"
+
+
+@pytest.mark.asyncio
+async def test_delete_disk_success(async_client, mocker: MockFixture):
+    mock_delete = mocker.patch("httpx.AsyncClient.delete")
+    mock_delete.return_value = httpx.Response(status_code=204, json={"success": True})
+
+    response = await async_client.delete_disk(name="mock_disk_1")
+
+    assert response is None

@@ -4,14 +4,13 @@ dynamic = ["version"]
 description = "Python SDK for rapyuta.io v2 APIs"
 dependencies = [
     "httpx>=0.27.2",
-    "munch>=4.0.0",
     "pydantic-settings>=2.7.1",
     "python-benedict>=0.34.1",
     "pyyaml>=6.0.2",
 ]
 readme = "README.md"
 license = { file = "LICENSE" }
-requires-python = ">= 3.8"
+requires-python = ">= 3.10"
 
 [build-system]
 requires = ["hatchling"]
@@ -74,18 +73,15 @@ exclude = [
     "venv",
 ]
 
-# Same as Black.
+target-version = "py310"
 line-length = 90
 indent-width = 4
-
-# Assume Python 3.8
-target-version = "py38"
 
 [tool.ruff.lint]
 # Enable Pyflakes (`F`) and a subset of the pycodestyle (`E`)  codes by default.
 # Unlike Flake8, Ruff doesn't enable pycodestyle warnings (`W`) or
 # McCabe complexity (`C901`) by default.
-select = ["E4", "E7", "E9", "F", "B", "Q", "W", "N816"]
+select = ["E4", "E7", "E9", "F", "B", "Q", "W", "N816", "UP"]
 ignore = ["E741", "B904"]
 
 # Allow fix for all enabled rules (when `--fix`) is provided.
