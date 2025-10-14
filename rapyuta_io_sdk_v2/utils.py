@@ -34,6 +34,11 @@ def handle_server_errors(response: httpx.Response):
     except json.JSONDecodeError:
         err = response.text
 
+    # 400 error
+    if status_code == httpx.codes.BAD_REQUEST:
+        raise exceptions.MethodNotAllowedError(err)
+    if status_code == httpx.codes.FORBIDDEN:
+        raise exceptions.MethodNotAllowedError(err)
     # 404 Not Found
     if status_code == httpx.codes.NOT_FOUND:
         raise exceptions.HttpNotFoundError(err)
