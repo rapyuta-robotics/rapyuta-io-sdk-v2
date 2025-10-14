@@ -146,6 +146,6 @@ class Daemon(BaseModel):
 
     # Daemon-specific fields
     spec: DaemonSpec = Field(default=None, description="Daemon specification")
-    status: dict[str, DaemonStatus] | None = Field(
+    status: dict[str, DaemonStatus | None] | None = Field(
         default=None, description="Status of the daemon by component"
     )
