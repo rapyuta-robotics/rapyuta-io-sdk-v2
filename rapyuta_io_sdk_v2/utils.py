@@ -68,7 +68,7 @@ def handle_server_errors(response: httpx.Response):
         raise exceptions.UnauthorizedAccessError(err)
 
     # Anything else that is not known
-    if status_code > 504:
+    if status_code > 400:
         raise exceptions.UnknownError(err)
 
 
