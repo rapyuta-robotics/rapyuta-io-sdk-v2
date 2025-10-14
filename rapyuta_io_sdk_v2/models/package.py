@@ -116,7 +116,7 @@ class RosEndpointSpec(BaseModel):
     scoped: bool | None = Field(default=False)
     targeted: bool | None = Field(default=False)
     qos: str | None = None
-    timeout: float | None = None
+    timeout: int | float | None = None
 
 
 class RosComponentSpec(BaseModel):
