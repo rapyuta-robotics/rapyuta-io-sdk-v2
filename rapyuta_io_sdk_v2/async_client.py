@@ -1551,7 +1551,7 @@ class AsyncClient:
         }
 
         result = await self.c.patch(
-            url=f"{self.v2api_host}/v2/configtrees/{tree_name}/revisions/{revision_id}/commit/",
+            url=f"{self.v2api_host}/v2/configtrees/{tree_name}/revisions/{revision_id}/",
             headers=self.config.get_headers(project_guid=project_guid, **kwargs),
             json=config_tree_revision,
         )
