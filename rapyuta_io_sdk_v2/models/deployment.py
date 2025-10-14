@@ -101,7 +101,7 @@ class ManagedServiceSpec(BaseModel):
 class DeploymentROSNetwork(BaseModel):
     """ROS Network configuration matching Go DeploymentROSNetwork struct."""
 
-    domainID: int = Field(description="ROS Domain ID")
+    domainID: int | None = Field(default=None, description="ROS Domain ID")
     depends: Depends | None = None
     interface: str | None = Field(default=None, description="Network interface")
 
