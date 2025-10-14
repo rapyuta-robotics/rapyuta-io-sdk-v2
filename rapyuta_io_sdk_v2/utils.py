@@ -108,15 +108,14 @@ def walk_pages(
     while True:
         data = func(cont, limit, *args, **kwargs)
 
-        items = data.get("items", [])
+        items = data.items or []
         if not items:
             break
 
-        for item in items:
-            yield from item
+        yield items
 
         # Update `cont` for the next page
-        cont = data.get("metadata", {}).get("continue")
+        cont = data.metadata.continue_ or None
         if cont is None:
             break
 
@@ -143,14 +142,13 @@ async def walk_pages_async(
     while True:
         data = await func(cont, limit, *args, **kwargs)
 
-        items = data.get("items", [])
+        items = data.items or []
         if not items:
             break
 
-        for item in items:
-            yield item
+        yield items
 
         # Update `cont` for the next page
-        cont = data.get("metadata", {}).get("continue")
+        cont = data.metadata.continue_ or None
         if cont is None:
             break
