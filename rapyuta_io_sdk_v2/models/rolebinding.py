@@ -42,11 +42,7 @@ class RoleBinding(BaseObject):
 
 class BulkRoleBindingUpdate(BaseModel):
     new_bindings: list[RoleBinding] = Field(alias="newBindings")
-    old_bindings: list[RoleBinding] = Field(alias="oldBindings")
-
-
-class BulkRoleBindingCreate(BaseModel):
-    bindings: list[RoleBinding]
+    old_bindings: list[RoleBinding | None] = Field(alias="oldBindings")
 
 
 class RoleBindingList(BaseList[RoleBinding]):

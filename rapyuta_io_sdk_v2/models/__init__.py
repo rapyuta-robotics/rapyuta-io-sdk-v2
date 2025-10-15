@@ -64,7 +64,6 @@ from rapyuta_io_sdk_v2.models.role import (
 from rapyuta_io_sdk_v2.models.rolebinding import (
     RoleBinding as RoleBinding,
     RoleBindingList as RoleBindingList,
-    BulkRoleBindingCreate as BulkRoleBindingCreate,
     BulkRoleBindingUpdate as BulkRoleBindingUpdate,
 )
 

@@ -25,7 +25,6 @@ from rapyuta_io_sdk_v2.models import (
     RoleBinding as RoleBinding,
     RoleBindingList as RoleBindingList,
     BulkRoleBindingUpdate as BulkRoleBindingUpdate,
-    BulkRoleBindingCreate as BulkRoleBindingCreate,
     Secret as Secret,
     SecretList as SecretList,
     SecretCreate as SecretCreate,
