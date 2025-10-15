@@ -20,6 +20,7 @@ import httpx
 from rapyuta_io_sdk_v2.config import Configuration
 from rapyuta_io_sdk_v2.models import (
     Secret,
+    SecretCreate,
     StaticRoute,
     Disk,
     Deployment,
@@ -41,6 +42,14 @@ from rapyuta_io_sdk_v2.models import (
     ManagedServiceProviderList,
     Organization,
     Daemon,
+    UserList,
+    UserGroupList,
+    UserGroup,
+    Role,
+    RoleBinding,
+    RoleBindingList,
+    BulkRoleBindingUpdate,
+    RoleList,
 )
 from rapyuta_io_sdk_v2.utils import handle_server_errors
 
@@ -48,10 +57,10 @@ from rapyuta_io_sdk_v2.utils import handle_server_errors
 class AsyncClient:
     """AsyncClient class for the SDK."""
 
-    def __init__(self, config=None, **kwargs):
-        self.config = config or Configuration()
-        timeout = kwargs.get("timeout", 10)
-        self.c = httpx.AsyncClient(
+    def __init__(self, config: Configuration | None = None, **kwargs: Any):
+        self.config: Configuration = config or Configuration()
+        timeout: float = float(kwargs.get("timeout", 10))
+        self.c: httpx.AsyncClient = httpx.AsyncClient(
             timeout=timeout,
             limits=httpx.Limits(
                 max_keepalive_connections=5,
@@ -64,7 +73,7 @@ class AsyncClient:
                 )
             },
         )
-        self.sync_client = httpx.Client(
+        self.sync_client: httpx.Client = httpx.Client(
             timeout=timeout,
             limits=httpx.Limits(
                 max_keepalive_connections=5,
@@ -119,7 +128,7 @@ class AsyncClient:
         token = self.get_auth_token(email, password)
         self.config.auth_token = token
 
-    def logout(self, token: str = None) -> dict[str, Any]:
+    def logout(self, token: str | None = None) -> dict[str, Any]:
         """Expire the authentication token.
 
         Args:
@@ -139,7 +148,7 @@ class AsyncClient:
         handle_server_errors(result)
         return result.json()
 
-    def refresh_token(self, token: str = None, set_token: bool = True) -> str:
+    def refresh_token(self, token: str | None = None, set_token: bool = True) -> str:
         """Refresh the authentication token.
 
         Args:
@@ -181,7 +190,7 @@ class AsyncClient:
 
     # -----------------Organization----------------
     async def get_organization(
-        self, organization_guid: str = None, **kwargs
+        self, organization_guid: str | None = None, **kwargs
     ) -> Organization:
         """Get an organization by its GUID.
 
@@ -204,7 +213,10 @@ class AsyncClient:
         return Organization(**result.json())
 
     async def update_organization(
-        self, body: Organization | dict, organization_guid: str = None, **kwargs
+        self,
+        body: Organization | dict[str, Any],
+        organization_guid: str | None = None,
+        **kwargs,
     ) -> Organization:
         """Update an organization by its GUID.
 
@@ -230,7 +242,34 @@ class AsyncClient:
         return Organization(**result.json())
 
     # ---------------------User--------------------
-    async def get_user(self, **kwargs) -> User:
+    async def list_users(
+        self,
+        organization_guid: str | None = None,
+        guid: str | None = None,
+        cont: int = 0,
+        limit: int = 50,
+        **kwargs,
+    ) -> UserList:
+        parameters: dict[str, Any] = {
+            "continue": cont,
+            "limit": limit,
+        }
+        if guid:
+            parameters["guid"] = guid
+
+        result = await self.c.get(
+            url=f"{self.v2api_host}/v2/users/",
+            headers=self.config.get_headers(
+                with_project=False, organization_guid=organization_guid, **kwargs
+            ),
+            params=parameters,
+        )
+
+        handle_server_errors(result)
+
+        return UserList(**result.json())
+
+    async def get_myself(self, **kwargs) -> User:
         """Get User details.
 
         Returns:
@@ -238,12 +277,23 @@ class AsyncClient:
         """
         result = await self.c.get(
             url=f"{self.v2api_host}/v2/users/me/",
-            headers=self.config.get_headers(with_project=False, **kwargs),
+            headers=self.config.get_headers(
+                with_project=False, with_organization=False, **kwargs
+            ),
         )
         handle_server_errors(result)
         return User(**result.json())
 
-    async def update_user(self, body: User | dict, **kwargs) -> User:
+    # Alias for backward compatibility
+    async def get_user(self, **kwargs) -> User:
+        """Get User details. (Alias for get_myself)
+
+        Returns:
+            User: User details as a User object.
+        """
+        return await self.get_myself(**kwargs)
+
+    async def update_user(self, body: User | dict[str, Any], **kwargs) -> User:
         """Update the user details.
 
         Args:
@@ -270,10 +320,10 @@ class AsyncClient:
         self,
         cont: int = 0,
         limit: int = 50,
-        label_selector: list[str] = None,
-        status: list[str] = None,
-        organizations: list[str] = None,
-        name: str = None,
+        label_selector: list[str] | None = None,
+        status: list[str] | None = None,
+        organizations: list[str] | None = None,
+        name: str | None = None,
         **kwargs,
     ) -> ProjectList:
         """List all projects in an organization.
@@ -290,7 +340,7 @@ class AsyncClient:
             List of projects as a dictionary.
         """
 
-        parameters = {
+        parameters: dict[str, Any] = {
             "continue": cont,
             "limit": limit,
         }
@@ -312,7 +362,7 @@ class AsyncClient:
         handle_server_errors(result)
         return ProjectList(**result.json())
 
-    async def get_project(self, project_guid: str = None, **kwargs) -> Project:
+    async def get_project(self, project_guid: str | None = None, **kwargs) -> Project:
         """Get a project by its GUID.
 
         If no project or organization GUID is provided,
@@ -339,7 +389,7 @@ class AsyncClient:
         handle_server_errors(result)
         return Project(**result.json())
 
-    async def create_project(self, body: Project | dict, **kwargs) -> Project:
+    async def create_project(self, body: Project | dict[str, Any], **kwargs) -> Project:
         """Create a new project.
 
         Args:
@@ -360,7 +410,7 @@ class AsyncClient:
         return Project(**result.json())
 
     async def update_project(
-        self, body: Project | dict, project_guid: str = None, **kwargs
+        self, body: Project | dict[str, Any], project_guid: str | None = None, **kwargs
     ) -> Project:
         """Update a project by its GUID.
 
@@ -399,8 +449,8 @@ class AsyncClient:
         return None
 
     async def update_project_owner(
-        self, body: Project | dict, project_guid: str = None, **kwargs
-    ) -> dict[str, Any]:
+        self, body: Project | dict[str, Any], project_guid: str | None = None, **kwargs
+    ) -> Project:
         """Update the owner of a project by its GUID.
 
         Args:
@@ -428,8 +478,8 @@ class AsyncClient:
         self,
         cont: int = 0,
         limit: int = 50,
-        label_selector: list[str] = None,
-        name: str = None,
+        label_selector: list[str] | None = None,
+        name: str | None = None,
         **kwargs,
     ) -> PackageList:
         """List all packages in a project.
@@ -457,7 +507,7 @@ class AsyncClient:
         handle_server_errors(response=result)
         return PackageList(**result.json())
 
-    async def create_package(self, body: Package | dict, **kwargs) -> Package:
+    async def create_package(self, body: Package | dict[str, Any], **kwargs) -> Package:
         """Create a new package.
 
         The Payload is the JSON format of the Package Manifest.
@@ -481,7 +531,9 @@ class AsyncClient:
         handle_server_errors(result)
         return Package(**result.json())
 
-    async def get_package(self, name: str, version: str = None, **kwargs) -> Package:
+    async def get_package(
+        self, name: str, version: str | None = None, **kwargs
+    ) -> Package:
         """Get a package by its name.
 
         Args:
@@ -523,15 +575,15 @@ class AsyncClient:
         cont: int = 0,
         limit: int = 50,
         dependencies: bool = False,
-        device_name: str = None,
-        guids: list[str] = None,
-        label_selector: list[str] = None,
-        name: str = None,
-        names: list[str] = None,
-        package_name: str = None,
-        package_version: str = None,
-        phases: list[str] = None,
-        regions: list[str] = None,
+        device_name: str | None = None,
+        guids: list[str] | None = None,
+        label_selector: list[str] | None = None,
+        name: str | None = None,
+        names: list[str] | None = None,
+        package_name: str | None = None,
+        package_version: str | None = None,
+        phases: list[str] | None = None,
+        regions: list[str] | None = None,
         **kwargs,
     ) -> DeploymentList:
         """List all deployments in a project.
@@ -579,7 +631,9 @@ class AsyncClient:
 
     # -------------------Deployment-------------------
 
-    async def create_deployment(self, body: Deployment | dict, **kwargs) -> Deployment:
+    async def create_deployment(
+        self, body: Deployment | dict[str, Any], **kwargs
+    ) -> Deployment:
         """Create a new deployment.
 
         Args:
@@ -600,7 +654,9 @@ class AsyncClient:
         handle_server_errors(result)
         return Deployment(**result.json())
 
-    async def get_deployment(self, name: str, guid: str = None, **kwargs) -> Deployment:
+    async def get_deployment(
+        self, name: str, guid: str | None = None, **kwargs
+    ) -> Deployment:
         """Get a deployment by its name.
 
         Args:
@@ -622,7 +678,7 @@ class AsyncClient:
         return Deployment(**result.json())
 
     async def update_deployment(
-        self, name: str, body: Deployment | dict, **kwargs
+        self, name: str, body: Deployment | dict[str, Any], **kwargs
     ) -> Deployment:
         """Update a deployment by its name.
 
@@ -673,7 +729,7 @@ class AsyncClient:
         return result.json()
 
     async def get_deployment_history(
-        self, name: str, guid: str = None, **kwargs
+        self, name: str, guid: str | None = None, **kwargs
     ) -> dict[str, Any]:
         """Get a deployment history by its name.
 
@@ -694,11 +750,11 @@ class AsyncClient:
     async def list_disks(
         self,
         cont: int = 0,
-        label_selector: list[str] = None,
+        label_selector: list[str] | None = None,
         limit: int = 50,
-        names: list[str] = None,
-        regions: list[str] = None,
-        status: list[str] = None,
+        names: list[str] | None = None,
+        regions: list[str] | None = None,
+        status: list[str] | None = None,
         **kwargs,
     ) -> DiskList:
         """List all disks in a project.
@@ -750,7 +806,7 @@ class AsyncClient:
 
         return Disk(**result.json())
 
-    async def create_disk(self, body: Disk | dict, **kwargs) -> Disk:
+    async def create_disk(self, body: Disk | dict[str, Any], **kwargs) -> Disk:
         """Create a new disk.
 
         Args:
@@ -813,10 +869,10 @@ class AsyncClient:
         self,
         cont: int = 0,
         limit: int = 50,
-        guids: list[str] = None,
-        label_selector: list[str] = None,
-        names: list[str] = None,
-        regions: list[str] = None,
+        guids: list[str] | None = None,
+        label_selector: list[str] | None = None,
+        names: list[str] | None = None,
+        regions: list[str] | None = None,
         **kwargs,
     ) -> StaticRouteList:
         """List all static routes in a project.
@@ -849,7 +905,9 @@ class AsyncClient:
         handle_server_errors(response=result)
         return StaticRouteList(**result.json())
 
-    async def create_staticroute(self, body: StaticRoute | dict, **kwargs) -> StaticRoute:
+    async def create_staticroute(
+        self, body: StaticRoute | dict[str, Any], **kwargs
+    ) -> StaticRoute:
         """Create a new static route.
 
         Args:
@@ -888,7 +946,7 @@ class AsyncClient:
         return StaticRoute(**result.json())
 
     async def update_staticroute(
-        self, name: str, body: StaticRoute | dict, **kwargs
+        self, name: str, body: StaticRoute | dict[str, Any], **kwargs
     ) -> StaticRoute:
         """Update a static route by its name.
 
@@ -933,13 +991,13 @@ class AsyncClient:
         self,
         cont: int = 0,
         limit: int = 50,
-        device_name: str = None,
-        label_selector: list[str] = None,
-        names: list[str] = None,
-        network_type: str = None,
-        phases: list[str] = None,
-        regions: list[str] = None,
-        status: list[str] = None,
+        device_name: str | None = None,
+        label_selector: list[str] | None = None,
+        names: list[str] | None = None,
+        network_type: str | None = None,
+        phases: list[str] | None = None,
+        regions: list[str] | None = None,
+        status: list[str] | None = None,
         **kwargs,
     ) -> NetworkList:
         """List all networks in a project.
@@ -978,7 +1036,7 @@ class AsyncClient:
         handle_server_errors(response=result)
         return NetworkList(**result.json())
 
-    async def create_network(self, body: Network | dict, **kwargs) -> Network:
+    async def create_network(self, body: Network | dict[str, Any], **kwargs) -> Network:
         """Create a new network.
 
         Args:
@@ -1039,9 +1097,9 @@ class AsyncClient:
         self,
         cont: int = 0,
         limit: int = 50,
-        label_selector: list[str] = None,
-        names: list[str] = None,
-        regions: list[str] = None,
+        label_selector: list[str] | None = None,
+        names: list[str] | None = None,
+        regions: list[str] | None = None,
         **kwargs,
     ) -> SecretList:
         """List all secrets in a project.
@@ -1057,7 +1115,7 @@ class AsyncClient:
             List of secrets as a dictionary.
         """
 
-        parameters = {
+        parameters: dict[str, Any] = {
             "continue": cont,
             "limit": limit,
         }
@@ -1077,7 +1135,7 @@ class AsyncClient:
         handle_server_errors(response=result)
         return SecretList(**result.json())
 
-    async def create_secret(self, body: Secret | dict, **kwargs) -> Secret:
+    async def create_secret(self, body: SecretCreate | dict[str, Any], **kwargs) -> Secret:
         """Create a new secret.
 
         Args:
@@ -1087,7 +1145,7 @@ class AsyncClient:
             Secret: Secret details as a Secret object.
         """
         if isinstance(body, dict):
-            body = Secret.model_validate(body)
+            body = SecretCreate.model_validate(body)
 
         result = await self.c.post(
             url=f"{self.v2api_host}/v2/secrets/",
@@ -1116,7 +1174,9 @@ class AsyncClient:
 
         return Secret(**result.json())
 
-    async def update_secret(self, name: str, body: Secret | dict, **kwargs) -> Secret:
+    async def update_secret(
+        self, name: str, body: Secret | dict[str, Any], **kwargs
+    ) -> Secret:
         """Update a secret by its name.
 
         Args:
@@ -1345,7 +1405,7 @@ class AsyncClient:
         content_types: list[str] = None,
         include_data: bool = False,
         key_prefixes: list[str] = None,
-        revision: str = None,
+        revision: str | None = None,
         with_project: bool = True,
         **kwargs,
     ) -> dict[str, Any]:
@@ -1377,7 +1437,7 @@ class AsyncClient:
         return result.json()
 
     async def set_configtree_revision(
-        self, name: str, configtree: object, project_guid: str = None, **kwargs
+        self, name: str, configtree: object, project_guid: str | None = None, **kwargs
     ) -> dict[str, Any]:
         """Set a config tree revision.
 
@@ -1479,7 +1539,7 @@ class AsyncClient:
         return result.json()
 
     async def create_revision(
-        self, name: str, body: dict, project_guid: str = None, **kwargs
+        self, name: str, body: dict, project_guid: str | None = None, **kwargs
     ) -> dict[str, Any]:
         """Create a new revision.
 
@@ -1528,9 +1588,9 @@ class AsyncClient:
         self,
         tree_name: str,
         revision_id: str,
-        author: str = None,
-        message: str = None,
-        project_guid: str = None,
+        author: str | None = None,
+        message: str | None = None,
+        project_guid: str | None = None,
         **kwargs,
     ) -> dict[str, Any]:
         """Commit a revision.
@@ -1564,7 +1624,7 @@ class AsyncClient:
         tree_name: str,
         revision_id: str,
         key: str,
-        project_guid: str = None,
+        project_guid: str | None = None,
         **kwargs,
     ) -> dict[str, Any]:
         """Get a key in a revision.
@@ -1592,7 +1652,7 @@ class AsyncClient:
         tree_name: str,
         revision_id: str,
         key: str,
-        project_guid: str = None,
+        project_guid: str | None = None,
         **kwargs,
     ) -> dict[str, Any]:
         """Put a key in a revision.
@@ -1619,7 +1679,7 @@ class AsyncClient:
         tree_name: str,
         revision_id: str,
         key: str,
-        project_guid: str = None,
+        project_guid: str | None = None,
         **kwargs,
     ) -> None:
         """Delete a key in a revision.
@@ -1647,7 +1707,7 @@ class AsyncClient:
         revision_id: str,
         key: str,
         config_key_rename: dict,
-        project_guid: str = None,
+        project_guid: str | None = None,
         **kwargs,
     ) -> dict[str, Any]:
         """Rename a key in a revision.
@@ -1740,7 +1800,7 @@ class AsyncClient:
         return ManagedServiceInstance(**result.json())
 
     async def create_instance(
-        self, body: ManagedServiceInstance | dict
+        self, body: ManagedServiceInstance | dict[str, Any]
     ) -> ManagedServiceInstance:
         """Create a new instance.
 
@@ -1805,7 +1865,7 @@ class AsyncClient:
         return ManagedServiceBindingList(**result.json())
 
     async def create_instance_binding(
-        self, instance_name: str, body: ManagedServiceBinding | dict
+        self, instance_name: str, body: ManagedServiceBinding | dict[str, Any]
     ) -> dict[str, Any]:
         """Create a new instance binding.
 
@@ -1865,3 +1925,226 @@ class AsyncClient:
         )
         handle_server_errors(result)
         return None
+
+    # -------------------Usergroup-------------------
+    async def list_user_groups(
+        self,
+        cont: int = 0,
+        limit: int = 50,
+        label_selector: list[str] | None = None,
+        name: str | None = None,
+        **kwargs,
+    ) -> UserGroupList:
+        parameters: dict[str, Any] = {
+            "continue": cont,
+            "limit": limit,
+        }
+        if label_selector:
+            parameters["labelSelector"] = label_selector
+        if name:
+            parameters["name"] = name
+
+        result = await self.c.get(
+            url=f"{self.v2api_host}/v2/usergroups/",
+            headers=self.config.get_headers(with_project=False, **kwargs),
+            params=parameters,
+        )
+
+        handle_server_errors(response=result)
+
+        return UserGroupList(**result.json())
+
+    async def get_user_group(
+        self, group_name: str, group_guid: str, **kwargs
+    ) -> UserGroup:
+        result = await self.c.get(
+            url=f"{self.v2api_host}/v2/usergroups/{group_name}/",
+            headers=self.config.get_headers(
+                with_project=False, with_group=True, group_guid=group_guid, **kwargs
+            ),
+        )
+        handle_server_errors(result)
+
+        return UserGroup(**result.json())
+
+    async def create_user_group(self, user_group: UserGroup, **kwargs) -> UserGroup:
+        result = await self.c.post(
+            url=f"{self.v2api_host}/v2/usergroups/",
+            headers=self.config.get_headers(with_project=False, **kwargs),
+            json=user_group.model_dump(),
+        )
+        handle_server_errors(result)
+
+        return UserGroup(**result.json())
+
+    async def update_user_group(self, user_group: UserGroup, **kwargs) -> UserGroup:
+        result = await self.c.put(
+            url=f"{self.v2api_host}/v2/usergroups/{user_group.metadata.name}/",
+            headers=self.config.get_headers(
+                with_project=False,
+                with_group=True,
+                group_guid=user_group.metadata.guid,
+                **kwargs,
+            ),
+            json=user_group.model_dump(),
+        )
+        handle_server_errors(result)
+
+        return UserGroup(**result.json())
+
+    async def delete_user_group(self, group_name: str, group_guid: str, **kwargs) -> None:
+        result = await self.c.delete(
+            url=f"{self.v2api_host}/v2/usergroups/{group_name}/",
+            headers=self.config.get_headers(
+                with_project=False, with_group=True, group_guid=group_guid, **kwargs
+            ),
+        )
+        handle_server_errors(result)
+
+    # -------------------Roles-------------------
+    async def list_roles(
+        self,
+        cont: int = 0,
+        limit: int = 50,
+        label_selector: list[str] | None = None,
+        name: str | None = None,
+        **kwargs,
+    ) -> RoleList:
+        parameters: dict[str, Any] = {
+            "continue": cont,
+            "limit": limit,
+        }
+        if label_selector:
+            parameters["labelSelector"] = label_selector
+        if name:
+            parameters["name"] = name
+
+        result = await self.c.get(
+            url=f"{self.v2api_host}/v2/roles/",
+            headers=self.config.get_headers(with_project=False, **kwargs),
+            params=parameters,
+        )
+
+        handle_server_errors(result)
+
+        return RoleList(**result.json())
+
+    async def get_role(self, role_name: str, **kwargs) -> Role:
+        result = await self.c.get(
+            url=f"{self.v2api_host}/v2/roles/{role_name}/",
+            headers=self.config.get_headers(with_project=False, **kwargs),
+        )
+        handle_server_errors(result)
+
+        return Role(**result.json())
+
+    async def create_role(self, role: Role | dict, **kwargs) -> Role:
+        if isinstance(role, dict):
+            role = Role.model_validate(role)
+        result = await self.c.post(
+            url=f"{self.v2api_host}/v2/roles/",
+            headers=self.config.get_headers(with_project=False, **kwargs),
+            json=role.model_dump(),
+        )
+        handle_server_errors(result)
+
+        return Role(**result.json())
+
+    async def update_role(self, role: Role, **kwargs) -> Role:
+        result = await self.c.put(
+            url=f"{self.v2api_host}/v2/roles/{role.metadata.name}/",
+            headers=self.config.get_headers(with_project=False, **kwargs),
+            json=role.model_dump(),
+        )
+        handle_server_errors(result)
+
+        return Role(**result.json())
+
+    async def delete_role(self, role_name: str, **kwargs) -> None:
+        result = await self.c.delete(
+            url=f"{self.v2api_host}/v2/roles/{role_name}/",
+            headers=self.config.get_headers(with_project=False, **kwargs),
+        )
+        handle_server_errors(result)
+
+    # -------------------RoleBindings-------------------
+    async def list_role_bindings(
+        self,
+        cont: int = 0,
+        limit: int = 50,
+        label_selector: list[str] | None = None,
+        role_names: list[str] | None = None,
+        subject_guids: list[str] | None = None,
+        subject_names: list[str] | None = None,
+        subject_kinds: list[str] | None = None,
+        domain_guids: list[str] | None = None,
+        domain_names: list[str] | None = None,
+        domain_kinds: list[str] | None = None,
+        guids: list[str] | None = None,
+        **kwargs,
+    ) -> RoleBindingList:
+        parameters: dict[str, Any] = {
+            "continue": cont,
+            "limit": limit,
+        }
+        if label_selector:
+            parameters["labelSelector"] = label_selector
+        if role_names:
+            parameters["roleNames"] = role_names
+        if subject_guids:
+            parameters["subjectGUIDS"] = subject_guids
+        if subject_names:
+            parameters["subjectNames"] = subject_names
+        if subject_kinds:
+            parameters["subjectKinds"] = subject_kinds
+        if domain_guids:
+            parameters["domainGUIDS"] = domain_guids
+        if domain_names:
+            parameters["domainNames"] = domain_names
+        if domain_kinds:
+            parameters["domainKinds"] = domain_kinds
+        if guids:
+            parameters["guids"] = guids
+
+        result = await self.c.get(
+            url=f"{self.v2api_host}/v2/role-bindings/",
+            headers=self.config.get_headers(with_project=False, **kwargs),
+            params=parameters,
+        )
+
+        handle_server_errors(result)
+
+        return RoleBindingList(**result.json())
+
+    async def get_role_binding(self, binding_guid: str, **kwargs) -> RoleBinding:
+        result = await self.c.get(
+            url=f"{self.v2api_host}/v2/role-bindings/{binding_guid}/",
+            headers=self.config.get_headers(with_project=False, **kwargs),
+        )
+        handle_server_errors(result)
+
+        return RoleBinding(**result.json())
+
+    async def update_role_binding(
+        self, binding: BulkRoleBindingUpdate | dict, **kwargs
+    ) -> RoleBinding:
+        if isinstance(binding, dict):
+            binding = BulkRoleBindingUpdate.model_validate(binding)
+        result = await self.c.put(
+            url=f"{self.v2api_host}/v2/role-bindings/",
+            headers=self.config.get_headers(with_project=False, **kwargs),
+            json=binding.model_dump(),
+        )
+        handle_server_errors(result)
+
+        try:
+            return RoleBinding(**result.json())
+        except Exception:
+            return result.json()
+
+    async def delete_role_binding(self, binding_guid: str, **kwargs) -> None:
+        result = await self.c.delete(
+            url=f"{self.v2api_host}/v2/role-bindings/{binding_guid}/",
+            headers=self.config.get_headers(with_project=False, **kwargs),
+        )
+        handle_server_errors(result)

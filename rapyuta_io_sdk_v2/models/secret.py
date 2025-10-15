@@ -6,49 +6,46 @@ providing validation for Secret resources to help users identify missing or
 incorrect fields.
 """
 
-from pydantic import BaseModel, Field, field_validator
+from typing import Literal
 
-from rapyuta_io_sdk_v2.models.utils import BaseMetadata, BaseList
+from pydantic import BaseModel, Field
+
+from rapyuta_io_sdk_v2.models.utils import BaseList, BaseMetadata, BaseObject
 
 
 class DockerSpec(BaseModel):
-    """Docker registry configuration for secrets."""
-
     registry: str = Field(
         default="https://index.docker.io/v1/", description="Docker registry URL"
     )
     username: str = Field(description="Username for docker registry authentication")
-    password: str | None = Field(
-        default=None, description="Password for docker registry authentication"
-    )
     email: str = Field(description="Email for docker registry authentication")
-
-    @field_validator("registry", "username", "password", "email", mode="after")
-    @classmethod
-    def not_empty(cls, v, info):
-        # Only require password if it's not None
-        if info.field_name == "password" and v is None:
-            return v
-        if not v or (isinstance(v, str) and v.strip() == ""):
-            raise ValueError(f"{info.field_name} is required and cannot be empty")
-        return v
+    
+class DockerSpecCreate(DockerSpec):
+    password: str = Field(description="Password for docker registry authentication")
+    
+    
 
 
 class SecretSpec(BaseModel):
     """Specification for Secret resource."""
 
-    docker: DockerSpec | None = Field(
-        default=None, description="Docker registry configuration when type is Docker"
+    docker: DockerSpec = Field(
+        description="Docker registry configuration when type is Docker"
     )
 
+class SecretSpecCreate(BaseModel):
+    docker: DockerSpecCreate
 
-class Secret(BaseModel):
+
+class Secret(BaseObject):
     """Secret model."""
 
-    apiVersion: str | None = None
-    kind: str | None = None
-    metadata: BaseMetadata | None = None
+    kind: Literal["Secret"] | None = "Secret"
+    metadata: BaseMetadata
     spec: SecretSpec = Field(description="Specification for the Secret resource")
+
+class SecretCreate(Secret):
+    spec: SecretSpecCreate
 
 
 class SecretList(BaseList[Secret]):
