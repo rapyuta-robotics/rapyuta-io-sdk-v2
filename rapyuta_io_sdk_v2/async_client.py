@@ -51,7 +51,6 @@ from rapyuta_io_sdk_v2.models import (
     RoleBinding,
     RoleBindingList,
     BulkRoleBindingUpdate,
-    BulkRoleBindingCreate,
     RoleList,
 )
 from rapyuta_io_sdk_v2.utils import handle_server_errors
@@ -2143,30 +2142,13 @@ class AsyncClient:
 
         return RoleBinding(**result.json())
 
-    async def create_role_binding(
-        self, binding: BulkRoleBindingCreate | dict, **kwargs
-    ) -> RoleBinding:
-        if isinstance(binding, dict):
-            binding = BulkRoleBindingCreate.model_validate(binding)
-        result = await self.c.post(
-            url=f"{self.v2api_host}/v2/role-bindings/",
-            headers=self.config.get_headers(with_project=False, **kwargs),
-            json=binding.model_dump(),
-        )
-        handle_server_errors(result)
-
-        try:
-            return RoleBinding(**result.json())
-        except Exception:
-            return result.json()
-
     async def update_role_binding(
         self, binding: BulkRoleBindingUpdate | dict, **kwargs
     ) -> RoleBinding:
         if isinstance(binding, dict):
             binding = BulkRoleBindingUpdate.model_validate(binding)
         result = await self.c.put(
-            url=f"{self.v2api_host}/v2/roles/{binding.metadata.guid}/",
+            url=f"{self.v2api_host}/v2/role-bindings/",
             headers=self.config.get_headers(with_project=False, **kwargs),
             json=binding.model_dump(),
         )

@@ -50,7 +50,6 @@ from rapyuta_io_sdk_v2.models import (
     Role,
     RoleBinding,
     RoleBindingList,
-    BulkRoleBindingCreate,
     BulkRoleBindingUpdate,
     RoleList,
     OAuth2UpdateURI,
@@ -2043,29 +2042,13 @@ class Client:
 
         return RoleBinding(**result.json())
 
-    def create_role_binding(
-        self, binding: BulkRoleBindingCreate | dict, **kwargs
-    ) -> RoleBinding:
-        if isinstance(binding, dict):
-            binding = BulkRoleBindingCreate.model_validate(binding)
-        result = self.c.post(
-            url=f"{self.v2api_host}/v2/role-bindings/",
-            headers=self.config.get_headers(with_project=False, **kwargs),
-            json=binding.model_dump(by_alias=True),
-        )
-        handle_server_errors(result)
-        try:
-            return RoleBinding(**result.json())
-        except Exception:
-            return result.json()
-
     def update_role_binding(
         self, binding: BulkRoleBindingUpdate | dict, **kwargs
     ) -> RoleBinding:
         if isinstance(binding, dict):
             binding = BulkRoleBindingUpdate.model_validate(binding)
         result = self.c.put(
-            url=f"{self.v2api_host}/v2/roles/{binding.metadata.guid}/",
+            url=f"{self.v2api_host}/v2/role-bindings/",
             headers=self.config.get_headers(with_project=False, **kwargs),
             json=binding.model_dump(by_alias=True),
         )
