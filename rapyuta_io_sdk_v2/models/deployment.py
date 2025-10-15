@@ -88,7 +88,7 @@ class DeploymentROSNetwork(BaseModel):
     """ROS Network configuration matching Go DeploymentROSNetwork struct."""
 
     depends: NetworkDepends
-    domainID: int | None | None = Field(default=None, default=None, description="ROS Domain ID")
+    domainID: int | None | None = Field(default=None, description="ROS Domain ID")
     interface: str | None = Field(default=None, description="Network interface")
 
     @model_validator(mode="before")
