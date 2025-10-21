@@ -1,3 +1,10 @@
+## [0.2.1](https://github.com/rapyuta-robotics/rapyuta-io-sdk-v2/compare/v0.2.0...v0.2.1) (2025-10-21)
+
+
+### Bug Fixes
+
+* **pydantic_source:** moved pydantic_source under rapyuta_io_sdk_v2 ([c71f32c](https://github.com/rapyuta-robotics/rapyuta-io-sdk-v2/commit/c71f32c2dbc068be69de03905d53d872ca6eb9dd))
+
 # [0.2.0](https://github.com/rapyuta-robotics/rapyuta-io-sdk-v2/compare/v0.1.0...v0.2.0) (2025-04-09)
 
 
