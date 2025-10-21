@@ -9,7 +9,7 @@ from pydantic_settings import (
 )
 
 from rapyuta_io_sdk_v2 import Configuration
-from pydantic_source import ConfigTreeSource
+from rapyuta_io_sdk_v2.pydantic_source import ConfigTreeSource
 
 app = FastAPI()
 
@@ -24,16 +24,16 @@ class AuthConfig(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env")
 
     env: str
-    auth_token: str
-    organization_guid: str = Field(alias="ORG")
-    project_guid: str = Field(alias="PROJ")
+    auth_token: str = Field(alias="RIO_AuthToken")
+    organization_guid: str = Field(alias="RIO_ORGANIZATION_ID")
+    project_guid: str = Field(alias="RIO_PROJECT_ID")
 
     def __new__(cls, *args, **kwargs):
         instance = super().__new__(cls)
         cls.__init__(instance, *args, **kwargs)
 
         return Configuration(
-            auth_token=instance.auth_token,
+            auth_token=instance.auth_token.removeprefix("Bearer "),
             environment=instance.env,
             organization_guid=instance.organization_guid,
             project_guid=instance.project_guid,
@@ -251,4 +251,4 @@ def get_configtrees_local():
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run(app, host="0.0.0.0", port=8000)

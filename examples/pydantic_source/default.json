@@ -1,12 +1,16 @@
 {
-    "apis": {
-        "services": {
-            "value": "services inside the local file",
-            "description": "Description"
-        }
-    },
-    "common": {
-        "value": "common in local file",
-        "description": "Common Description"
+  "apis": {
+    "services": {
+      "value": "services inside the local file",
+	  "metadata": {
+        "description": "Description"
+	  }
     }
+  },
+  "common": {
+    "value": "common in local file",
+	"metadata": {
+      "description": "Common Description"
+	}
+  }
 }
