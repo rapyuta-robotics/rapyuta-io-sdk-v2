@@ -1,3 +1,10 @@
+## [0.2.2](https://github.com/rapyuta-robotics/rapyuta-io-sdk-v2/compare/v0.2.1...v0.2.2) (2025-10-21)
+
+
+### Bug Fixes
+
+* **config:** adds support for local v2-configtree env ([f30ec37](https://github.com/rapyuta-robotics/rapyuta-io-sdk-v2/commit/f30ec37bb465020c91d630d9784b861667b4f4cb))
+
 ## [0.2.1](https://github.com/rapyuta-robotics/rapyuta-io-sdk-v2/compare/v0.2.0...v0.2.1) (2025-10-21)
 
 
