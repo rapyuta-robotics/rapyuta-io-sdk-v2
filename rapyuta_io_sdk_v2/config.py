@@ -129,6 +129,11 @@ class Configuration(object):
         """
         name = name or "ga"  # Default to prod.
 
+        if name == "local":
+            self.hosts["environment"] = name
+            self.hosts["v2api_host"] = "http://v2-apiserver:8080"
+            return
+
         if name == "ga":
             self.hosts["environment"] = "ga"
             self.hosts["rip_host"] = "https://garip.apps.okd4v2.prod.rapyuta.io"
