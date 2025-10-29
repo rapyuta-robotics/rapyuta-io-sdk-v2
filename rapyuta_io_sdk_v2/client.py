@@ -667,6 +667,17 @@ class Client:
         handle_server_errors(result)
         return result
 
+    def stream_deployment_logs(self, name: str, executable: str, replica: int = 0):
+        url = f"{self.v2api_host}/v2/deployments/{name}/logs/?replica={replica}&executable={executable}"
+
+        with self.c.stream("GET", url=url, headers=self.config.get_headers()) as response:
+            # check status without reading the streaming content
+            response.raise_for_status()
+
+            for line in response.iter_lines():
+                if line:
+                    yield line
+
     # -------------------Disks-------------------
     def list_disks(
         self,

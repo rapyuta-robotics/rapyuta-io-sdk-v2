@@ -689,6 +689,19 @@ class AsyncClient:
         handle_server_errors(result)
         return result.json()
 
+    async def stream_deployment_logs(self, name: str, executable: str, replica: int = 0):
+        """Asynchronously stream logs for a deployment executable replica."""
+        url = f"{self.v2api_host}/v2/deployments/{name}/logs/?replica={replica}&executable={executable}"
+
+        async with self.c.stream(
+            "GET", url=url, headers=self.config.get_headers()
+        ) as response:
+            response.raise_for_status()
+
+            async for line in response.aiter_lines():
+                if line:
+                    yield line
+
     # -------------------Disks-------------------
 
     async def list_disks(
