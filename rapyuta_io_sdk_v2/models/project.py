@@ -57,7 +57,8 @@ class FeaturesDockerCache(BaseModel):
 class Features(BaseModel):
     vpn: FeaturesVPN | None = None
     dockerCache: FeaturesDockerCache | None = None
-    
+
+
 class ProjectMetadata(BaseMetadata):
     @model_validator(mode="after")
     def validate_project_name(self):
