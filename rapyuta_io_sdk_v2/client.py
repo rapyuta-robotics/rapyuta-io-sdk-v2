@@ -1968,6 +1968,8 @@ class Client:
         return Role(**result.json())
 
     def update_role(self, role: Role, **kwargs) -> Role:
+        if isinstance(role, dict):
+            role = Role.model_validate(role)
         result = self.c.put(
             url=f"{self.v2api_host}/v2/roles/{role.metadata.name}/",
             headers=self.config.get_headers(with_project=False, **kwargs),

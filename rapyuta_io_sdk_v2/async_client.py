@@ -1147,7 +1147,9 @@ class AsyncClient:
         handle_server_errors(response=result)
         return SecretList(**result.json())
 
-    async def create_secret(self, body: SecretCreate | dict[str, Any], **kwargs) -> Secret:
+    async def create_secret(
+        self, body: SecretCreate | dict[str, Any], **kwargs
+    ) -> Secret:
         """Create a new secret.
 
         Args:
@@ -2068,6 +2070,8 @@ class AsyncClient:
         return Role(**result.json())
 
     async def update_role(self, role: Role, **kwargs) -> Role:
+        if isinstance(role, dict):
+            role = Role.model_validate(role)
         result = await self.c.put(
             url=f"{self.v2api_host}/v2/roles/{role.metadata.name}/",
             headers=self.config.get_headers(with_project=False, **kwargs),

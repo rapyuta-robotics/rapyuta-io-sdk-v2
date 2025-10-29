@@ -19,11 +19,10 @@ class DockerSpec(BaseModel):
     )
     username: str = Field(description="Username for docker registry authentication")
     email: str = Field(description="Email for docker registry authentication")
-    
+
+
 class DockerSpecCreate(DockerSpec):
     password: str = Field(description="Password for docker registry authentication")
-    
-    
 
 
 class SecretSpec(BaseModel):
@@ -32,6 +31,7 @@ class SecretSpec(BaseModel):
     docker: DockerSpec = Field(
         description="Docker registry configuration when type is Docker"
     )
+
 
 class SecretSpecCreate(BaseModel):
     docker: DockerSpecCreate
@@ -43,6 +43,7 @@ class Secret(BaseObject):
     kind: Literal["Secret"] | None = "Secret"
     metadata: BaseMetadata
     spec: SecretSpec = Field(description="Specification for the Secret resource")
+
 
 class SecretCreate(Secret):
     spec: SecretSpecCreate
