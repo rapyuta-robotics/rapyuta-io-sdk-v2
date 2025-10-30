@@ -34,6 +34,7 @@ class DeploymentMetadata(BaseMetadata):
     """Metadata for Deployment resource."""
 
     depends: PackageDepends | None = None
+    generation: int | None = None
 
 
 class EnvArgsSpec(BaseModel):
