@@ -7,27 +7,25 @@ incorrect fields.
 """
 
 from typing import Literal
+
 from pydantic import BaseModel, Field, model_validator
 
 from rapyuta_io_sdk_v2.models.utils import (
-    BaseMetadata,
     BaseList,
-    Depends,
+    BaseMetadata,
+    BaseObject,
+    DeploymentDepends,
     DeploymentPhase,
     DeploymentStatusType,
+    DeviceDepends,
+    DiskDepends,
     ExecutableStatusType,
+    NetworkDepends,
+    PackageDepends,
     RestartPolicy,
     Runtime,
+    StaticRouteDepends,
 )
-
-
-class StringMap(dict[str, str]):
-    pass
-
-
-# --- Depends Models ---
-class PackageDepends(Depends):
-    kind: Literal["package"] = Field(default="package")
 
 
 class DeploymentMetadata(BaseMetadata):
@@ -45,13 +43,13 @@ class EnvArgsSpec(BaseModel):
 class DeploymentVolume(BaseModel):
     """Unified volume spec matching Go DeploymentVolume struct."""
 
-    execName: str | None = None
-    mountPath: str | None = None
-    subPath: str | None = None
+    exec_name: str | None = Field(default=None, alias="execName")
+    mount_path: str | None = Field(default=None, alias="mountPath")
+    sub_path: str | None = Field(default=None, alias="subPath")
     uid: int | None = None
     gid: int | None = None
     perm: int | None = None
-    depends: Depends | None = None
+    depends: DiskDepends | None = None
 
     @model_validator(mode="before")
     @classmethod
@@ -70,22 +68,7 @@ class DeploymentStaticRoute(BaseModel):
 
     name: str | None = None
     url: str | None = None
-    depends: Depends | None = None
-
-    @model_validator(mode="before")
-    @classmethod
-    def handle_empty_depends(cls, data):
-        """Handle empty depends dictionaries by converting them to None."""
-        if isinstance(data, dict) and "depends" in data:
-            depends = data["depends"]
-            # If depends is an empty dictionary, set it to None
-            if isinstance(depends, dict) and not depends:
-                data["depends"] = None
-        return data
-
-
-class ManagedServiceSpec(BaseModel):
-    depends: dict[str, str] | None = None
+    depends: StaticRouteDepends
 
     @model_validator(mode="before")
     @classmethod
@@ -102,8 +85,8 @@ class ManagedServiceSpec(BaseModel):
 class DeploymentROSNetwork(BaseModel):
     """ROS Network configuration matching Go DeploymentROSNetwork struct."""
 
-    domainID: int | None = Field(default=None, description="ROS Domain ID")
-    depends: Depends | None = None
+    depends: NetworkDepends
+    domainID: int | None | None = Field(default=None, description="ROS Domain ID")
     interface: str | None = Field(default=None, description="Network interface")
 
     @model_validator(mode="before")
@@ -142,11 +125,11 @@ class DeploymentFeatures(BaseModel):
 class DeploymentDevice(BaseModel):
     """Device configuration matching Go DeploymentDevice struct."""
 
-    depends: Depends | None = None
+    depends: DeviceDepends
 
     @model_validator(mode="before")
-    @classmethod
-    def handle_empty_depends(cls, data):
+    @staticmethod
+    def handle_empty_depends(data):
         """Handle empty depends dictionaries by converting them to None."""
         if isinstance(data, dict) and "depends" in data:
             depends = data["depends"]
@@ -158,7 +141,7 @@ class DeploymentDevice(BaseModel):
 
 class DeploymentSpec(BaseModel):
     runtime: Runtime
-    depends: list[Depends] | None = None
+    depends: list[DeploymentDepends] | None = None
     device: DeploymentDevice | None = None
     restart: RestartPolicy = Field(default="always")
     envArgs: list[EnvArgsSpec] | None = None
@@ -166,7 +149,6 @@ class DeploymentSpec(BaseModel):
     rosNetworks: list[DeploymentROSNetwork] | None = None
     features: DeploymentFeatures | None = None
     staticRoutes: list[DeploymentStaticRoute] | None = None
-    managedServices: list[ManagedServiceSpec] | None = None
 
     @model_validator(mode="after")
     def validate_runtime_and_volumes(self):
@@ -197,12 +179,12 @@ class DeploymentSpec(BaseModel):
 
 
 class ExecutableStatus(BaseModel):
-    name: str | None = None
+    name: str
     status: ExecutableStatusType | None = None
-    errorCode: str | None = Field(default=None, alias="error_code")
+    error_code: str | None = None
     reason: str | None = None
-    restartCount: int | None = Field(default=None, alias="restart_count")  # int32 in Go
-    exitCode: int | None = Field(default=None, alias="exit_code")  # int32 in Go
+    restart_count: int | None = None
+    exit_code: int | None = None
 
 
 class DependentDeploymentStatus(BaseModel):
@@ -210,7 +192,7 @@ class DependentDeploymentStatus(BaseModel):
     guid: str | None = None
     status: DeploymentStatusType | None = None
     phase: DeploymentPhase | None = None
-    errorCodes: list[str] | None = Field(default=None, alias="error_codes")
+    errorCodes: list[str] | None = None
 
 
 class DependentNetworkStatus(BaseModel):
@@ -237,18 +219,17 @@ class Dependencies(BaseModel):
 class DeploymentStatus(BaseModel):
     phase: DeploymentPhase | None = None
     status: DeploymentStatusType | None = None
-    errorCodes: list[str] | None = Field(default=None, alias="error_codes")
-    executablesStatus: dict[str, ExecutableStatus] | None = Field(
-        default=None, alias="executables_status"
+    error_codes: list[str] | None = Field(default=None, alias="errorCodes")
+    executables_status: dict[str, ExecutableStatus] | None = Field(
+        default=None, alias="executablesStatus"
     )
     dependencies: Dependencies | None = None
 
 
-class Deployment(BaseModel):
+class Deployment(BaseObject):
     """Deployment model."""
 
-    apiVersion: str | None = None
-    kind: str | None = None
+    kind: Literal["Deployment"] | None = "Deployment"
     metadata: DeploymentMetadata
     spec: DeploymentSpec
     status: DeploymentStatus | None = None
