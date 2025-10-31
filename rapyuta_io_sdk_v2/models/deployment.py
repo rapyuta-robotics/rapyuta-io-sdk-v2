@@ -160,7 +160,7 @@ class DeploymentSpec(BaseModel):
     runtime: Runtime
     depends: list[Depends] | None = None
     device: DeploymentDevice | None = None
-    restart: RestartPolicy = Field(default="always")
+    restart: RestartPolicy | None = None
     envArgs: list[EnvArgsSpec] | None = None
     volumes: list[DeploymentVolume] | None = None
     rosNetworks: list[DeploymentROSNetwork] | None = None
