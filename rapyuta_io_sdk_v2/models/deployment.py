@@ -40,6 +40,8 @@ class DeploymentMetadata(BaseMetadata):
 class EnvArgsSpec(BaseModel):
     name: str
     value: str | None = None
+    exposed: bool | None = None
+    exposed_name: str | None = Field(default=None, alias='exposedName')
 
 
 class DeploymentVolume(BaseModel):
