@@ -96,8 +96,9 @@ class Depends(BaseModel):
     name_or_guid: str = Field(validation_alias=AliasChoices("nameOrGuid", "nameOrGUID"))
 
 
-class PackageDepends(Depends):
+class PackageDepends(BaseModel):
     kind: Literal["Package", "package"] = "Package"
+    name_or_guid: str = Field(alias="nameOrGUID")
     version: str
 
 
