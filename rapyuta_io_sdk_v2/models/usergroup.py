@@ -13,12 +13,12 @@ from rapyuta_io_sdk_v2.models.utils import (
 
 class UserGroupMember(BaseModel):
     subject: Subject
-    roles: list[str]
+    role_names: list[str] = Field(alias="roleNames")
 
 
 class UserGroupBinding(BaseModel):
     domain: Domain
-    role: str
+    role_name: str = Field(alias="roleName")
 
 
 class UserGroupSpec(BaseModel):
