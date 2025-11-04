@@ -1125,7 +1125,7 @@ class Client:
         handle_server_errors(response=result)
         return Secret(**result.json())
 
-    def update_secret(self, name: str, body: Secret | dict[str, Any], **kwargs) -> Secret:
+    def update_secret(self, name: str, body: SecretCreate | dict[str, Any], **kwargs) -> Secret:
         """Update a secret by its name.
 
         Args:
@@ -1136,7 +1136,7 @@ class Client:
             Secret: Secret details.
         """
         if isinstance(body, dict):
-            body = Secret.model_validate(body)
+            body = SecretCreate.model_validate(body)
 
         result = self.c.put(
             url=f"{self.v2api_host}/v2/secrets/{name}/",
@@ -1884,7 +1884,9 @@ class Client:
 
         return UserGroup(**result.json())
 
-    def create_user_group(self, user_group: UserGroup, **kwargs) -> UserGroup:
+    def create_user_group(self, user_group: UserGroup|dict, **kwargs) -> UserGroup:
+        if isinstance(user_group, dict):
+            user_group = UserGroup.model_validate(user_group)
         result = self.c.post(
             url=f"{self.v2api_host}/v2/usergroups/",
             headers=self.config.get_headers(with_project=False, **kwargs),
@@ -1894,7 +1896,9 @@ class Client:
 
         return UserGroup(**result.json())
 
-    def update_user_group(self, user_group: UserGroup, **kwargs) -> UserGroup:
+    def update_user_group(self, user_group: UserGroup | dict, **kwargs) -> UserGroup:
+        if isinstance(user_group, dict):
+            user_group = UserGroup.model_validate(user_group)
         result = self.c.put(
             url=f"{self.v2api_host}/v2/usergroups/{user_group.metadata.name}/",
             headers=self.config.get_headers(
