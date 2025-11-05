@@ -1481,7 +1481,7 @@ class Client:
         return result.json()
 
     def create_revision(
-        self, name: str, body: dict[str, Any], project_guid: str | None = None, **kwargs
+        self, name: str, body: dict[str, Any] | None = None, project_guid: str | None = None, **kwargs
     ) -> dict[str, Any]:
         """Create a new revision.
 

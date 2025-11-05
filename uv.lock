@@ -707,7 +707,7 @@ dev = [
 requires-dist = [
     { name = "httpx", specifier = ">=0.27.2" },
     { name = "pydantic-settings", specifier = ">=2.7.1" },
-    { name = "python-benedict", specifier = ">=0.34.1" },
+    { name = "python-benedict", specifier = ">=0.30" },
     { name = "pyyaml", specifier = ">=6.0.2" },
 ]
 
