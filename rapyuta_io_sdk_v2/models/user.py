@@ -62,7 +62,9 @@ class UserUserGroup(BaseModel):
     guid: str | None = None
     name: str | None = None
     creator: str | None = None
-    organization_creator_guid: str | None = Field(default=None, alias="organizationCreatorGUID")
+    organization_creator_guid: str | None = Field(
+        default=None, alias="organizationCreatorGUID"
+    )
     organization_guid: str | None = Field(default=None, alias="organizationGUID")
     role_names: list[str] = Field(alias="roleNames")
 

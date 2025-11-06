@@ -1125,7 +1125,9 @@ class Client:
         handle_server_errors(response=result)
         return Secret(**result.json())
 
-    def update_secret(self, name: str, body: SecretCreate | dict[str, Any], **kwargs) -> Secret:
+    def update_secret(
+        self, name: str, body: SecretCreate | dict[str, Any], **kwargs
+    ) -> Secret:
         """Update a secret by its name.
 
         Args:
@@ -1370,15 +1372,19 @@ class Client:
         Returns:
             Config tree details as a dictionary.
         """
+        parameters = {}
+        if content_types:
+            parameters["contentTypes"] = content_types
+        if include_data:
+            parameters["includeData"] = include_data
+        if key_prefixes:
+            parameters["keyPrefixes"] = key_prefixes
+        if revision:
+            parameters["revision"] = revision
         result = self.c.get(
             url=f"{self.v2api_host}/v2/configtrees/{name}/",
             headers=self.config.get_headers(with_project=with_project, **kwargs),
-            params={
-                "contentTypes": content_types,
-                "includeData": include_data,
-                "keyPrefixes": key_prefixes,
-                "revision": revision,
-            },
+            params=parameters,
         )
         handle_server_errors(result)
         return result.json()
@@ -1481,7 +1487,11 @@ class Client:
         return result.json()
 
     def create_revision(
-        self, name: str, body: dict[str, Any] | None = None, project_guid: str | None = None, **kwargs
+        self,
+        name: str,
+        body: dict[str, Any] | None = None,
+        project_guid: str | None = None,
+        **kwargs,
     ) -> dict[str, Any]:
         """Create a new revision.
 
@@ -1515,7 +1525,7 @@ class Client:
             Revision details as a dictionary.
         """
         result = self.c.put(
-            url=f"{self.v2api_host}/v2/configtrees/{name}/revisions/{revision_id}/keys/",
+            url=f"{self.v2api_host}/v2/configtrees/{name}/revisions/{revision_id}/",
             headers=self.config.get_headers(**kwargs),
             json=config_values,
         )
@@ -1884,7 +1894,7 @@ class Client:
 
         return UserGroup(**result.json())
 
-    def create_user_group(self, user_group: UserGroup|dict, **kwargs) -> UserGroup:
+    def create_user_group(self, user_group: UserGroup | dict, **kwargs) -> UserGroup:
         if isinstance(user_group, dict):
             user_group = UserGroup.model_validate(user_group)
         result = self.c.post(
