@@ -8,7 +8,7 @@ incorrect fields.
 
 from typing import Literal
 
-from pydantic import AliasChoices, BaseModel, Field, field_validator
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
 
 from rapyuta_io_sdk_v2.models.utils import (
     Architecture,
@@ -69,6 +69,7 @@ class NetworkStatus(BaseModel):
 
 class Network(BaseModel):
     """Network model."""
+    model_config = ConfigDict(extra="forbid")
 
     apiVersion: str | None = None
     kind: str | None = None

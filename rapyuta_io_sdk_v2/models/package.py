@@ -159,6 +159,18 @@ class Package(BaseModel):
     metadata: PackageMetadata
     spec: PackageSpec
 
+    def list_dependencies(self) -> list[str] | None:
+        dependencies: list[str] = []
+
+        if self.spec.executables:
+            for exec in self.spec.executables:
+                if exec.docker and exec.docker.pullSecret:
+                    secret = exec.docker.pullSecret.depends.nameOrGUID
+                    if secret is not None:
+                        dependencies.append(f"secret:{secret}")
+
+        return dependencies
+
 
 class PackageList(BaseList[Package]):
     """List of packages using BaseList."""

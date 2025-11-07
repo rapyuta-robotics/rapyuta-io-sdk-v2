@@ -89,6 +89,7 @@ from rapyuta_io_sdk_v2.models.user import (
 # User Group models
 from rapyuta_io_sdk_v2.models.usergroup import (
     UserGroup as UserGroup,
+    UserGroupCreate as UserGroupCreate,
     UserGroupList as UserGroupList,
 )
 

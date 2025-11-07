@@ -8,7 +8,7 @@ incorrect fields.
 
 from typing import Literal
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from rapyuta_io_sdk_v2.models.utils import (
     BaseList,
@@ -228,11 +228,56 @@ class DeploymentStatus(BaseModel):
 
 class Deployment(BaseObject):
     """Deployment model."""
+    model_config = ConfigDict(extra="forbid")
 
     kind: Literal["Deployment"] | None = "Deployment"
     metadata: DeploymentMetadata
     spec: DeploymentSpec
     status: DeploymentStatus | None = None
+
+    def list_dependencies(self) -> list[str] | None:
+        dependencies: list[str] = []
+
+        # Package Dependency
+        if self.metadata.depends is not None:
+            key = f"package:{self.metadata.depends.name_or_guid}"
+            dependencies.append(key)
+
+        if self.spec.runtime == "cloud":
+            # Disk Dependency
+            if self.spec.volumes:
+                for volume in self.spec.volumes:
+                    if volume.depends is not None:
+                        key = f"disk:{volume.depends.name_or_guid}"
+                        dependencies.append(key)
+
+            # Static Route Dependency
+            if self.spec.staticRoutes:
+                for route in self.spec.staticRoutes:
+                    if route.depends is not None:
+                        key = f"staticroute:{route.depends.name_or_guid}"
+                        dependencies.append(key)
+
+        # Device Dependency
+        if self.spec.runtime == "device" and self.spec.device is not None:
+            if self.spec.device.depends:
+                key = f"device:{self.spec.device.depends.name_or_guid}"
+                dependencies.append(key)
+
+        # Deployment Dependency
+        if self.spec.depends:
+            for dep in self.spec.depends:
+                key = f"deployment:{dep.name_or_guid}"
+                dependencies.append(key)
+
+        # Network Dependency
+        if self.spec.rosNetworks:
+            for network in self.spec.rosNetworks:
+                if network.depends is not None:
+                    key = f"network:{network.depends.name_or_guid}"
+                    dependencies.append(key)
+
+        return dependencies
 
 
 class DeploymentList(BaseList[Deployment]):

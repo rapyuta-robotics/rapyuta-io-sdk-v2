@@ -8,7 +8,7 @@ incorrect fields.
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from rapyuta_io_sdk_v2.models.utils import BaseList, BaseMetadata, BaseObject, Runtime
 
@@ -59,6 +59,7 @@ class DiskStatus(BaseModel):
 
 class Disk(BaseObject):
     """Disk model."""
+    model_config = ConfigDict(extra="forbid")
 
     kind: Literal["Disk"] | None = "Disk"
     metadata: BaseMetadata = Field(description="Metadata for the Disk resource")

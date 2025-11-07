@@ -9,6 +9,8 @@ incorrect fields.
 from typing import Literal
 from pydantic import BaseModel, Field, model_validator
 
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+
 from rapyuta_io_sdk_v2.models.utils import BaseList, BaseMetadata, BaseObject, Subject
 
 
@@ -64,6 +66,7 @@ class FeaturesDockerCache(BaseModel):
 
 class Features(BaseModel):
     vpn: FeaturesVPN | None = None
+    tracing : FeaturesTracing | None = None
     dockerCache: FeaturesDockerCache | None = None
 
 
@@ -81,6 +84,7 @@ class ProjectStatus(BaseModel):
 
 class Project(BaseObject):
     """Project model."""
+    model_config = ConfigDict(extra="forbid")
 
     kind: Literal["Project"] | None = "Project"
     metadata: BaseMetadata

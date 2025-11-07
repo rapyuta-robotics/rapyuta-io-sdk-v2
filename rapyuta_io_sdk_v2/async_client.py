@@ -2163,9 +2163,3 @@ class AsyncClient:
         except Exception:
             return result.json()
 
-    async def delete_role_binding(self, binding_guid: str, **kwargs) -> None:
-        result = await self.c.delete(
-            url=f"{self.v2api_host}/v2/role-bindings/{binding_guid}/",
-            headers=self.config.get_headers(with_project=False, **kwargs),
-        )
-        handle_server_errors(result)

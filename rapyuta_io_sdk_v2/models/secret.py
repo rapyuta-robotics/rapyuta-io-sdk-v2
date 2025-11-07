@@ -10,7 +10,13 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-from rapyuta_io_sdk_v2.models.utils import BaseList, BaseMetadata, BaseObject
+from rapyuta_io_sdk_v2.models.utils import (
+    BaseList,
+    BaseMetadata,
+    BaseObject,
+    DeviceDepends,
+    Runtime,
+)
 
 
 class DockerSpec(BaseModel):
@@ -31,10 +37,14 @@ class SecretSpec(BaseModel):
     docker: DockerSpec = Field(
         description="Docker registry configuration when type is Docker"
     )
+    runtime: Runtime | None = None
+    depends: DeviceDepends | None = None
 
 
 class SecretSpecCreate(BaseModel):
     docker: DockerSpecCreate
+    runtime: Runtime | None = None
+    depends: DeviceDepends | None = None
 
 
 class Secret(BaseObject):
@@ -47,6 +57,18 @@ class Secret(BaseObject):
 
 class SecretCreate(Secret):
     spec: SecretSpecCreate
+
+    def list_dependencies(self) -> list[str] | None:
+        runtime = self.spec.runtime
+
+        if not runtime or runtime == "cloud":
+            return None
+
+        if self.spec.depends is not None:
+            device_name = self.spec.depends.name_or_guid
+            return [f"device:{device_name}"]
+
+        return None
 
 
 class SecretList(BaseList[Secret]):
