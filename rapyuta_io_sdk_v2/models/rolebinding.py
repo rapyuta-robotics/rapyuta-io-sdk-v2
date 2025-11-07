@@ -1,4 +1,5 @@
-from typing import Literal, Self, override
+from typing import Literal
+from typing_extensions import override
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -21,7 +22,7 @@ class RoleRef(BaseModel):
     guid: str | None = None
 
     @model_validator(mode="after")
-    def ensure_name_or_guid(self) -> Self:
+    def ensure_name_or_guid(self):
         if self.name is None and self.guid is None:
             raise ValueError("either 'name' or 'guid' should be specified")
 

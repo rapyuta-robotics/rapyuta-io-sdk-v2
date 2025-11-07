@@ -1,4 +1,4 @@
-from typing import Generic, Literal, Self, TypeVar
+from typing import Generic, Literal, TypeVar
 
 from pydantic import AliasChoices, BaseModel, Field, model_validator
 
@@ -149,7 +149,7 @@ class Subject(BaseModel):
     guid: str | None = None
 
     @model_validator(mode="after")
-    def ensure_name_or_guid(self) -> Self:
+    def ensure_name_or_guid(self):
         if self.name is None and self.guid is None:
             raise ValueError("either 'name' or 'guid' should be specified")
 
@@ -162,7 +162,7 @@ class Domain(BaseModel):
     guid: str | None = None
 
     @model_validator(mode="after")
-    def ensure_name_or_guid(self) -> Self:
+    def ensure_name_or_guid(self):
         if self.name is None and self.guid is None:
             raise ValueError("either 'name' or 'guid' should be specified")
 

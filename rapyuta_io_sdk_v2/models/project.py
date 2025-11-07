@@ -7,8 +7,6 @@ incorrect fields.
 """
 
 from typing import Literal
-from pydantic import BaseModel, Field, model_validator
-
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from rapyuta_io_sdk_v2.models.utils import BaseList, BaseMetadata, BaseObject, Subject
@@ -40,7 +38,7 @@ class FeaturesDockerCache(BaseModel):
     )
 
     @model_validator(mode="after")
-    def validate_enabled_requires_all_fields(self) -> Self:
+    def validate_enabled_requires_all_fields(self):
         if self.enabled:
             required_fields = [
                 "proxy_device",
