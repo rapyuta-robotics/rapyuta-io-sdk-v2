@@ -1,4 +1,4 @@
-from typing import Literal, Self
+from typing import Literal, Self, override
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -38,6 +38,24 @@ class RoleBinding(BaseObject):
     kind: Literal["RoleBinding"] | None = "RoleBinding"
     metadata: RoleBindingMetadata
     spec: RoleBindingSpec
+
+    @override
+    def list_dependencies(self) -> list[str] | None:
+        dependencies: list[str] = []
+
+        # Add role dependency
+        if self.spec.role_ref.name is not None:
+            dependencies.append(f"role:{self.spec.role_ref.name}")
+
+        # Add subject dependency
+        if self.spec.subject.kind is not None and self.spec.subject.name is not None:
+            dependencies.append(f"{self.spec.subject.kind}:{self.spec.subject.name}")
+
+        # Add domain dependency
+        if self.spec.domain.kind is not None and self.spec.domain.name is not None:
+            dependencies.append(f"{self.spec.domain.kind}:{self.spec.domain.name}")
+
+        return dependencies
 
 
 class BulkRoleBindingUpdate(BaseModel):

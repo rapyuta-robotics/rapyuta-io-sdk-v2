@@ -115,11 +115,13 @@ class NetworkDepends(Depends):
 
 
 class DeviceDepends(Depends):
+    name_or_guid: str = Field(alias="nameOrGUID")
     kind: Literal["Device", "device"] = "Device"
 
 
 class DeploymentDepends(Depends):
     kind: Literal["Deployment", "deployment"] = "Deployment"
+    name_or_guid: str = Field(alias="nameOrGUID")
     wait: bool = False
 
 

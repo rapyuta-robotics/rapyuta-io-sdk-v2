@@ -33,6 +33,7 @@ from rapyuta_io_sdk_v2.models import (
     User as User,
     UserList as UserList,
     UserGroup as UserGroup,
+    UserGroupCreate as UserGroupCreate,
     UserGroupList as UserGroupList,
     Daemon as Daemon,
 )
