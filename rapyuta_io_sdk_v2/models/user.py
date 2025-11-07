@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Literal, Self
+from typing import Literal
 
 from pydantic import AliasChoices, BaseModel, Field, model_validator
 
@@ -29,7 +29,7 @@ class UserOrganization(BaseModel):
     role_names: list[str] | None = Field(alias="roleNames")
 
     @model_validator(mode="after")
-    def ensure_name_or_guid(self) -> Self:
+    def ensure_name_or_guid(self):
         if self.name is None and self.guid is None:
             raise ValueError("either 'name' or 'guid' should be specified")
 
@@ -49,7 +49,7 @@ class UserProject(BaseModel):
     role_names: list[str] | None = Field(alias="roleNames")
 
     @model_validator(mode="after")
-    def ensure_name_or_guid(self) -> Self:
+    def ensure_name_or_guid(self):
         if self.name is None and self.guid is None:
             raise ValueError("either 'name' or 'guid' should be specified")
 
@@ -69,7 +69,7 @@ class UserUserGroup(BaseModel):
     role_names: list[str] = Field(alias="roleNames")
 
     @model_validator(mode="after")
-    def ensure_name_or_guid(self) -> Self:
+    def ensure_name_or_guid(self):
         if self.name is None and self.guid is None:
             raise ValueError("either 'name' or 'guid' should be specified")
 
