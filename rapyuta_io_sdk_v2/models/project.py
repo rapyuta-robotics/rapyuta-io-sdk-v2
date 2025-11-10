@@ -14,7 +14,7 @@ from rapyuta_io_sdk_v2.models.utils import BaseList, BaseMetadata, BaseObject, S
 
 class ProjectMember(BaseModel):
     subject: Subject
-    roleNames: list[str]
+    role_names: list[str] = Field(alias="roleNames")
 
 
 class FeaturesVPN(BaseModel):
@@ -65,7 +65,7 @@ class FeaturesDockerCache(BaseModel):
 class Features(BaseModel):
     vpn: FeaturesVPN | None = None
     tracing : FeaturesTracing | None = None
-    dockerCache: FeaturesDockerCache | None = None
+    docker_cache: FeaturesDockerCache | None = Field(default=None, alias="dockerCache")
 
 
 class ProjectSpec(BaseModel):
