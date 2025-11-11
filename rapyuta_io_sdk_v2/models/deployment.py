@@ -228,6 +228,7 @@ class DeploymentStatus(BaseModel):
 
 class Deployment(BaseObject):
     """Deployment model."""
+
     model_config = ConfigDict(extra="forbid")
 
     kind: Literal["Deployment"] | None = "Deployment"

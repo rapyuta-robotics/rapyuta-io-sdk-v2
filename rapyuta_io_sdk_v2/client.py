@@ -383,8 +383,6 @@ class Client:
         if isinstance(body, dict):
             body = Project.model_validate(body)
 
-        org_guid = body.metadata.organizationGUID or None
-
         result = self.c.post(
             url=f"{self.v2api_host}/v2/projects/",
             headers=self.config.get_headers(with_project=False, **kwargs),

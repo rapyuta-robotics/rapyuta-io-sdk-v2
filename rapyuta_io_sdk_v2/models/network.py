@@ -69,6 +69,7 @@ class NetworkStatus(BaseModel):
 
 class Network(BaseModel):
     """Network model."""
+
     model_config = ConfigDict(extra="forbid")
 
     apiVersion: str | None = None
