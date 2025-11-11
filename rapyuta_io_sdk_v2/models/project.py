@@ -14,7 +14,8 @@ from rapyuta_io_sdk_v2.models.utils import BaseList, BaseMetadata, BaseObject, S
 
 class ProjectMember(BaseModel):
     subject: Subject
-    role_names: list[str] = Field(alias="roleNames")
+    role_names: list[str] | None = Field(default=None, alias="roleNames")
+    implicit_role_names: list[str] | None = Field(default=None, alias="implicitRoleNames")
 
 
 class FeaturesVPN(BaseModel):
@@ -39,7 +40,7 @@ class FeaturesDockerCache(BaseModel):
 
     @model_validator(mode="after")
     def validate_enabled_requires_all_fields(self):
-        if self.enabled:
+        if self and self.enabled:
             required_fields = [
                 "proxy_device",
                 "proxy_interface",
@@ -57,14 +58,14 @@ class FeaturesDockerCache(BaseModel):
 
     @model_validator(mode="after")
     def validate_data_directory(self):
-        if not self.enabled:
+        if self and not self.enabled:
             self.dataDirectory = None
         return self
 
 
 class Features(BaseModel):
-    vpn: FeaturesVPN | None = None
-    tracing: FeaturesTracing | None = None
+    vpn: FeaturesVPN | None = Field(default=None)
+    tracing: FeaturesTracing | None = Field(default=None)
     docker_cache: FeaturesDockerCache | None = Field(default=None, alias="dockerCache")
 
 
