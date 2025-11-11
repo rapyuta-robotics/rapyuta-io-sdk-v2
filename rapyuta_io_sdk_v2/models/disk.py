@@ -59,6 +59,7 @@ class DiskStatus(BaseModel):
 
 class Disk(BaseObject):
     """Disk model."""
+
     model_config = ConfigDict(extra="forbid")
 
     kind: Literal["Disk"] | None = "Disk"

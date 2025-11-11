@@ -64,7 +64,7 @@ class FeaturesDockerCache(BaseModel):
 
 class Features(BaseModel):
     vpn: FeaturesVPN | None = None
-    tracing : FeaturesTracing | None = None
+    tracing: FeaturesTracing | None = None
     docker_cache: FeaturesDockerCache | None = Field(default=None, alias="dockerCache")
 
 
@@ -82,6 +82,7 @@ class ProjectStatus(BaseModel):
 
 class Project(BaseObject):
     """Project model."""
+
     model_config = ConfigDict(extra="forbid")
 
     kind: Literal["Project"] | None = "Project"

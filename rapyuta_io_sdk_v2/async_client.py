@@ -2162,4 +2162,3 @@ class AsyncClient:
             return RoleBinding(**result.json())
         except Exception:
             return result.json()
-
