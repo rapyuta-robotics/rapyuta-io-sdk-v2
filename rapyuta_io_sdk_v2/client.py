@@ -408,7 +408,7 @@ class Client:
 
         result = self.c.put(
             url=f"{self.v2api_host}/v2/projects/{project_guid}/",
-            headers=self.config.get_headers(with_project=False, **kwargs),
+            headers=self.config.get_headers(**kwargs),
             json=body.model_dump(by_alias=True),
         )
         handle_server_errors(result)
