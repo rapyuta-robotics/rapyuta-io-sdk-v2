@@ -133,9 +133,7 @@ def test_update_deployment_success(
         json=device_deployment_model_mock,
     )
 
-    response = client.update_deployment(
-        name="device_deployment_sample", body=deployment_body
-    )
+    response = client.update_deployment(body=deployment_body)
 
     assert isinstance(response, Deployment)
     assert response.metadata.guid == "dep-device-001"
