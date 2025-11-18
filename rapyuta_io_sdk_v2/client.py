@@ -53,6 +53,13 @@ from rapyuta_io_sdk_v2.models import (
     BulkRoleBindingUpdate,
     RoleList,
     OAuth2UpdateURI,
+    ServiceAccountList,
+    ServiceAccount,
+)
+from rapyuta_io_sdk_v2.models.serviceaccount import (
+    ServiceAccountToken,
+    ServiceAccountTokenInfo,
+    ServiceAccountTokenList,
 )
 from rapyuta_io_sdk_v2.utils import handle_server_errors
 
@@ -2072,3 +2079,151 @@ class Client:
             return RoleBinding(**result.json())
         except Exception:
             return result.json()
+
+    # -------------------ServiceAccount-------------------
+
+    def list_service_accounts(
+        self,
+        cont: int = 0,
+        limit: int = 50,
+        label_selector: list[str] | None = None,
+        name: str | None = None,
+        regions: list[str] | None = None,
+        **kwargs,
+    ) -> ServiceAccountList:
+        parameters: dict[str, Any] = {
+            "continue": cont,
+            "limit": limit,
+        }
+        if label_selector:
+            parameters["labelSelector"] = label_selector
+        if name:
+            parameters["name"] = name
+        if regions:
+            parameters["regions"] = regions
+
+        result = self.c.get(
+            url=f"{self.v2api_host}/v2/serviceaccounts/",
+            headers=self.config.get_headers(with_project=False, **kwargs),
+            params=parameters,
+        )
+
+        handle_server_errors(result)
+
+        return ServiceAccountList(**result.json())
+
+    def get_service_account(
+        self,
+        name: str,
+        **kwargs,
+    ) -> ServiceAccount:
+        result = self.c.get(
+            url=f"{self.v2api_host}/v2/serviceaccounts/{name}/",
+            headers=self.config.get_headers(with_project=False, **kwargs),
+        )
+
+        handle_server_errors(result)
+        return ServiceAccount(**result.json())
+
+    def create_service_account(
+        self,
+        service_account: ServiceAccount | dict,
+        **kwargs,
+    ) -> ServiceAccount:
+        if isinstance(service_account, dict):
+            service_account = ServiceAccount.model_validate(service_account)
+        result = self.c.post(
+            url=f"{self.v2api_host}/v2/serviceaccounts/",
+            headers=self.config.get_headers(with_project=False, **kwargs),
+            json=service_account.model_dump(by_alias=True),
+        )
+
+        handle_server_errors(result)
+        return ServiceAccount(**result.json())
+
+    def update_service_account(
+        self,
+        service_account: ServiceAccount | dict,
+        name: str | None,
+        **kwargs,
+    ) -> ServiceAccount:
+        if isinstance(service_account, dict):
+            service_account = ServiceAccount.model_validate(service_account)
+        if not name:
+            name = service_account.metadata.name
+        result = self.c.put(
+            url=f"{self.v2api_host}/v2/serviceaccounts/{name}/",
+            headers=self.config.get_headers(with_project=False, **kwargs),
+            json=service_account.model_dump(by_alias=True),
+        )
+
+        handle_server_errors(result)
+        return ServiceAccount(**result.json())
+
+    def delete_service_account(
+        self,
+        name: str,
+        **kwargs,
+    ) -> None:
+        result = self.c.delete(
+            url=f"{self.v2api_host}/v2/serviceaccounts/{name}/",
+            headers=self.config.get_headers(with_project=False, **kwargs),
+        )
+
+        handle_server_errors(result)
+        return None
+
+    def list_service_account_tokens(
+        self, name: str, cont: int = 0, limit: int = 50, **kwargs
+    ) -> ServiceAccountTokenList:
+
+        result = self.c.get(
+            url=f"{self.v2api_host}/v2/serviceaccounts/{name}/token/",
+            headers=self.config.get_headers(with_project=False, **kwargs),
+        )
+
+        handle_server_errors(result)
+
+        return ServiceAccountTokenList(**result.json())
+
+    def create_service_account_token(
+        self, name: str, expiry_at: ServiceAccountToken | dict, **kwargs
+    ) -> ServiceAccountTokenInfo:
+        if isinstance(expiry_at, dict):
+            expiry_at = ServiceAccountToken.model_validate(expiry_at)
+
+        result = self.c.post(
+            url=f"{self.v2api_host}/v2/serviceaccounts/{name}/token/",
+            headers=self.config.get_headers(with_project=False, **kwargs),
+            json=expiry_at.model_dump(by_alias=True, mode="json"),
+        )
+
+        handle_server_errors(result)
+
+        return ServiceAccountTokenInfo(**result.json())
+
+    def refresh_service_account_token(
+        self, name: str, token_id: str, expiry_at: ServiceAccountToken | dict, **kwargs
+    ) -> ServiceAccountTokenInfo:
+        if isinstance(expiry_at, dict):
+            expiry_at = ServiceAccountToken.model_validate(expiry_at)
+
+        result = self.c.patch(
+            url=f"{self.v2api_host}/v2/serviceaccounts/{name}/token/{token_id}/",
+            headers=self.config.get_headers(with_project=False, **kwargs),
+            json=expiry_at.model_dump(by_alias=True, mode="json"),
+        )
+
+        handle_server_errors(result)
+
+        return ServiceAccountTokenInfo(**result.json())
+
+    def delete_service_account_token(self, name: str, token_id: str, **kwargs) -> None:
+        result = self.c.delete(
+            url=f"{self.v2api_host}/v2/serviceaccounts/{name}/token/{token_id}/",
+            headers=self.config.get_headers(with_project=False, **kwargs),
+        )
+
+        handle_server_errors(result)
+
+        return None
