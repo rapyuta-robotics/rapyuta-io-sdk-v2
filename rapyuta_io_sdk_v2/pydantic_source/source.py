@@ -1,5 +1,6 @@
 import ast
-from typing import Any, Type, Dict, Iterable
+from typing import Any
+from collections.abc import Iterable
 from benedict import benedict
 from pathlib import Path
 
@@ -13,7 +14,7 @@ import base64
 class ConfigTreeSource(PydanticBaseSettingsSource):
     def __init__(
         self,
-        settings_cls: Type["BaseSettings"],
+        settings_cls: type["BaseSettings"],
         config: Configuration,
         tree_name: str = "default",
         key_prefix: str = "",
@@ -43,7 +44,10 @@ class ConfigTreeSource(PydanticBaseSettingsSource):
             key_prefixes=[self._top_prefix],
             with_project=self._with_project,
         )
-        return self._extract_data_api(input_data=response["keys"].toDict())
+        keys = response["keys"]
+        if not isinstance(keys, dict):
+            keys = dict(keys)
+        return self._extract_data_api(input_data=keys)
 
     def _load_from_local_file(self):
         """
@@ -74,7 +78,7 @@ class ConfigTreeSource(PydanticBaseSettingsSource):
         return processed_data
 
     # * Methods to process the tree
-    def _extract_data_api(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+    def _extract_data_api(self, input_data: dict[str, Any]) -> dict[str, Any]:
         return {
             key: self._decode_value(value.get("data"))
             for key, value in input_data.items()
@@ -119,8 +123,8 @@ class ConfigTreeSource(PydanticBaseSettingsSource):
         return content
 
     # * This method is extracting the data from the raw data and removing the top level prefix
-    def _process_config_tree(self, raw_data: Dict[str, Any]) -> Dict[str, Any]:
-        d: Dict[str, Any] = {}
+    def _process_config_tree(self, raw_data: dict[str, Any]) -> dict[str, Any]:
+        d: dict[str, Any] = {}
         prefix_length = len(self._top_prefix)
 
         if prefix_length == 0:
@@ -135,7 +139,7 @@ class ConfigTreeSource(PydanticBaseSettingsSource):
     def __call__(self) -> dict[str, Any]:
         if self.settings_cls.model_config.get("extra") == "allow":
             return self._configtree_data
-        d: Dict[str, Any] = {}
+        d: dict[str, Any] = {}
 
         for field_name, field in self.settings_cls.model_fields.items():
             field_value, field_key, value_is_complex = self.get_field_value(
