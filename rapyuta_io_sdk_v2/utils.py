@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2024 Rapyuta Robotics
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,15 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # from rapyuta_io_sdk_v2.config import Configuration
-import asyncio
 import json
 import os
 import sys
 import typing
-from functools import wraps
 
 import httpx
-from munch import Munch, munchify
 
 import rapyuta_io_sdk_v2.exceptions as exceptions
 
@@ -38,6 +34,11 @@ def handle_server_errors(response: httpx.Response):
     except json.JSONDecodeError:
         err = response.text
 
+    # 400 error
+    if status_code == httpx.codes.BAD_REQUEST:
+        raise exceptions.MethodNotAllowedError(err)
+    if status_code == httpx.codes.FORBIDDEN:
+        raise exceptions.MethodNotAllowedError(err)
     # 404 Not Found
     if status_code == httpx.codes.NOT_FOUND:
         raise exceptions.HttpNotFoundError(err)
@@ -67,7 +68,7 @@ def handle_server_errors(response: httpx.Response):
         raise exceptions.UnauthorizedAccessError(err)
 
     # Anything else that is not known
-    if status_code > 504:
+    if status_code > 400:
         raise exceptions.UnknownError(err)
 
 
@@ -90,39 +91,13 @@ def get_default_app_dir(app_name: str) -> str:
     return os.path.join(xdg_config_home, app_name)
 
 
-# Decorator to handle server errors and munchify response
-def handle_and_munchify_response(func) -> typing.Callable:
-    """Decorator to handle server errors and munchify response.
-
-    Args:
-        func (callable): The function to decorate.
-    """
-
-    @wraps(func)
-    async def async_wrapper(*args, **kwargs) -> Munch:
-        response = await func(*args, **kwargs)
-        handle_server_errors(response)
-        return munchify(response.json())
-
-    @wraps(func)
-    def sync_wrapper(*args, **kwargs) -> Munch:
-        response = func(*args, **kwargs)
-        handle_server_errors(response)
-        return munchify(response.json())
-
-    if asyncio.iscoroutinefunction(func):
-        return async_wrapper
-
-    return sync_wrapper
-
-
 def walk_pages(
     func: typing.Callable,
     *args,
     limit: int = 50,
     cont: int = 0,
     **kwargs,
-) -> typing.Generator:
+):
     """A generator function to paginate through list API results.
 
     Args:
@@ -133,20 +108,19 @@ def walk_pages(
         **kwargs: Additional keyword arguments to pass to the API function.
 
     Yields:
-        Munch: Each item from the API response.
+        Dict[str, Any]: Each item from the API response.
     """
     while True:
         data = func(cont, limit, *args, **kwargs)
 
-        items = data.get("items", [])
+        items = data.items or []
         if not items:
             break
 
-        for item in items:
-            yield munchify(item)
+        yield items
 
         # Update `cont` for the next page
-        cont = data.get("metadata", {}).get("continue")
+        cont = data.metadata.continue_ or None
         if cont is None:
             break
 
@@ -168,19 +142,18 @@ async def walk_pages_async(
         **kwargs: Additional keyword arguments to pass to the API function.
 
     Yields:
-        Munch: Each item from the API response.
+        Dict[str, Any]: Each item from the API response.
     """
     while True:
         data = await func(cont, limit, *args, **kwargs)
 
-        items = data.get("items", [])
+        items = data.items or []
         if not items:
             break
 
-        for item in items:
-            yield munchify(item)
+        yield items
 
         # Update `cont` for the next page
-        cont = data.get("metadata", {}).get("continue")
+        cont = data.metadata.continue_ or None
         if cont is None:
             break
