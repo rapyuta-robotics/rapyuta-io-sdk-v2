@@ -36,6 +36,11 @@ from rapyuta_io_sdk_v2.models import (
     UserGroupCreate as UserGroupCreate,
     UserGroupList as UserGroupList,
     Daemon as Daemon,
+    ServiceAccountList as ServiceAccountList,
+    ServiceAccount as ServiceAccount,
+    ServiceAccountTokenList as ServiceAccountTokenList,
+    ServiceAccountToken as ServiceAccountToken,
+    ServiceAccountTokenInfo as ServiceAccountTokenInfo,
 )
 from rapyuta_io_sdk_v2.utils import walk_pages as walk_pages
 
