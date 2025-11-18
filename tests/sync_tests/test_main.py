@@ -2,10 +2,11 @@ import httpx
 import pytest
 from pytest_mock import MockFixture
 
-from tests.utils.fixtures import client  # noqa: F401
+# ruff: noqa: F811, F401
+from tests.utils.fixtures import client
 
 
-def test_get_auth_token_success(client, mocker: MockFixture):  # noqa: F811
+def test_get_auth_token_success(client, mocker: MockFixture):
     # Mock the httpx.Client.post method
     mock_post = mocker.patch("httpx.Client.post")
 
@@ -26,7 +27,7 @@ def test_get_auth_token_success(client, mocker: MockFixture):  # noqa: F811
     assert response == "mock_token"
 
 
-def test_login_success(client, mocker: MockFixture):  # noqa: F811
+def test_login_success(client, mocker: MockFixture):
     # Mock the httpx.Client.post method
     mock_post = mocker.patch("httpx.Client.post")
 
@@ -42,7 +43,7 @@ def test_login_success(client, mocker: MockFixture):  # noqa: F811
     assert client.config.auth_token == "mock_token_2"
 
 
-def test_login_failure(client, mocker: MockFixture):  # noqa: F811
+def test_login_failure(client, mocker: MockFixture):
     # Mock the httpx.Client.post method
     mock_post = mocker.patch("httpx.Client.post")
 
