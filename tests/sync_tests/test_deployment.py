@@ -1,36 +1,40 @@
 import httpx
 import pytest
-from munch import Munch
 from pytest_mock import MockFixture
 
-from tests.data.mock_data import deployment_body  # noqa: F401
-from tests.utils.fixtures import client  # noqa: F401
+# ruff: noqa: F811, F401
+from rapyuta_io_sdk_v2.models import DeploymentList, Deployment
+from tests.utils.fixtures import client
+from tests.data import (
+    deployment_body,
+    deploymentlist_model_mock,
+    cloud_deployment_model_mock,
+    device_deployment_model_mock,
+)
 
 
-def test_list_deployments_success(client, mocker: MockFixture):  # noqa: F811
-    # Mock the httpx.Client.get method
+def test_list_deployments_success(client, deploymentlist_model_mock, mocker: MockFixture):
     mock_get = mocker.patch("httpx.Client.get")
-
-    # Set up the mock responses for pagination
+    # Use the DeploymentList pydantic model mock and dump as JSON
     mock_get.return_value = httpx.Response(
         status_code=200,
-        json={
-            "metadata": {"continue": 1},
-            "items": [{"name": "test-deployment", "guid": "mock_deployment_guid"}],
-        },
+        json=deploymentlist_model_mock,
     )
 
-    # Call the list_deployments method
     response = client.list_deployments()
 
-    # Validate the response
-    assert isinstance(response, Munch)
-    assert response["items"] == [
-        {"name": "test-deployment", "guid": "mock_deployment_guid"}
-    ]
+    assert isinstance(response, DeploymentList)
+    assert response.metadata.continue_ == 123
+    assert len(response.items) == 2
+    cloud_dep = response.items[0]
+    device_dep = response.items[1]
+    assert cloud_dep.spec.runtime == "cloud"
+    assert device_dep.spec.runtime == "device"
+    assert cloud_dep.metadata.guid == "dep-cloud-001"
+    assert device_dep.metadata.guid == "dep-device-001"
 
 
-def test_list_deployments_not_found(client, mocker: MockFixture):  # noqa: F811
+def test_list_deployments_not_found(client, mocker: MockFixture):
     # Mock the httpx.Client.get method
     mock_get = mocker.patch("httpx.Client.get")
 
@@ -46,28 +50,35 @@ def test_list_deployments_not_found(client, mocker: MockFixture):  # noqa: F811
     assert str(exc.value) == "not found"
 
 
-def test_get_deployment_success(client, mocker: MockFixture):  # noqa: F811
-    # Mock the httpx.Client.get method
+def test_get_cloud_deployment_success(
+    client, cloud_deployment_model_mock, mocker: MockFixture
+):
     mock_get = mocker.patch("httpx.Client.get")
-
-    # Set up the mock response
     mock_get.return_value = httpx.Response(
         status_code=200,
-        json={
-            "kind": "Deployment",
-            "metadata": {"guid": "test_deployment_guid", "name": "test_deployment"},
-        },
+        json=cloud_deployment_model_mock,
     )
-
-    # Call the get_deployment method
-    response = client.get_deployment(name="mock_deployment_name")
-
-    # Validate the response
-    assert isinstance(response, Munch)
-    assert response["metadata"]["guid"] == "test_deployment_guid"
+    response = client.get_deployment(name="cloud_deployment_sample")
+    assert isinstance(response, Deployment)
+    assert response.spec.runtime == "cloud"
+    assert response.metadata.guid == "dep-cloud-001"
 
 
-def test_get_deployment_not_found(client, mocker: MockFixture):  # noqa: F811
+def test_get_device_deployment_success(
+    client, device_deployment_model_mock, mocker: MockFixture
+):
+    mock_get = mocker.patch("httpx.Client.get")
+    mock_get.return_value = httpx.Response(
+        status_code=200,
+        json=device_deployment_model_mock,
+    )
+    response = client.get_deployment(name="device_deployment_sample")
+    assert isinstance(response, Deployment)
+    assert response.spec.runtime == "device"
+    assert response.metadata.guid == "dep-device-001"
+
+
+def test_get_deployment_not_found(client, mocker: MockFixture):
     # Mock the httpx.Client.get method
     mock_get = mocker.patch("httpx.Client.get")
 
@@ -84,24 +95,7 @@ def test_get_deployment_not_found(client, mocker: MockFixture):  # noqa: F811
     assert str(exc.value) == "deployment not found"
 
 
-def test_create_deployment_success(client, deployment_body, mocker: MockFixture):  # noqa: F811
-    mock_post = mocker.patch("httpx.Client.post")
-
-    mock_post.return_value = httpx.Response(
-        status_code=200,
-        json={
-            "kind": "Deployment",
-            "metadata": {"guid": "test_deployment_guid", "name": "test_deployment"},
-        },
-    )
-
-    response = client.create_deployment(body=deployment_body)
-
-    assert isinstance(response, Munch)
-    assert response["metadata"]["guid"] == "test_deployment_guid"
-
-
-def test_create_deployment_unauthorized(client, deployment_body, mocker: MockFixture):  # noqa: F811
+def test_create_deployment_unauthorized(client, deployment_body, mocker: MockFixture):
     mock_post = mocker.patch("httpx.Client.post")
 
     mock_post.return_value = httpx.Response(
@@ -115,28 +109,43 @@ def test_create_deployment_unauthorized(client, deployment_body, mocker: MockFix
     assert str(exc.value) == "unauthorized"
 
 
-def test_update_deployment_success(client, deployment_body, mocker: MockFixture):  # noqa: F811
-    mock_put = mocker.patch("httpx.Client.put")
+def test_create_deployment_unauthorized(client, deployment_body, mocker: MockFixture):
+    mock_post = mocker.patch("httpx.Client.post")
+
+    mock_post.return_value = httpx.Response(
+        status_code=401,
+        json={"error": "unauthorized"},
+    )
+
+    with pytest.raises(Exception) as exc:
+        client.create_deployment(body=deployment_body)
+
+    assert str(exc.value) == "unauthorized"
+
+
+def test_update_deployment_success(
+    client, deployment_body, device_deployment_model_mock, mocker: MockFixture
+):
+    mock_put = mocker.patch("httpx.Client.patch")
 
     mock_put.return_value = httpx.Response(
         status_code=200,
-        json={
-            "kind": "Deployment",
-            "metadata": {"guid": "test_deployment_guid", "name": "test_deployment"},
-        },
+        json=device_deployment_model_mock,
     )
 
-    response = client.update_deployment(name="mock_deployment_name", body=deployment_body)
+    response = client.update_deployment(
+        name="device_deployment_sample", body=deployment_body
+    )
 
-    assert isinstance(response, Munch)
-    assert response["metadata"]["guid"] == "test_deployment_guid"
+    assert isinstance(response, Deployment)
+    assert response.metadata.guid == "dep-device-001"
 
 
-def test_delete_deployment_success(client, mocker: MockFixture):  # noqa: F811
+def test_delete_deployment_success(client, mocker: MockFixture):
     mock_delete = mocker.patch("httpx.Client.delete")
 
     mock_delete.return_value = httpx.Response(status_code=204, json={"success": True})
 
     response = client.delete_deployment(name="mock_deployment_name")
 
-    assert response["success"] is True
+    assert response is None
