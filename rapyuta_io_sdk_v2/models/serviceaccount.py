@@ -9,6 +9,7 @@ from typing import Literal, override
 from datetime import datetime
 
 from pydantic import BaseModel, Field
+from pydantic import field_validator
 
 from rapyuta_io_sdk_v2.models.utils import (
     BaseList,
@@ -66,19 +67,32 @@ class ServiceAccountList(BaseList[ServiceAccount]):
     pass
 
 
+class ServiceAccountToken(BaseModel):
+    owner: str | None = None
+    expiry_at: datetime | None = Field(default=None, alias="expiry_at")
+
+    @field_validator("expiry_at")
+    @classmethod
+    def check_expiry_at_iso8601(cls, v):
+        if v is not None and v.tzinfo is None:
+            raise ValueError("expiry_at must be an ISO8601 datetime with timezone info")
+        return v
+
+
 class ServiceAccountTokenInfo(BaseModel):
     id: int | None = None
     token: str | None = None
     expiry_at: datetime | None = Field(default=None, alias="expiry_at")
+
+    @field_validator("expiry_at")
+    @classmethod
+    def check_expiry_at_iso8601(cls, v):
+        if v is not None and v.tzinfo is None:
+            raise ValueError("expiry_at must be an ISO8601 datetime with timezone info")
+        return v
 
 
 class ServiceAccountTokenList(BaseList[ServiceAccountTokenInfo]):
     """List of service account tokens."""
 
     pass
-
-
-class ServiceAccountToken(BaseModel):
-    owner: str | None = None
-    expiry_at: datetime | None = Field(default=None, alias="expiry_at")
-
