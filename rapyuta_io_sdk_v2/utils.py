@@ -111,16 +111,21 @@ def walk_pages(
         Dict[str, Any]: Each item from the API response.
     """
     while True:
-        data = func(cont, limit, *args, **kwargs)
+        call_kwargs = dict(kwargs or {})
+        if "cont" not in call_kwargs:
+            call_kwargs["cont"] = cont
+        if "limit" not in call_kwargs:
+            call_kwargs["limit"] = limit
 
-        items = data.items or []
+        data = func(*args, **call_kwargs)
+
+        items = getattr(data, "items", None) or []
         if not items:
             break
 
         yield items
 
-        # Update `cont` for the next page
-        cont = data.metadata.continue_ or None
+        cont = getattr(getattr(data, "metadata", {}), "continue_", None)
         if cont is None:
             break
 
@@ -145,15 +150,20 @@ async def walk_pages_async(
         Dict[str, Any]: Each item from the API response.
     """
     while True:
-        data = await func(cont, limit, *args, **kwargs)
+        call_kwargs = dict(kwargs or {})
+        if "cont" not in call_kwargs:
+            call_kwargs["cont"] = cont
+        if "limit" not in call_kwargs:
+            call_kwargs["limit"] = limit
 
-        items = data.items or []
+        data = await func(*args, **call_kwargs)
+
+        items = getattr(data, "items", None) or []
         if not items:
             break
 
         yield items
 
-        # Update `cont` for the next page
-        cont = data.metadata.continue_ or None
+        cont = getattr(getattr(data, "metadata", {}), "continue_", None)
         if cont is None:
             break

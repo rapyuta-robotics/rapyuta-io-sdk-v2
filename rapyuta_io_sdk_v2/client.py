@@ -243,10 +243,10 @@ class Client:
     # ---------------------User--------------------
     def list_users(
         self,
-        organization_guid: str | None = None,
-        guid: str | None = None,
         cont: int = 0,
         limit: int = 50,
+        organization_guid: str | None = None,
+        guid: str | None = None,
         **kwargs,
     ) -> UserList:
         parameters: dict[str, Any] = {
@@ -662,7 +662,7 @@ class Client:
             body = Deployment.model_validate(body)
 
         result = self.c.patch(
-            url=f"{self.v2api_host}/v2/deployments/{name}/",
+            url=f"{self.v2api_host}/v2/deployments/{body.metadata.name}/",
             headers=self.config.get_headers(**kwargs),
             json=body.model_dump(by_alias=True),
         )
@@ -2176,7 +2176,6 @@ class Client:
     def list_service_account_tokens(
         self, name: str, cont: int = 0, limit: int = 50, **kwargs
     ) -> ServiceAccountTokenList:
-
         result = self.c.get(
             url=f"{self.v2api_host}/v2/serviceaccounts/{name}/token/",
             headers=self.config.get_headers(with_project=False, **kwargs),

@@ -52,6 +52,12 @@ from rapyuta_io_sdk_v2.models import (
     RoleBindingList,
     BulkRoleBindingUpdate,
     RoleList,
+    OAuth2UpdateURI,
+    ServiceAccountList,
+    ServiceAccount,
+    ServiceAccountToken,
+    ServiceAccountTokenInfo,
+    ServiceAccountTokenList,
 )
 from rapyuta_io_sdk_v2.utils import handle_server_errors
 
@@ -130,7 +136,7 @@ class AsyncClient:
         token = self.get_auth_token(email, password)
         self.config.auth_token = token
 
-    def logout(self, token: str | None = None) -> dict[str, Any]:
+    def logout(self, token: str | None = None) -> None:
         """Expire the authentication token.
 
         Args:
@@ -148,7 +154,6 @@ class AsyncClient:
             },
         )
         handle_server_errors(result)
-        return result.json()
 
     def refresh_token(self, token: str | None = None, set_token: bool = True) -> str:
         """Refresh the authentication token.
@@ -238,7 +243,7 @@ class AsyncClient:
             headers=self.config.get_headers(
                 with_project=False, organization_guid=organization_guid, **kwargs
             ),
-            json=body.model_dump(),
+            json=body.model_dump(by_alias=True),
         )
         handle_server_errors(result)
         return Organization(**result.json())
@@ -312,7 +317,7 @@ class AsyncClient:
             headers=self.config.get_headers(
                 with_project=False, with_organization=False, **kwargs
             ),
-            json=body.model_dump(),
+            json=body.model_dump(by_alias=True),
         )
         handle_server_errors(result)
         return User(**result.json())
@@ -410,7 +415,7 @@ class AsyncClient:
             headers=self.config.get_headers(
                 organization_guid=org_guid, with_project=False, **kwargs
             ),
-            json=body.model_dump(),
+            json=body.model_dump(by_alias=True),
         )
         handle_server_errors(result)
         return Project(**result.json())
@@ -433,7 +438,7 @@ class AsyncClient:
         result = await self.c.put(
             url=f"{self.v2api_host}/v2/projects/{project_guid}/",
             headers=self.config.get_headers(with_project=False, **kwargs),
-            json=body.model_dump(),
+            json=body.model_dump(by_alias=True),
         )
         handle_server_errors(result)
         return Project(**result.json())
@@ -524,7 +529,7 @@ class AsyncClient:
         result = await self.c.post(
             url=f"{self.v2api_host}/v2/packages/",
             headers=self.config.get_headers(**kwargs),
-            json=body.model_dump(),
+            json=body.model_dump(by_alias=True),
         )
 
         handle_server_errors(result)
@@ -647,7 +652,7 @@ class AsyncClient:
         result = await self.c.post(
             url=f"{self.v2api_host}/v2/deployments/",
             headers=self.config.get_headers(**kwargs),
-            json=body.model_dump(),
+            json=body.model_dump(by_alias=True),
         )
 
         handle_server_errors(result)
@@ -694,7 +699,7 @@ class AsyncClient:
         result = await self.c.patch(
             url=f"{self.v2api_host}/v2/deployments/{name}/",
             headers=self.config.get_headers(**kwargs),
-            json=body.model_dump(),
+            json=body.model_dump(by_alias=True),
         )
         handle_server_errors(result)
         return Deployment(**result.json())
@@ -833,7 +838,7 @@ class AsyncClient:
         result = await self.c.post(
             url=f"{self.v2api_host}/v2/disks/",
             headers=self.config.get_headers(**kwargs),
-            json=body.model_dump(),
+            json=body.model_dump(by_alias=True),
         )
         handle_server_errors(result)
         return Disk(**result.json())
@@ -934,7 +939,7 @@ class AsyncClient:
         result = await self.c.post(
             url=f"{self.v2api_host}/v2/staticroutes/",
             headers=self.config.get_headers(**kwargs),
-            json=body.model_dump(),
+            json=body.model_dump(by_alias=True),
         )
         handle_server_errors(result)
         return StaticRoute(**result.json())
@@ -975,7 +980,7 @@ class AsyncClient:
         result = await self.c.put(
             url=f"{self.v2api_host}/v2/staticroutes/{name}/",
             headers=self.config.get_headers(**kwargs),
-            json=body.model_dump(),
+            json=body.model_dump(by_alias=True),
         )
         handle_server_errors(result)
         return StaticRoute(**result.json())
@@ -1063,7 +1068,7 @@ class AsyncClient:
         result = await self.c.post(
             url=f"{self.v2api_host}/v2/networks/",
             headers=self.config.get_headers(**kwargs),
-            json=body.model_dump(),
+            json=body.model_dump(by_alias=True),
         )
         handle_server_errors(result)
         return Network(**result.json())
@@ -1164,7 +1169,7 @@ class AsyncClient:
         result = await self.c.post(
             url=f"{self.v2api_host}/v2/secrets/",
             headers=self.config.get_headers(**kwargs),
-            json=body.model_dump(),
+            json=body.model_dump(by_alias=True),
         )
 
         handle_server_errors(result)
@@ -1206,7 +1211,7 @@ class AsyncClient:
         result = await self.c.put(
             url=f"{self.v2api_host}/v2/secrets/{name}/",
             headers=self.config.get_headers(**kwargs),
-            json=body.model_dump(),
+            json=body.model_dump(by_alias=True),
         )
         handle_server_errors(result)
         return Secret(**result.json())
@@ -1323,21 +1328,21 @@ class AsyncClient:
         return result.json()
 
     async def update_oauth2_client_uris(
-        self, client_id: str, uris: dict, **kwargs
+        self, client_id: str, update: OAuth2UpdateURI, **kwargs
     ) -> dict[str, Any]:
         """Update OAuth2 client URIs.
 
         Args:
             client_id (str): OAuth2 client ID
-            uris (dict): URIs update payload
+            update (OAuth2UpdateURI): URIs update payload
 
         Returns:
             OAuth2 client details as a dictionary.
         """
         result = await self.c.patch(
-            url=f"{self.v2api_host}/v2/oauth2clients/{client_id}/uris/",
+            url=f"{self.v2api_host}/v2/oauth2/clients/{client_id}/uris/",
             headers=self.config.get_headers(**kwargs),
-            json=uris,
+            json=update.model_dump(by_alias=True),
         )
         handle_server_errors(result)
         return result.json()
@@ -1830,7 +1835,7 @@ class AsyncClient:
         result = await self.c.post(
             url=f"{self.v2api_host}/v2/managedservices/",
             headers=self.config.get_headers(),
-            json=body.model_dump(),
+            json=body.model_dump(by_alias=True),
         )
 
         handle_server_errors(result)
@@ -1900,7 +1905,7 @@ class AsyncClient:
         result = await self.c.post(
             url=f"{self.v2api_host}/v2/managedservices/{instance_name}/bindings/",
             headers=self.config.get_headers(),
-            json=body.model_dump(),
+            json=body.model_dump(by_alias=True),
         )
 
         handle_server_errors(result)
@@ -1990,7 +1995,7 @@ class AsyncClient:
         result = await self.c.post(
             url=f"{self.v2api_host}/v2/usergroups/",
             headers=self.config.get_headers(with_project=False, **kwargs),
-            json=user_group.model_dump(),
+            json=user_group.model_dump(by_alias=True),
         )
         handle_server_errors(result)
 
@@ -2005,7 +2010,7 @@ class AsyncClient:
                 group_guid=user_group.metadata.guid,
                 **kwargs,
             ),
-            json=user_group.model_dump(),
+            json=user_group.model_dump(by_alias=True),
         )
         handle_server_errors(result)
 
@@ -2063,7 +2068,7 @@ class AsyncClient:
         result = await self.c.post(
             url=f"{self.v2api_host}/v2/roles/",
             headers=self.config.get_headers(with_project=False, **kwargs),
-            json=role.model_dump(),
+            json=role.model_dump(by_alias=True),
         )
         handle_server_errors(result)
 
@@ -2075,7 +2080,7 @@ class AsyncClient:
         result = await self.c.put(
             url=f"{self.v2api_host}/v2/roles/{role.metadata.name}/",
             headers=self.config.get_headers(with_project=False, **kwargs),
-            json=role.model_dump(),
+            json=role.model_dump(by_alias=True),
         )
         handle_server_errors(result)
 
@@ -2154,7 +2159,7 @@ class AsyncClient:
         result = await self.c.put(
             url=f"{self.v2api_host}/v2/role-bindings/",
             headers=self.config.get_headers(with_project=False, **kwargs),
-            json=binding.model_dump(),
+            json=binding.model_dump(by_alias=True),
         )
         handle_server_errors(result)
 
@@ -2162,3 +2167,152 @@ class AsyncClient:
             return RoleBinding(**result.json())
         except Exception:
             return result.json()
+
+    # -------------------ServiceAccount-------------------
+
+    async def list_service_accounts(
+        self,
+        cont: int = 0,
+        limit: int = 50,
+        label_selector: list[str] | None = None,
+        name: str | None = None,
+        regions: list[str] | None = None,
+        **kwargs,
+    ) -> ServiceAccountList:
+        parameters: dict[str, Any] = {
+            "continue": cont,
+            "limit": limit,
+        }
+        if label_selector:
+            parameters["labelSelector"] = label_selector
+        if name:
+            parameters["name"] = name
+        if regions:
+            parameters["regions"] = regions
+
+        result = await self.c.get(
+            url=f"{self.v2api_host}/v2/serviceaccounts/",
+            headers=self.config.get_headers(with_project=False, **kwargs),
+            params=parameters,
+        )
+
+        handle_server_errors(result)
+
+        return ServiceAccountList(**result.json())
+
+    async def get_service_account(
+        self,
+        name: str,
+        **kwargs,
+    ) -> ServiceAccount:
+        result = await self.c.get(
+            url=f"{self.v2api_host}/v2/serviceaccounts/{name}/",
+            headers=self.config.get_headers(with_project=False, **kwargs),
+        )
+
+        handle_server_errors(result)
+        return ServiceAccount(**result.json())
+
+    async def create_service_account(
+        self,
+        service_account: ServiceAccount | dict,
+        **kwargs,
+    ) -> ServiceAccount:
+        if isinstance(service_account, dict):
+            service_account = ServiceAccount.model_validate(service_account)
+        result = await self.c.post(
+            url=f"{self.v2api_host}/v2/serviceaccounts/",
+            headers=self.config.get_headers(with_project=False, **kwargs),
+            json=service_account.model_dump(by_alias=True),
+        )
+
+        handle_server_errors(result)
+        return ServiceAccount(**result.json())
+
+    async def update_service_account(
+        self,
+        service_account: ServiceAccount | dict,
+        name: str | None,
+        **kwargs,
+    ) -> ServiceAccount:
+        if isinstance(service_account, dict):
+            service_account = ServiceAccount.model_validate(service_account)
+        if not name:
+            name = service_account.metadata.name
+        result = await self.c.put(
+            url=f"{self.v2api_host}/v2/serviceaccounts/{name}/",
+            headers=self.config.get_headers(with_project=False, **kwargs),
+            json=service_account.model_dump(by_alias=True),
+        )
+
+        handle_server_errors(result)
+        return ServiceAccount(**result.json())
+
+    async def delete_service_account(
+        self,
+        name: str,
+        **kwargs,
+    ) -> None:
+        result = await self.c.delete(
+            url=f"{self.v2api_host}/v2/serviceaccounts/{name}/",
+            headers=self.config.get_headers(with_project=False, **kwargs),
+        )
+
+        handle_server_errors(result)
+        return None
+
+    async def list_service_account_tokens(
+        self, name: str, cont: int = 0, limit: int = 50, **kwargs
+    ) -> ServiceAccountTokenList:
+        result = await self.c.get(
+            url=f"{self.v2api_host}/v2/serviceaccounts/{name}/token/",
+            headers=self.config.get_headers(with_project=False, **kwargs),
+        )
+
+        handle_server_errors(result)
+
+        return ServiceAccountTokenList(**result.json())
+
+    async def create_service_account_token(
+        self, name: str, expiry_at: ServiceAccountToken | dict, **kwargs
+    ) -> ServiceAccountTokenInfo:
+        if isinstance(expiry_at, dict):
+            expiry_at = ServiceAccountToken.model_validate(expiry_at)
+
+        result = await self.c.post(
+            url=f"{self.v2api_host}/v2/serviceaccounts/{name}/token/",
+            headers=self.config.get_headers(with_project=False, **kwargs),
+            json=expiry_at.model_dump(by_alias=True, mode="json"),
+        )
+
+        handle_server_errors(result)
+
+        return ServiceAccountTokenInfo(**result.json())
+
+    async def refresh_service_account_token(
+        self, name: str, token_id: str, expiry_at: ServiceAccountToken | dict, **kwargs
+    ) -> ServiceAccountTokenInfo:
+        if isinstance(expiry_at, dict):
+            expiry_at = ServiceAccountToken.model_validate(expiry_at)
+
+        result = await self.c.patch(
+            url=f"{self.v2api_host}/v2/serviceaccounts/{name}/token/{token_id}/",
+            headers=self.config.get_headers(with_project=False, **kwargs),
+            json=expiry_at.model_dump(by_alias=True, mode="json"),
+        )
+
+        handle_server_errors(result)
+
+        return ServiceAccountTokenInfo(**result.json())
+
+    async def delete_service_account_token(
+        self, name: str, token_id: str, **kwargs
+    ) -> None:
+        result = await self.c.delete(
+            url=f"{self.v2api_host}/v2/serviceaccounts/{name}/token/{token_id}/",
+            headers=self.config.get_headers(with_project=False, **kwargs),
+        )
+
+        handle_server_errors(result)
+
+        return None
