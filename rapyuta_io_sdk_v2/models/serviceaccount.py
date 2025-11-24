@@ -32,7 +32,7 @@ class ServiceAccountSpec(BaseModel):
 class ServiceAccount(BaseObject):
     """ServiceAccount model."""
 
-    kind: Literal["ServiceAccount"] | None = "ServiceAccount"
+    kind: Literal["ServiceAccount", "serviceaccount"] | None = "ServiceAccount"
     metadata: BaseMetadata
     spec: ServiceAccountSpec | None = None
 
