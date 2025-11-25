@@ -258,7 +258,7 @@ def test_commit_revision_success(client, mocker: MockFixture):  # noqa: F811
     assert response.metadata.name == "test_revision"
 
 
-def test_get_key_in_revision(client, mocker: MockFixture):  # noqa: F811
+def test_get_key_in_revision_str(client, mocker: MockFixture):  # noqa: F811
     # Mock the httpx.Client.get method
     mock_get = mocker.patch("httpx.Client.get")
 
@@ -276,6 +276,46 @@ def test_get_key_in_revision(client, mocker: MockFixture):  # noqa: F811
     # Validate the response
     assert isinstance(response, str)
     assert response == "test_value"
+
+
+def test_get_key_in_revision_int(client, mocker: MockFixture):  # noqa: F811
+    # Mock the httpx.Client.get method
+    mock_get = mocker.patch("httpx.Client.get")
+
+    # Set up the mock response
+    mock_get.return_value = httpx.Response(
+        status_code=200,
+        text="1500",
+    )
+
+    # Call the get_key_in_revision method
+    response = client.get_key_in_revision(
+        tree_name="mock_configtree_name", revision_id="mock_revision_id", key="mock_key"
+    )
+
+    # Validate the response
+    assert isinstance(response, int)
+    assert response == 1500
+
+
+def test_get_key_in_revision_bool(client, mocker: MockFixture):  # noqa: F811
+    # Mock the httpx.Client.get method
+    mock_get = mocker.patch("httpx.Client.get")
+
+    # Set up the mock response
+    mock_get.return_value = httpx.Response(
+        status_code=200,
+        text="true",
+    )
+
+    # Call the get_key_in_revision method
+    response = client.get_key_in_revision(
+        tree_name="mock_configtree_name", revision_id="mock_revision_id", key="mock_key"
+    )
+
+    # Validate the response
+    assert isinstance(response, bool)
+    assert response
 
 
 def test_put_key_in_revision_success(client, mocker: MockFixture):  # noqa: F811

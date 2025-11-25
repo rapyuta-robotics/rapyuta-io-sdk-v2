@@ -276,7 +276,7 @@ async def test_commit_revision_success(client, mocker: AsyncMock):  # noqa: F811
 
 
 @pytest.mark.asyncio
-async def test_get_key_in_revision(client, mocker: AsyncMock):  # noqa: F811
+async def test_get_key_in_revision_str(client, mocker: AsyncMock):  # noqa: F811
     # Mock the httpx.AsyncClient.get method
     mock_get = mocker.patch("httpx.AsyncClient.get")
 
@@ -291,6 +291,42 @@ async def test_get_key_in_revision(client, mocker: AsyncMock):  # noqa: F811
     # Validate the response
     assert isinstance(response, str)
     assert response == "test_value"
+
+
+@pytest.mark.asyncio
+async def test_get_key_in_revision_int(client, mocker: AsyncMock):  # noqa: F811
+    # Mock the httpx.AsyncClient.get method
+    mock_get = mocker.patch("httpx.AsyncClient.get")
+
+    # Set up the mock response
+    mock_get.return_value = httpx.Response(status_code=200, text="999")
+
+    # Call the get_key_in_revision method
+    response = await client.get_key_in_revision(
+        tree_name="mock_configtree_name", revision_id="mock_revision_id", key="mock_key"
+    )
+
+    # Validate the response
+    assert isinstance(response, int)
+    assert response == 999
+
+
+@pytest.mark.asyncio
+async def test_get_key_in_revision_bool(client, mocker: AsyncMock):  # noqa: F811
+    # Mock the httpx.AsyncClient.get method
+    mock_get = mocker.patch("httpx.AsyncClient.get")
+
+    # Set up the mock response
+    mock_get.return_value = httpx.Response(status_code=200, text="false")
+
+    # Call the get_key_in_revision method
+    response = await client.get_key_in_revision(
+        tree_name="mock_configtree_name", revision_id="mock_revision_id", key="mock_key"
+    )
+
+    # Validate the response
+    assert isinstance(response, bool)
+    assert not response
 
 
 @pytest.mark.asyncio
