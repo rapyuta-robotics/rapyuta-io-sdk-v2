@@ -17,6 +17,7 @@ import platform
 
 import httpx
 from munch import Munch
+from yaml import safe_load
 
 from rapyuta_io_sdk_v2.config import Configuration
 from rapyuta_io_sdk_v2.utils import handle_and_munchify_response, handle_server_errors
@@ -1235,7 +1236,6 @@ class AsyncClient(object):
             json=config_tree_revision,
         )
 
-    @handle_and_munchify_response
     async def get_key_in_revision(
         self,
         tree_name: str,
@@ -1243,7 +1243,7 @@ class AsyncClient(object):
         key: str,
         project_guid: str = None,
         **kwargs,
-    ) -> Munch:
+    ):
         """Get a key in a revision.
 
         Args:
@@ -1256,10 +1256,14 @@ class AsyncClient(object):
             Munch: Key details as a Munch object.
         """
 
-        return await self.c.get(
+        result = await self.c.get(
             url=f"{self.v2api_host}/v2/configtrees/{tree_name}/revisions/{revision_id}/{key}/",
             headers=self.config.get_headers(project_guid=project_guid, **kwargs),
         )
+        # The data received from the API is always in string format. To use
+        # appropriate data-type in Python (as well in exports), we are
+        # passing it through YAML parser.
+        return safe_load(result.text)
 
     @handle_and_munchify_response
     async def put_key_in_revision(
