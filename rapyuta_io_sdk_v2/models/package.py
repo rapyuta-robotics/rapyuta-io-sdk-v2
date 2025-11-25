@@ -169,6 +169,9 @@ class Package(BaseModel):
                     if secret is not None:
                         dependencies.append(f"secret:{secret}")
 
+        if dependencies == []:
+            return None
+
         return dependencies
 
 
