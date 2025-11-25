@@ -620,43 +620,52 @@ def configtree_body() -> dict[str, Any]:
 def mock_response_user() -> dict[str, Any]:
     return {
         "kind": "User",
-        "metadata": {"name": "test user", "guid": "mock_user_guid"},
+        "apiVersion": "api.rapyuta.io/v2",
+        "metadata": {
+            "name": "test user",
+            "guid": "user-testuser-guid-000000001",
+            "createdAt": "2025-01-10T08:00:00Z",
+            "updatedAt": "2025-01-10T09:00:00Z",
+        },
         "spec": {
-            "emailID": "test.user@example.com",
             "firstName": "Test",
             "lastName": "User",
-            "userGUID": "mock_user_guid",
-            "role": "admin",
-            "organizations": [
-                {
-                    "guid": "mock_org_guid",
-                    "name": "mock-org",
-                    "shortGUID": "org123",
-                    "creator": "mock_user_guid",
-                }
-            ],
+            "emailID": "test.user@example.com",
             "projects": [
                 {
-                    "guid": "mock_project_guid",
-                    "name": "mock-project",
-                    "organizationGUID": "mock_org_guid",
-                    "creator": "mock_user_guid",
+                    "guid": "project-testproject1-guid-001",
+                    "creator": "user-creator-guid-000000000001",
+                    "name": "test-project1",
+                    "organizationGUID": "org-testorg123456789abcdef",
+                    "organizationCreator": "user-creator-guid-000000000001",
+                    "roleNames": ["project_admin", "project_member"],
+                },
+                {
+                    "guid": "project-testproject2-guid-002",
+                    "creator": "user-creator-guid-000000000001",
+                    "name": "test-project2",
+                    "organizationGUID": "org-testorg123456789abcdef",
+                    "organizationCreator": "user-creator-guid-000000000001",
+                    "roleNames": ["project_viewer"],
+                },
+            ],
+            "organizations": [
+                {
+                    "guid": "org-testorg123456789abcdef",
+                    "name": "test-org",
+                    "creator": "user-creator-guid-000000000001",
+                    "shortGUID": "testorg",
+                    "roleNames": ["rio-org_admin", "rio-org_member"],
                 }
             ],
-            "userGroupsMembers": [
+            "userGroups": [
                 {
-                    "guid": "mock_group_guid",
-                    "name": "mock-group",
-                    "organizationGUID": "mock_org_guid",
-                    "role": "member",
-                }
-            ],
-            "userGroupAdmins": [
-                {
-                    "guid": "mock_admin_group_guid",
-                    "name": "mock-admin-group",
-                    "organizationGUID": "mock_org_guid",
-                    "role": "admin",
+                    "guid": "group-testusergroup-0001",
+                    "name": "test-user-group",
+                    "creator": "user-creator-guid-000000000001",
+                    "organizationGUID": "org-testorg123456789abcdef",
+                    "organizationCreatorGUID": "user-creator-guid-000000000001",
+                    "roleNames": ["group_member"],
                 }
             ],
         },
@@ -666,11 +675,17 @@ def mock_response_user() -> dict[str, Any]:
 @pytest.fixture
 def user_body() -> dict[str, Any]:
     return {
-        "emailID": "test.user@example.com",
-        "firstName": "Test",
-        "lastName": "User",
-        "userGUID": "mock_user_guid",
-        "role": "admin",
+        "apiVersion": "api.rapyuta.io/v2",
+        "kind": "User",
+        "metadata": {
+            "name": "test user",
+            "guid": "user-testuser-guid-000000001",
+        },
+        "spec": {
+            "emailID": "test.user@example.com",
+            "firstName": "Test",
+            "lastName": "User",
+        },
     }
 
 
@@ -680,33 +695,52 @@ def user_body() -> dict[str, Any]:
 @pytest.fixture
 def mock_response_organization() -> dict[str, Any]:
     return {
+        "kind": "Organization",
+        "apiVersion": "api.rapyuta.io/v2",
         "metadata": {
             "name": "test-org",
-            "guid": "mock_org_guid",
-            "projectGUID": "project-aaaaaaaaaaaaaaaaaaaa",
-            "organizationGUID": "org-mock-789",
-            "creatorGUID": "mock-user-guid-000",
-            "createdAt": "2025-01-01T00:00:00Z",
-            "updatedAt": "2025-01-01T01:00:00Z",
-            "deletedAt": None,
-            "organizationName": "Mock Org",
-            "projectName": "Mock Project",
+            "guid": "org-testorg123456789abcdef",
+            "organizationGUID": "org-testorg123456789abcdef",
+            "organizationCreatorGUID": "user-creator-guid-000000000001",
+            "creatorGUID": "user-creator-guid-000000000001",
+            "createdAt": "2025-01-15T10:00:00Z",
+            "updatedAt": "2025-01-15T12:30:00Z",
+            "organizationName": "test-org",
+            "shortGUID": "testorg",
         },
         "spec": {
-            "users": [
+            "members": [
                 {
-                    "guid": "mock_user1_guid",
-                    "firstName": "John",
-                    "lastName": "Doe",
-                    "emailID": "test.user1@rapyuta-robotics.com",
-                    "roleInOrganization": "viewer",
+                    "subject": {
+                        "kind": "ServiceAccount",
+                        "name": "test-project-builtin-paramsync-sa",
+                        "guid": "sa-testsa1234567890abc",
+                    },
+                    "roleNames": ["rio-org_member"],
                 },
                 {
-                    "guid": "mock_user2_guid",
-                    "firstName": "Jane",
-                    "lastName": "Smith",
-                    "emailID": "test.user2@rapyuta-robotics.com",
-                    "roleInOrganization": "admin",
+                    "subject": {
+                        "kind": "User",
+                        "name": "test.user1@example.com",
+                        "guid": "user-testuser1-guid-00001",
+                    },
+                    "roleNames": ["rio-org_admin", "rio-org_member"],
+                },
+                {
+                    "subject": {
+                        "kind": "User",
+                        "name": "test.user2@example.com",
+                        "guid": "user-testuser2-guid-00002",
+                    },
+                    "roleNames": ["rio-org_member"],
+                },
+                {
+                    "subject": {
+                        "kind": "UserGroup",
+                        "name": "test-user-group",
+                        "guid": "group-testusergroup-0001",
+                    },
+                    "roleNames": ["rio-org_member"],
                 },
             ]
         },
@@ -716,25 +750,29 @@ def mock_response_organization() -> dict[str, Any]:
 @pytest.fixture
 def organization_body() -> dict[str, Any]:
     return {
+        "apiVersion": "api.rapyuta.io/v2",
+        "kind": "Organization",
         "metadata": {
             "name": "test-org",
-            "guid": "mock_org_guid",
+            "guid": "org-testorg123456789abcdef",
         },
         "spec": {
-            "users": [
+            "members": [
                 {
-                    "guid": "mock_user1_guid",
-                    "firstName": "John",
-                    "lastName": "Doe",
-                    "emailID": "test.user1@rapyuta-robotics.com",
-                    "roleInOrganization": "viewer",
+                    "subject": {
+                        "kind": "User",
+                        "name": "test.user1@example.com",
+                        "guid": "user-testuser1-guid-00001",
+                    },
+                    "roleNames": ["rio-org_admin", "rio-org_member"],
                 },
                 {
-                    "guid": "mock_user2_guid",
-                    "firstName": "Jane",
-                    "lastName": "Smith",
-                    "emailID": "test.user2@rapyuta-robotics.com",
-                    "roleInOrganization": "admin",
+                    "subject": {
+                        "kind": "User",
+                        "name": "test.user2@example.com",
+                        "guid": "user-testuser2-guid-00002",
+                    },
+                    "roleNames": ["rio-org_member"],
                 },
             ]
         },

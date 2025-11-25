@@ -25,12 +25,20 @@ async def test_get_organization_success(
     # Validate that response is an Organization model object
     assert isinstance(response, Organization)
     assert response.metadata.name == "test-org"
-    assert response.metadata.guid == "mock_org_guid"
-    assert len(response.spec.users) == 2
-    assert response.spec.users[0].emailID == "test.user1@rapyuta-robotics.com"
-    assert response.spec.users[0].roleInOrganization == "viewer"
-    assert response.spec.users[1].emailID == "test.user2@rapyuta-robotics.com"
-    assert response.spec.users[1].roleInOrganization == "admin"
+    assert response.metadata.guid == "org-testorg123456789abcdef"
+    assert len(response.spec.members) == 4
+    # Check first member (ServiceAccount)
+    assert response.spec.members[0].subject.kind == "ServiceAccount"
+    assert response.spec.members[0].subject.name == "test-project-builtin-paramsync-sa"
+    assert response.spec.members[0].roleNames == ["rio-org_member"]
+    # Check second member (User - admin)
+    assert response.spec.members[1].subject.kind == "User"
+    assert response.spec.members[1].subject.name == "test.user1@example.com"
+    assert response.spec.members[1].roleNames == ["rio-org_admin", "rio-org_member"]
+    # Check third member (User - member only)
+    assert response.spec.members[2].subject.kind == "User"
+    assert response.spec.members[2].subject.name == "test.user2@example.com"
+    assert response.spec.members[2].roleNames == ["rio-org_member"]
 
 
 @pytest.mark.asyncio
@@ -63,14 +71,16 @@ async def test_update_organization_success(
     )
 
     response = await client.update_organization(
-        organization_guid="mock_org_guid",
+        organization_guid="org-testorg123456789abcdef",
         body=organization_body,
     )
 
     # Validate that response is an Organization model object
     assert isinstance(response, Organization)
     assert response.metadata.name == "test-org"
-    assert response.metadata.guid == "mock_org_guid"
-    assert len(response.spec.users) == 2
-    assert response.spec.users[0].roleInOrganization == "viewer"
-    assert response.spec.users[1].roleInOrganization == "admin"
+    assert response.metadata.guid == "org-testorg123456789abcdef"
+    assert len(response.spec.members) == 4
+    # Verify admin member
+    assert response.spec.members[1].roleNames == ["rio-org_admin", "rio-org_member"]
+    # Verify regular member
+    assert response.spec.members[2].roleNames == ["rio-org_member"]

@@ -16,7 +16,6 @@ import platform
 from typing import Any
 
 import httpx
-from munch import Munch
 from yaml import safe_load
 
 from rapyuta_io_sdk_v2.config import Configuration
@@ -55,6 +54,8 @@ from rapyuta_io_sdk_v2.models import (
     OAuth2UpdateURI,
     ServiceAccountList,
     ServiceAccount,
+)
+from rapyuta_io_sdk_v2.models.serviceaccount import (
     ServiceAccountToken,
     ServiceAccountTokenInfo,
     ServiceAccountTokenList,
@@ -251,10 +252,10 @@ class AsyncClient:
     # ---------------------User--------------------
     async def list_users(
         self,
-        organization_guid: str | None = None,
-        guid: str | None = None,
         cont: int = 0,
         limit: int = 50,
+        organization_guid: str | None = None,
+        guid: str | None = None,
         **kwargs,
     ) -> UserList:
         parameters: dict[str, Any] = {
@@ -276,8 +277,26 @@ class AsyncClient:
 
         return UserList(**result.json())
 
+    async def add_user(self, user: User | dict, **kwargs) -> User:
+        """Add a User in Organization.
+
+        Returns:
+            User: User details as a user object.
+        """
+        if isinstance(user, dict):
+            user = User.model_validate(user)
+        result = await self.c.post(
+            url=f"{self.v2api_host}/v2/users/",
+            headers=self.config.get_headers(with_project=False, **kwargs),
+            body=user.model_dump(by_alias=True),
+        )
+
+        handle_server_errors(result)
+
+        return UserList(**result.json())
+
     async def get_myself(self, **kwargs) -> User:
-        """Get User details.
+        """Get my User details.
 
         Returns:
             User: User details as a User object.
@@ -291,17 +310,8 @@ class AsyncClient:
         handle_server_errors(result)
         return User(**result.json())
 
-    # Alias for backward compatibility
-    async def get_user(self, **kwargs) -> User:
-        """Get User details. (Alias for get_myself)
-
-        Returns:
-            User: User details as a User object.
-        """
-        return await self.get_myself(**kwargs)
-
-    async def update_user(self, body: User | dict[str, Any], **kwargs) -> User:
-        """Update the user details.
+    async def update_myself(self, body: User | dict[str, Any], **kwargs) -> User:
+        """Update my user details.
 
         Args:
             body (dict): User details
@@ -321,6 +331,52 @@ class AsyncClient:
         )
         handle_server_errors(result)
         return User(**result.json())
+
+    async def get_user(self, email_id: str, **kwargs) -> User:
+        """Get User details.
+
+        Returns:
+            User: User details as a User object.
+        """
+        result = await self.c.get(
+            url=f"{self.v2api_host}/v2/users/{email_id}",
+            headers=self.config.get_headers(with_project=False, **kwargs),
+        )
+        handle_server_errors(result)
+        return User(**result.json())
+
+    async def update_user(
+        self, email_id: str, body: User | dict[str, Any], **kwargs
+    ) -> User:
+        """Update the user details.
+
+        Args:
+            body (dict): User details
+
+        Returns:
+            User: User details as a User object.
+        """
+        if isinstance(body, dict):
+            body = User.model_validate(body)
+
+        result = await self.c.put(
+            url=f"{self.v2api_host}/v2/users/{email_id}/",
+            headers=self.config.get_headers(with_project=False, **kwargs),
+            json=body.model_dump(by_alias=True),
+        )
+        handle_server_errors(result)
+        return User(**result.json())
+
+    async def delete_user(self, email_id: str, **kwargs):
+        """
+        Delete the User
+        """
+        result = await self.c.delete(
+            url=f"{self.v2api_host}/v2/users/{email_id}/",
+            headers=self.config.get_headers(with_project=False, **kwargs),
+        )
+        handle_server_errors(result)
+        return None
 
     # ----------------- Projects -----------------
     async def list_projects(
@@ -1637,6 +1693,9 @@ class AsyncClient:
             json=config_tree_revision,
         )
 
+        handle_server_errors(result)
+        return result.json()
+
     async def get_key_in_revision(
         self,
         tree_name: str,
@@ -1665,9 +1724,6 @@ class AsyncClient:
         # appropriate data-type in Python (as well in exports), we are
         # passing it through YAML parser.
         return safe_load(result.text)
-
-        handle_server_errors(result)
-        return result.json()
 
     async def put_key_in_revision(
         self,

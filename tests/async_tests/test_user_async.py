@@ -16,10 +16,18 @@ async def test_get_user_success(async_client, mock_response_user, mocker):
         json=mock_response_user,
     )
 
-    response = await async_client.get_user()
+    response = await async_client.get_user(email_id="test.user@example.com")
     assert response.metadata.name == "test user"
-    assert response.metadata.guid == "mock_user_guid"
-    assert response.spec.emailID == "test.user@example.com"
+    assert response.metadata.guid == "user-testuser-guid-000000001"
+    assert response.spec.email_id == "test.user@example.com"
+    assert response.spec.first_name == "Test"
+    assert response.spec.last_name == "User"
+    assert len(response.spec.projects) == 2
+    assert response.spec.projects[0].name == "test-project1"
+    assert response.spec.projects[0].role_names == ["project_admin", "project_member"]
+    assert len(response.spec.organizations) == 1
+    assert response.spec.organizations[0].name == "test-org"
+    assert len(response.spec.user_groups) == 1
 
 
 @pytest.mark.asyncio
@@ -32,7 +40,7 @@ async def test_get_user_unauthorized(async_client, mocker):
     )
 
     with pytest.raises(UnauthorizedAccessError) as exc:
-        await async_client.get_user()
+        await async_client.get_user(email_id="test.user@example.com")
     assert "user cannot be authenticated" in str(exc.value)
 
 
@@ -43,13 +51,14 @@ async def test_update_user_success(async_client, mock_response_user, user_body, 
         status_code=200,
         json=mock_response_user,
     )
-    response = await async_client.update_user(body=user_body)
+    response = await async_client.update_user(
+        email_id="test.user@example.com", body=user_body
+    )
     assert response.metadata.name == "test user"
-    assert response.metadata.guid == "mock_user_guid"
-    assert response.spec.emailID == "test.user@example.com"
-    assert response.metadata.name == "test user"
-    assert response.metadata.guid == "mock_user_guid"
-    assert response.spec.emailID == "test.user@example.com"
+    assert response.metadata.guid == "user-testuser-guid-000000001"
+    assert response.spec.email_id == "test.user@example.com"
+    assert response.spec.first_name == "Test"
+    assert response.spec.last_name == "User"
 
 
 @pytest.mark.asyncio
@@ -64,5 +73,5 @@ async def test_update_user_unauthorized(
     )
 
     with pytest.raises(UnauthorizedAccessError) as exc:
-        await async_client.update_user(user_body)
+        await async_client.update_user(email_id="test.user@example.com", body=user_body)
     assert "user cannot be authenticated" in str(exc.value)
