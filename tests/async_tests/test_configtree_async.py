@@ -281,12 +281,7 @@ async def test_get_key_in_revision(client, mocker: AsyncMock):  # noqa: F811
     mock_get = mocker.patch("httpx.AsyncClient.get")
 
     # Set up the mock response
-    mock_get.return_value = httpx.Response(
-        status_code=200,
-        json={
-            "metadata": {"guid": "test_revision_guid", "name": "test_revision"},
-        },
-    )
+    mock_get.return_value = httpx.Response(status_code=200, text="test_value")
 
     # Call the get_key_in_revision method
     response = await client.get_key_in_revision(
@@ -294,9 +289,8 @@ async def test_get_key_in_revision(client, mocker: AsyncMock):  # noqa: F811
     )
 
     # Validate the response
-    assert isinstance(response, Munch)
-    assert response.metadata.guid == "test_revision_guid"
-    assert response.metadata.name == "test_revision"
+    assert isinstance(response, str)
+    assert response == "test_value"
 
 
 @pytest.mark.asyncio

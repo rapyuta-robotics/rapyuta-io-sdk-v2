@@ -265,9 +265,7 @@ def test_get_key_in_revision(client, mocker: MockFixture):  # noqa: F811
     # Set up the mock response
     mock_get.return_value = httpx.Response(
         status_code=200,
-        json={
-            "metadata": {"guid": "test_revision_guid", "name": "test_revision"},
-        },
+        text="test_value",
     )
 
     # Call the get_key_in_revision method
@@ -276,9 +274,8 @@ def test_get_key_in_revision(client, mocker: MockFixture):  # noqa: F811
     )
 
     # Validate the response
-    assert isinstance(response, Munch)
-    assert response.metadata.guid == "test_revision_guid"
-    assert response.metadata.name == "test_revision"
+    assert isinstance(response, str)
+    assert response == "test_value"
 
 
 def test_put_key_in_revision_success(client, mocker: MockFixture):  # noqa: F811
