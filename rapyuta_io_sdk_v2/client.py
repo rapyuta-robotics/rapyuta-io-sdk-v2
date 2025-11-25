@@ -16,7 +16,6 @@ import platform
 from typing import Any
 
 import httpx
-from munch import Munch
 from yaml import safe_load
 
 from rapyuta_io_sdk_v2.config import Configuration
@@ -268,8 +267,26 @@ class Client:
 
         return UserList(**result.json())
 
+    def add_user(self, user: User | dict, **kwargs) -> User:
+        """Add a User in Organization.
+
+        Returns:
+            User: User details as a user object.
+        """
+        if isinstance(user, dict):
+            user = User.model_validate(user)
+        result = self.c.post(
+            url=f"{self.v2api_host}/v2/users/",
+            headers=self.config.get_headers(with_project=False, **kwargs),
+            body=user.model_dump(by_alias=True),
+        )
+
+        handle_server_errors(result)
+
+        return UserList(**result.json())
+
     def get_myself(self, **kwargs) -> User:
-        """Get User details.
+        """Get my User details.
 
         Returns:
             User: User details as a User object.
@@ -283,8 +300,8 @@ class Client:
         handle_server_errors(result)
         return User(**result.json())
 
-    def update_user(self, body: User | dict[str, Any], **kwargs) -> User:
-        """Update the user details.
+    def update_myself(self, body: User | dict[str, Any], **kwargs) -> User:
+        """Update my user details.
 
         Args:
             body (dict): User details
@@ -304,6 +321,50 @@ class Client:
         )
         handle_server_errors(result)
         return User(**result.json())
+
+    def get_user(self, email_id: str, **kwargs) -> User:
+        """Get User details.
+
+        Returns:
+            User: User details as a User object.
+        """
+        result = self.c.get(
+            url=f"{self.v2api_host}/v2/users/{email_id}",
+            headers=self.config.get_headers(with_project=False, **kwargs),
+        )
+        handle_server_errors(result)
+        return User(**result.json())
+
+    def update_user(self, email_id: str, body: User | dict[str, Any], **kwargs) -> User:
+        """Update the user details.
+
+        Args:
+            body (dict): User details
+
+        Returns:
+            User: User details as a User object.
+        """
+        if isinstance(body, dict):
+            body = User.model_validate(body)
+
+        result = self.c.put(
+            url=f"{self.v2api_host}/v2/users/{email_id}/",
+            headers=self.config.get_headers(with_project=False, **kwargs),
+            json=body.model_dump(by_alias=True),
+        )
+        handle_server_errors(result)
+        return User(**result.json())
+
+    def delete_user(self, email_id: str, **kwargs):
+        """
+        Delete the User
+        """
+        result = self.c.delete(
+            url=f"{self.v2api_host}/v2/users/{email_id}/",
+            headers=self.config.get_headers(with_project=False, **kwargs),
+        )
+        handle_server_errors(result)
+        return None
 
     # -------------------Project-------------------
     def get_project(self, project_guid: str | None = None, **kwargs) -> Project:

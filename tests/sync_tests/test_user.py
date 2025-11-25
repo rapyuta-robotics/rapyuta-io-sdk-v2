@@ -8,28 +8,26 @@ from tests.data.mock_data import mock_response_user, user_body
 from tests.utils.fixtures import client
 
 
-def test_get_user_success(client, mocker: MockFixture):
+def test_get_user_success(client, mock_response_user, mocker: MockFixture):
     mock_get = mocker.patch("httpx.Client.get")
 
     mock_get.return_value = httpx.Response(
         status_code=200,
-        json={
-            "kind": "User",
-            "metadata": {"name": "test user", "guid": "mock_user_guid"},
-            "spec": {
-                "emailID": "test.user@example.com",
-                "firstName": "Test",
-                "lastName": "User",
-                "userGUID": "mock_user_guid",
-                "role": "admin",
-            },
-        },
+        json=mock_response_user,
     )
 
-    response = client.get_user()
+    response = client.get_user(email_id="test.user@example.com")
     assert response.metadata.name == "test user"
-    assert response.metadata.guid == "mock_user_guid"
-    assert response.spec.emailID == "test.user@example.com"
+    assert response.metadata.guid == "user-testuser-guid-000000001"
+    assert response.spec.email_id == "test.user@example.com"
+    assert response.spec.first_name == "Test"
+    assert response.spec.last_name == "User"
+    assert len(response.spec.projects) == 2
+    assert response.spec.projects[0].name == "test-project1"
+    assert response.spec.projects[0].role_names == ["project_admin", "project_member"]
+    assert len(response.spec.organizations) == 1
+    assert response.spec.organizations[0].name == "test-org"
+    assert len(response.spec.user_groups) == 1
 
 
 def test_get_user_unauthorized(client, mocker: MockFixture):
@@ -41,7 +39,7 @@ def test_get_user_unauthorized(client, mocker: MockFixture):
     )
 
     with pytest.raises(UnauthorizedAccessError) as exc:
-        client.get_user()
+        client.get_user(email_id="test.user@example.com")
     assert "user cannot be authenticated" in str(exc.value)
 
 
@@ -51,10 +49,12 @@ def test_update_user_success(client, user_body, mock_response_user, mocker: Mock
         status_code=200,
         json=mock_response_user,
     )
-    response = client.update_user(body=user_body)
+    response = client.update_user(email_id="test.user@example.com", body=user_body)
     assert response.metadata.name == "test user"
-    assert response.metadata.guid == "mock_user_guid"
-    assert response.spec.emailID == "test.user@example.com"
+    assert response.metadata.guid == "user-testuser-guid-000000001"
+    assert response.spec.email_id == "test.user@example.com"
+    assert response.spec.first_name == "Test"
+    assert response.spec.last_name == "User"
 
 
 def test_update_user_unauthorized(client, user_body, mocker: MockFixture):
@@ -66,5 +66,5 @@ def test_update_user_unauthorized(client, user_body, mocker: MockFixture):
     )
 
     with pytest.raises(UnauthorizedAccessError) as exc:
-        client.update_user(user_body)
+        client.update_user(email_id="test.user@example.com", body=user_body)
     assert "user cannot be authenticated" in str(exc.value)
