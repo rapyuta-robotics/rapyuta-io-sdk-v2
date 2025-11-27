@@ -2238,7 +2238,7 @@ class Client:
         self, name: str, cont: int = 0, limit: int = 50, **kwargs
     ) -> ServiceAccountTokenList:
         result = self.c.get(
-            url=f"{self.v2api_host}/v2/serviceaccounts/{name}/token/",
+            url=f"{self.v2api_host}/v2/serviceaccounts/{name}/tokens/",
             headers=self.config.get_headers(with_project=False, **kwargs),
         )
 
@@ -2253,7 +2253,7 @@ class Client:
             expiry_at = ServiceAccountToken.model_validate(expiry_at)
 
         result = self.c.post(
-            url=f"{self.v2api_host}/v2/serviceaccounts/{name}/token/",
+            url=f"{self.v2api_host}/v2/serviceaccounts/{name}/tokens/",
             headers=self.config.get_headers(with_project=False, **kwargs),
             json=expiry_at.model_dump(by_alias=True, mode="json"),
         )
@@ -2269,7 +2269,7 @@ class Client:
             expiry_at = ServiceAccountToken.model_validate(expiry_at)
 
         result = self.c.patch(
-            url=f"{self.v2api_host}/v2/serviceaccounts/{name}/token/{token_id}/",
+            url=f"{self.v2api_host}/v2/serviceaccounts/{name}/tokens/{token_id}/",
             headers=self.config.get_headers(with_project=False, **kwargs),
             json=expiry_at.model_dump(by_alias=True, mode="json"),
         )
@@ -2280,7 +2280,7 @@ class Client:
 
     def delete_service_account_token(self, name: str, token_id: str, **kwargs) -> None:
         result = self.c.delete(
-            url=f"{self.v2api_host}/v2/serviceaccounts/{name}/token/{token_id}/",
+            url=f"{self.v2api_host}/v2/serviceaccounts/{name}/tokens/{token_id}/",
             headers=self.config.get_headers(with_project=False, **kwargs),
         )
 
