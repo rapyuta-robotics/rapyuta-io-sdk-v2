@@ -111,6 +111,21 @@ class Client:
         handle_server_errors(result)
         return result.json()["data"].get("token")
 
+    def get_subject(self, auth_token: str) -> dict:
+        """Get subject(user or service account) from auth token.
+
+        Args:
+            auth_token (str): Authentication token
+        """
+        result = self.c.get(
+            url=f"{self.rip_host}/user/info",
+            headers={"Authorization": f"Bearer {auth_token}"},
+        )
+
+        handle_server_errors(result)
+
+        return result.json()
+
     def login(self, email: str, password: str) -> None:
         """Get the authentication token for the user.
 
