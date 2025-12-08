@@ -7,8 +7,9 @@ incorrect fields.
 """
 
 from typing import Literal
+from typing_extensions import override
 
-from pydantic import BaseModel, Field, RootModel, field_validator, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from rapyuta_io_sdk_v2.models.utils import (
     Architecture,
@@ -155,6 +156,7 @@ class Package(BaseModel):
     metadata: PackageMetadata
     spec: PackageSpec
 
+    @override
     def list_dependencies(self) -> list[str] | None:
         dependencies: list[str] = []
 

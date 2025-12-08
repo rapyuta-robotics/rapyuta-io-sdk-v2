@@ -5,7 +5,8 @@ This module mirrors the Go `ServiceAccount` and related types from the
 `package extensions` snippet provided by the user.
 """
 
-from typing import Literal, override
+from typing import Literal
+from typing_extensions import override
 from datetime import datetime
 
 from pydantic import BaseModel, Field

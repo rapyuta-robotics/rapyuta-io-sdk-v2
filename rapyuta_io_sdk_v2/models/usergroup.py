@@ -1,4 +1,5 @@
 from typing import Literal
+from typing_extensions import override
 
 from pydantic import BaseModel, Field
 
@@ -45,6 +46,7 @@ class UserGroup(BaseObject):
 class UserGroupCreate(UserGroup):
     spec: UserGroupSpecCreate
 
+    @override
     def list_dependencies(self) -> list[str] | None:
         dependencies: list[str] = []
 
