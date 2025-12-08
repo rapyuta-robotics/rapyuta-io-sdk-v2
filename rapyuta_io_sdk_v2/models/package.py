@@ -61,10 +61,6 @@ class EnvironmentSpec(BaseModel):
         return v
 
 
-class CommandSpec(RootModel[list[str] | str | None]):
-    pass
-
-
 class Limits(BaseModel):
     cpu: float | None = Field(default=None, ge=0, le=256)
     memory: float | int | None = Field(default=None, ge=0)
@@ -85,7 +81,7 @@ class Executable(BaseModel):
     name: str | None = None
     type: Literal["docker", "preInstalled"] = Field(default="docker")
     docker: DeviceDockerSpec | None = None
-    command: list[str] | None = None
+    command: str | list[str] | None = None
     args: list[str] | None = None
     limits: Limits | None = None
     livenessProbe: LivenessProbe | None = None
