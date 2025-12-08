@@ -7,6 +7,7 @@ incorrect fields.
 """
 
 from typing import Literal
+from typing_extensions import override
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -236,6 +237,7 @@ class Deployment(BaseObject):
     spec: DeploymentSpec
     status: DeploymentStatus | None = None
 
+    @override
     def list_dependencies(self) -> list[str] | None:
         dependencies: list[str] = []
 
