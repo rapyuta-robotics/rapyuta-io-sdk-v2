@@ -6,7 +6,6 @@ This module mirrors the Go `ServiceAccount` and related types from the
 """
 
 from typing import Literal
-from typing_extensions import override
 from datetime import datetime
 
 from pydantic import BaseModel, Field
@@ -37,7 +36,6 @@ class ServiceAccount(BaseObject):
     metadata: BaseMetadata
     spec: ServiceAccountSpec | None = None
 
-    @override
     def list_dependencies(self) -> list[str] | None:
         dependencies: list[str] = []
 
