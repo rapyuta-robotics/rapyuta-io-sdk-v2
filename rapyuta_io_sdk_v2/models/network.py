@@ -31,7 +31,7 @@ class ResourceLimits(BaseModel):
 
 class Depends(BaseModel):
     kind: Literal["Device"] | None = Field(default="Device")
-    nameOrGuid: str = Field(validation_alias=AliasChoices("nameOrGuid", "nameOrGUID"))
+    name_or_guid: str = Field(validation_alias=AliasChoices("nameOrGuid"))
 
 
 class DiscoveryServerData(BaseModel):
@@ -77,6 +77,17 @@ class Network(BaseModel):
     metadata: BaseMetadata | None = None
     spec: NetworkSpec | None = None
     status: NetworkStatus | None = None
+
+    def list_dependencies(self) -> list[str]:
+        dependencies: list[str] = []
+
+        if self.spec.runtime == "device":
+            dependencies.append(f"device:{self.spec.depends.name_or_guid}")
+
+        if dependencies == []:
+            return None
+
+        return dependencies
 
 
 class NetworkList(BaseList[Network]):

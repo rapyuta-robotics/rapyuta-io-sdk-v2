@@ -7,7 +7,6 @@ incorrect fields.
 """
 
 from typing import Literal
-from typing_extensions import override
 
 from pydantic import BaseModel, Field
 
@@ -59,7 +58,6 @@ class Secret(BaseObject):
 class SecretCreate(Secret):
     spec: SecretSpecCreate
 
-    @override
     def list_dependencies(self) -> list[str] | None:
         runtime = self.spec.runtime
 

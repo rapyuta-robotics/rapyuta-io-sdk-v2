@@ -1,5 +1,4 @@
 from typing import Literal
-from typing_extensions import override
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -40,7 +39,6 @@ class RoleBinding(BaseObject):
     metadata: RoleBindingMetadata
     spec: RoleBindingSpec
 
-    @override
     def list_dependencies(self) -> list[str] | None:
         dependencies: list[str] = []
 
