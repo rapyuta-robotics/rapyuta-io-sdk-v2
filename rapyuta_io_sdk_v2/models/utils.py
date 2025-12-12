@@ -102,6 +102,11 @@ class PackageDepends(BaseModel):
     version: str
 
 
+class SecretDepends(BaseModel):
+    kind: Literal["Secret", "secret"] = "Secret"
+    name_or_guid: str | None = Field(default=None, alias="nameOrGUID")
+
+
 class DiskDepends(Depends):
     kind: Literal["Disk", "disk"] = "Disk"
 
