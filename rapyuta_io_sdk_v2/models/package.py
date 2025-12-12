@@ -17,6 +17,7 @@ from rapyuta_io_sdk_v2.models.utils import (
     RestartPolicy,
     Runtime,
 )
+from .utils import SecretDepends
 
 # --- Helper Models ---
 
@@ -33,6 +34,10 @@ EndpointProto = Literal[
 
 class StringMap(dict[str, str]):
     pass
+
+
+class PullSecret(BaseModel):
+    depends: SecretDepends
 
 
 class LivenessProbe(BaseModel):
@@ -66,21 +71,16 @@ class Limits(BaseModel):
     memory: float | int | None = Field(default=None, ge=0)
 
 
-class DeviceDockerSpec(BaseModel):
+class DockerSpec(BaseModel):
     image: str
     imagePullPolicy: str | None = Field(default="IfNotPresent")
-    pullSecret: dict | None = None
-
-
-class CloudDockerSpec(BaseModel):
-    image: str
-    pullSecret: dict | None = None
+    pull_secret: PullSecret | None = Field(default=None, alias="pullSecret")
 
 
 class Executable(BaseModel):
     name: str | None = None
     type: Literal["docker", "preInstalled"] = Field(default="docker")
-    docker: DeviceDockerSpec | None = None
+    docker: DockerSpec | None = None
     command: str | list[str] | None = None
     args: list[str] | None = None
     limits: Limits | None = None
@@ -160,8 +160,8 @@ class Package(BaseModel):
 
         if self.spec.executables:
             for exec in self.spec.executables:
-                if exec.docker and exec.docker.pullSecret:
-                    secret = exec.docker.pullSecret.depends.nameOrGUID
+                if exec.docker and exec.docker.pull_secret:
+                    secret = exec.docker.pull_secret.depends.name_or_guid
                     if secret is not None:
                         dependencies.append(f"secret:{secret}")
 
