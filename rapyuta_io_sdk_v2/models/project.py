@@ -19,9 +19,8 @@ class ProjectMember(BaseModel):
 
 
 class FeaturesVPN(BaseModel):
-    enabled: bool | None = None
-    subnets: list[str] | None = None
     enabled: bool = Field(default=False)
+    subnets: list[str] | None = None
 
 
 class FeaturesTracing(BaseModel):
@@ -64,14 +63,14 @@ class FeaturesDockerCache(BaseModel):
 
 
 class Features(BaseModel):
-    vpn: FeaturesVPN | None = Field(default=None)
-    tracing: FeaturesTracing | None = Field(default=None)
-    docker_cache: FeaturesDockerCache | None = Field(default=None, alias="dockerCache")
+    vpn: FeaturesVPN
+    tracing: FeaturesTracing
+    docker_cache: FeaturesDockerCache = Field(alias="dockerCache")
 
 
 class ProjectSpec(BaseModel):
     members: list[ProjectMember] | None = None
-    features: Features | None = None
+    features: Features
 
 
 class ProjectStatus(BaseModel):
