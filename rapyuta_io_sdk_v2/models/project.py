@@ -54,11 +54,12 @@ class FeaturesDockerCache(BaseModel):
                 raise ValueError(
                     f"Following fields should be present if docker_cache is enabled: {', '.join(missing_fields)}"
                 )
+        return self
 
     @model_validator(mode="after")
     def validate_data_directory(self):
         if self and not self.enabled:
-            self.dataDirectory = None
+            self.data_directory = None
         return self
 
 
