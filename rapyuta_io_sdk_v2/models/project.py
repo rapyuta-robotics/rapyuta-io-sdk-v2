@@ -64,9 +64,11 @@ class FeaturesDockerCache(BaseModel):
 
 
 class Features(BaseModel):
-    vpn: FeaturesVPN
-    tracing: FeaturesTracing
-    docker_cache: FeaturesDockerCache = Field(alias="dockerCache")
+    vpn: FeaturesVPN = Field(default_factory=FeaturesVPN)
+    tracing: FeaturesTracing = Field(default_factory=FeaturesTracing)
+    docker_cache: FeaturesDockerCache = Field(
+        default_factory=FeaturesDockerCache, alias="dockerCache"
+    )
 
 
 class ProjectSpec(BaseModel):
