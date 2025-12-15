@@ -73,7 +73,7 @@ class Features(BaseModel):
 
 class ProjectSpec(BaseModel):
     members: list[ProjectMember] | None = None
-    features: Features
+    features: Features = Field(default_factory=Features)
 
 
 class ProjectStatus(BaseModel):
