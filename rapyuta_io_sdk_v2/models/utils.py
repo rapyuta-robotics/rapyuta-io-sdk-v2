@@ -93,7 +93,7 @@ class BaseList(BaseModel, Generic[T]):
 
 
 class Depends(BaseModel):
-    name_or_guid: str = Field(validation_alias=AliasChoices("nameOrGuid", "nameOrGUID"))
+    name_or_guid: str = Field(alias="nameOrGUID")
 
 
 class PackageDepends(BaseModel):
