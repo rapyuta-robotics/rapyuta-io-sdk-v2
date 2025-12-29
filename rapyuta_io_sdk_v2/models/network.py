@@ -31,7 +31,7 @@ class ResourceLimits(BaseModel):
 
 class Depends(BaseModel):
     kind: Literal["Device"] | None = Field(default="Device")
-    name_or_guid: str = Field(validation_alias=AliasChoices("nameOrGuid"))
+    name_or_guid: str = Field(alias="nameOrGUID")
 
 
 class DiscoveryServerData(BaseModel):
