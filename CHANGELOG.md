@@ -1,3 +1,10 @@
+## [0.2.4](https://github.com/rapyuta-robotics/rapyuta-io-sdk-v2/compare/v0.2.3...v0.2.4) (2025-12-30)
+
+
+### Bug Fixes
+
+* configtree fixes ([#23](https://github.com/rapyuta-robotics/rapyuta-io-sdk-v2/issues/23)) ([9ea982a](https://github.com/rapyuta-robotics/rapyuta-io-sdk-v2/commit/9ea982ac0517359a185c05d8197d936b7f72cdac)), closes [#21](https://github.com/rapyuta-robotics/rapyuta-io-sdk-v2/issues/21)
+
 ## [0.2.3](https://github.com/rapyuta-robotics/rapyuta-io-sdk-v2/compare/v0.2.2...v0.2.3) (2025-10-26)
 
 
