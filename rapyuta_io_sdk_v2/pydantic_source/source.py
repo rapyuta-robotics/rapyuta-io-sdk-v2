@@ -43,6 +43,11 @@ class ConfigTreeSource(PydanticBaseSettingsSource):
             key_prefixes=[self._top_prefix],
             with_project=self._with_project,
         )
+        if "keys" not in response:
+            raise KeyError(
+                f"'keys' not found in response for config tree '{self._tree_name}' "
+                f"with prefix '{self._top_prefix}'"
+            )
         return self._extract_data_api(input_data=response["keys"].toDict())
 
     def _load_from_local_file(self):
