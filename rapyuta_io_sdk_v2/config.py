@@ -86,7 +86,10 @@ class Configuration(object):
         Returns:
             dict: Headers for the configuration.
         """
-        headers = dict(Authorization=f"Bearer {self.auth_token}")
+        auth_value = self.auth_token.strip() if self.auth_token else None
+        if auth_value and not auth_value.lower().startswith("bearer "):
+            auth_value = f"Bearer {auth_value}"
+        headers = {"Authorization": auth_value} if auth_value else {}
 
         organization_guid = organization_guid or self.organization_guid
         if with_organization and organization_guid:
