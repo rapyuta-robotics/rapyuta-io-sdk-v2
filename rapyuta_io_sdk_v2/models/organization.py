@@ -4,9 +4,6 @@ from pydantic import BaseModel
 
 from .utils import BaseMetadata, BaseObject, Subject
 
-# Define allowed roles
-RoleType = Literal["admin", "viewer"]
-
 
 class OrganizationMember(BaseModel):
     subject: Subject
