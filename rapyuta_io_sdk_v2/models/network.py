@@ -8,7 +8,7 @@ incorrect fields.
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, AliasChoices
 
 from rapyuta_io_sdk_v2.models.utils import (
     Architecture,
@@ -31,7 +31,10 @@ class ResourceLimits(BaseModel):
 
 class Depends(BaseModel):
     kind: Literal["Device"] | None = Field(default="Device")
-    name_or_guid: str = Field(alias="nameOrGUID")
+    name_or_guid: str = Field(
+        validation_alias=AliasChoices("nameOrGUID", "nameOrGuid"),
+        serialization_alias="nameOrGUID",
+    )
 
 
 class DiscoveryServerData(BaseModel):
