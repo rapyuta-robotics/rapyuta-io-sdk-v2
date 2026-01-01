@@ -89,11 +89,21 @@ class Executable(BaseModel):
     type: Literal["docker", "preInstalled"] = Field(default="docker")
     docker: DockerSpec | None = None
     command: str | list[str] | None = None
+    run_as_bash: bool = Field(default=False, alias="runAsBash")
     args: list[str] | None = None
     limits: Limits | None = None
     livenessProbe: LivenessProbe | None = None
     uid: int | None = None
     gid: int | None = None
+
+    @model_validator(mode="after")
+    def prepend_bash_to_command(self):
+        if self.run_as_bash and self.command:
+            if isinstance(self.command, str):
+                self.command = ["/bin/bash", "-c", self.command]
+            elif isinstance(self.command, list):
+                self.command = ["/bin/bash", "-c"] + self.command
+        return self
 
 
 class EndpointSpec(BaseModel):
