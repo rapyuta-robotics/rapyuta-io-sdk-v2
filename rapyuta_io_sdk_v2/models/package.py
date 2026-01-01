@@ -37,7 +37,14 @@ class StringMap(dict[str, str]):
 
 
 class PullSecret(BaseModel):
-    depends: SecretDepends
+    depends: SecretDepends | None = None
+
+    @field_validator("depends", mode="before")
+    @classmethod
+    def empty_dict_to_none(cls, value: dict) -> dict | None:
+        if value == {}:
+            return None
+        return value
 
 
 class LivenessProbe(BaseModel):
