@@ -1,6 +1,6 @@
 from typing import Generic, Literal, TypeVar
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import AliasChoices, BaseModel, Field, model_validator
 
 # Type variable for generic list items
 T = TypeVar("T")
@@ -93,18 +93,27 @@ class BaseList(BaseModel, Generic[T]):
 
 
 class Depends(BaseModel):
-    name_or_guid: str = Field(alias="nameOrGUID")
+    name_or_guid: str = Field(
+        validation_alias=AliasChoices("nameOrGUID", "nameOrGuid"),
+        serialization_alias="nameOrGUID",
+    )
 
 
 class PackageDepends(BaseModel):
     kind: Literal["Package", "package"] = "Package"
-    name_or_guid: str = Field(alias="nameOrGUID")
+    name_or_guid: str = Field(
+        validation_alias=AliasChoices("nameOrGUID", "nameOrGuid"),
+        serialization_alias="nameOrGUID",
+    )
     version: str
 
 
 class SecretDepends(BaseModel):
     kind: Literal["Secret", "secret"] = "Secret"
-    name_or_guid: str | None = Field(default=None, alias="nameOrGUID")
+    name_or_guid: str | None = Field(
+        validation_alias=AliasChoices("nameOrGUID", "nameOrGuid"),
+        serialization_alias="nameOrGUID",
+    )
 
 
 class DiskDepends(Depends):
@@ -120,13 +129,19 @@ class NetworkDepends(Depends):
 
 
 class DeviceDepends(Depends):
-    name_or_guid: str = Field(alias="nameOrGUID")
+    name_or_guid: str = Field(
+        validation_alias=AliasChoices("nameOrGUID", "nameOrGuid"),
+        serialization_alias="nameOrGUID",
+    )
     kind: Literal["Device", "device"] = "Device"
 
 
 class DeploymentDepends(Depends):
     kind: Literal["Deployment", "deployment"] = "Deployment"
-    name_or_guid: str = Field(alias="nameOrGUID")
+    name_or_guid: str = Field(
+        validation_alias=AliasChoices("nameOrGUID", "nameOrGuid"),
+        serialization_alias="nameOrGUID",
+    )
     wait: bool = False
 
 
