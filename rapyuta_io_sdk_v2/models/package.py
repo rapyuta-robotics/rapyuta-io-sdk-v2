@@ -83,13 +83,6 @@ class DockerSpec(BaseModel):
     imagePullPolicy: str | None = Field(default="IfNotPresent")
     pull_secret: PullSecret | None = Field(default=None, alias="pullSecret")
 
-    @field_validator("pullSecret", mode="before")
-    @classmethod
-    def empty_dict_to_none(cls, value: dict) -> dict | None:
-        if value == {}:
-            return None
-        return value
-
 
 class Executable(BaseModel):
     name: str | None = None
@@ -193,7 +186,9 @@ class Package(BaseModel):
         if self.spec.executables:
             for exec in self.spec.executables:
                 if exec.docker and exec.docker.pull_secret:
-                    secret = exec.docker.pull_secret.depends.name_or_guid
+                    secret = getattr(
+                        exec.docker.pull_secret.depends, "name_or_guid", None
+                    )
                     if secret is not None:
                         dependencies.append(f"secret:{secret}")
 
