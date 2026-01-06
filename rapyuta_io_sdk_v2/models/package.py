@@ -83,6 +83,13 @@ class DockerSpec(BaseModel):
     imagePullPolicy: str | None = Field(default="IfNotPresent")
     pull_secret: PullSecret | None = Field(default=None, alias="pullSecret")
 
+    @field_validator("pullSecret", mode="before")
+    @classmethod
+    def empty_dict_to_none(cls, value: dict) -> dict | None:
+        if value == {}:
+            return None
+        return value
+
 
 class Executable(BaseModel):
     name: str | None = None
@@ -157,6 +164,14 @@ class PackageSpec(BaseModel):
         if obj.runtime == "cloud" and obj.device is not None:
             raise ValueError("'device' section must not be set when runtime is 'cloud'.")
         return obj
+
+    @model_validator(mode="before")
+    @classmethod
+    def empty_dicts_to_none(cls, values):
+        for key, value in values.items():
+            if isinstance(value, dict) and not value:
+                values[key] = None
+        return values
 
 
 class PackageMetadata(BaseMetadata):
