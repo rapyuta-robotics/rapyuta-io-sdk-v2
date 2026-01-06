@@ -1680,6 +1680,7 @@ class Client:
         tree_name: str,
         revision_id: str,
         key: str,
+        body: Any,
         project_guid: str | None = None,
         **kwargs,
     ) -> dict[str, Any]:
@@ -1697,6 +1698,7 @@ class Client:
         result = self.c.put(
             url=f"{self.v2api_host}/v2/configtrees/{tree_name}/revisions/{revision_id}/{key}/",
             headers=self.config.get_headers(project_guid=project_guid, **kwargs),
+            content=body,
         )
         handle_server_errors(result)
         return result.json()
