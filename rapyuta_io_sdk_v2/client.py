@@ -73,7 +73,7 @@ class Client:
 
     def __init__(self, config: Configuration | None = None, **kwargs) -> None:
         self.config = config or Configuration()
-        timeout = kwargs.get("timeout", 10)
+        timeout = kwargs.get("timeout", 60)
         self.c = httpx.Client(
             timeout=timeout,
             limits=httpx.Limits(
