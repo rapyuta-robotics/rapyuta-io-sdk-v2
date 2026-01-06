@@ -76,6 +76,7 @@ class Configuration:
         project_guid: str | None = None,
         with_group: bool = False,
         group_guid: str | None = None,
+        **kwargs,
     ) -> dict[str, str]:
         """Get the headers for the configuration.
 
@@ -106,6 +107,14 @@ class Configuration:
         custom_client_request_id = os.getenv("REQUEST_ID")
         if custom_client_request_id:
             headers["X-Request-ID"] = custom_client_request_id
+
+        x_checksum = kwargs.get("x_checksum", None)
+        if x_checksum:
+            headers["X-Checksum"] = x_checksum
+
+        content_type = kwargs.get("content_type", None)
+        if content_type:
+            headers["Content-Type"] = content_type
 
         return headers
 
