@@ -98,11 +98,21 @@ class Executable(BaseModel):
 
     @model_validator(mode="after")
     def prepend_bash_to_command(self):
-        if self.run_as_bash and self.command:
-            if isinstance(self.command, str):
-                self.command = ["/bin/bash", "-c", self.command]
-            elif isinstance(self.command, list):
-                self.command = ["/bin/bash", "-c"] + self.command
+        if self.command is None:
+            return self
+
+        command: list[str] = []
+
+        if self.run_as_bash:
+            command = ["/bin/bash", "-c"]
+
+        if isinstance(self.command, str):
+            command.append(self.command)
+        elif isinstance(self.command, list):
+            command.extend(self.command)
+
+        self.command = command
+
         return self
 
 
