@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2024 Rapyuta Robotics
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -26,7 +25,7 @@ from rapyuta_io_sdk_v2.utils import get_default_app_dir
 
 
 @dataclass
-class Configuration(object):
+class Configuration:
     """Configuration class for the SDK."""
 
     email: str = None
@@ -58,10 +57,10 @@ class Configuration(object):
             default_dir = get_default_app_dir(APP_NAME)
             file_path = os.path.join(default_dir, "config.json")
 
-        with open(file_path, "r") as file:
+        with open(file_path) as file:
             data = json.load(file)
             return cls(
-                email=data.get("email"),
+                email=data.get("email_id"),
                 password=data.get("password"),
                 project_guid=data.get("project_id"),
                 organization_guid=data.get("organization_id"),
@@ -72,10 +71,13 @@ class Configuration(object):
     def get_headers(
         self,
         with_organization: bool = True,
-        organization_guid: str = None,
+        organization_guid: str | None = None,
         with_project: bool = True,
-        project_guid: str = None,
-    ) -> dict:
+        project_guid: str | None = None,
+        with_group: bool = False,
+        group_guid: str | None = None,
+        **kwargs,
+    ) -> dict[str, str]:
         """Get the headers for the configuration.
 
         Args:
@@ -96,12 +98,23 @@ class Configuration(object):
             headers["organizationguid"] = organization_guid
 
         project_guid = project_guid or self.project_guid
-        if with_project and project_guid is not None:
+        if with_project and project_guid:
             headers["project"] = project_guid
+
+        if with_group and group_guid:
+            headers["groupguid"] = group_guid
 
         custom_client_request_id = os.getenv("REQUEST_ID")
         if custom_client_request_id:
             headers["X-Request-ID"] = custom_client_request_id
+
+        x_checksum = kwargs.get("x_checksum", None)
+        if x_checksum:
+            headers["X-Checksum"] = x_checksum
+
+        content_type = kwargs.get("content_type", None)
+        if content_type:
+            headers["Content-Type"] = content_type
 
         return headers
 
