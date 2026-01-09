@@ -46,9 +46,19 @@ class PullSecret(BaseModel):
             return None
         return value
 
+class HttpHeader(BaseModel):
+    name: str
+    value: str
+
+class HttpGet(BaseModel):
+    path: str
+    port: int
+    host: str | None = Field(default=None)
+    scheme: str | None = Field(default="HTTP")
+    httpHeaders: list[HttpHeader] | None = Field(default=None)
 
 class LivenessProbe(BaseModel):
-    httpGet: dict | None = None
+    httpGet: HttpGet | None = None
     exec: dict | None = None
     tcpSocket: dict | None = None
     initialDelaySeconds: int | None = Field(default=None, ge=1)
