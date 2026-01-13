@@ -6,9 +6,11 @@ providing validation for Deployment resources to help users identify missing or
 incorrect fields.
 """
 
+from os import path
+
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator, field_validator
 
 from rapyuta_io_sdk_v2.models.utils import (
     BaseList,
@@ -63,6 +65,13 @@ class DeploymentVolume(BaseModel):
             if isinstance(depends, dict) and not depends:
                 data["depends"] = None
         return data
+
+    @field_validator("mount_path", "sub_path", mode="before")
+    @classmethod
+    def check_absolute_path(cls, v, info):
+        if v is not None and not path.isabs(v):
+            raise ValueError(f"{info.field_name} must be an absolute path.")
+        return v
 
 
 class DeploymentStaticRoute(BaseModel):

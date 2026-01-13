@@ -46,9 +46,11 @@ class PullSecret(BaseModel):
             return None
         return value
 
+
 class HttpHeader(BaseModel):
     name: str
     value: str
+
 
 class HttpGet(BaseModel):
     path: str
@@ -56,6 +58,7 @@ class HttpGet(BaseModel):
     host: str | None = Field(default=None)
     scheme: str | None = Field(default="HTTP")
     httpHeaders: list[HttpHeader] | None = Field(default=None)
+
 
 class LivenessProbe(BaseModel):
     httpGet: HttpGet | None = None
