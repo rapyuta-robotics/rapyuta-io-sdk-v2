@@ -23,7 +23,7 @@ import rapyuta_io_sdk_v2.exceptions as exceptions
 
 
 def handle_server_errors(response: httpx.Response):
-    status_code = response.status_code
+    status_code: int = response.status_code
 
     if status_code < 400:
         return
@@ -34,42 +34,35 @@ def handle_server_errors(response: httpx.Response):
     except json.JSONDecodeError:
         err = response.text
 
-    # 400 error
-    if status_code == httpx.codes.BAD_REQUEST:
-        raise exceptions.MethodNotAllowedError(err)
-    if status_code == httpx.codes.FORBIDDEN:
-        raise exceptions.MethodNotAllowedError(err)
-    # 404 Not Found
-    if status_code == httpx.codes.NOT_FOUND:
-        raise exceptions.HttpNotFoundError(err)
-    # 405 Method Not Allowed
-    if status_code == httpx.codes.METHOD_NOT_ALLOWED:
-        raise exceptions.MethodNotAllowedError(err)
-    # 409 Conflict
-    if status_code == httpx.codes.CONFLICT:
-        raise exceptions.HttpAlreadyExistsError(err)
-    # 500 Internal Server Error
-    if status_code == httpx.codes.INTERNAL_SERVER_ERROR:
-        raise exceptions.InternalServerError(err)
-    # 501 Not Implemented
-    if status_code == httpx.codes.NOT_IMPLEMENTED:
-        raise exceptions.NotImplementedError(err)
-    # 502 Bad Gateway
-    if status_code == httpx.codes.BAD_GATEWAY:
-        raise exceptions.BadGatewayError(err)
-    # 503 Service Unavailable
-    if status_code == httpx.codes.SERVICE_UNAVAILABLE:
-        raise exceptions.ServiceUnavailableError(err)
-    # 504 Gateway Timeout
-    if status_code == httpx.codes.GATEWAY_TIMEOUT:
-        raise exceptions.GatewayTimeoutError(err)
-    # 401 UnAuthorize Access
-    if status_code == httpx.codes.UNAUTHORIZED:
-        raise exceptions.UnauthorizedAccessError(err)
+    # If err is empty, use exception type and status code
+    def format_err(exc_name):
+        return f"{exc_name} (status_code={status_code})" if not err else err
 
-    # Anything else that is not known
+    if status_code == httpx.codes.BAD_REQUEST:
+        raise exceptions.MethodNotAllowedError(format_err("MethodNotAllowedError"))
+    if status_code == httpx.codes.FORBIDDEN:
+        raise exceptions.MethodNotAllowedError(format_err("MethodNotAllowedError"))
+    if status_code == httpx.codes.NOT_FOUND:
+        raise exceptions.HttpNotFoundError(format_err("HttpNotFoundError"))
+    if status_code == httpx.codes.METHOD_NOT_ALLOWED:
+        raise exceptions.MethodNotAllowedError(format_err("MethodNotAllowedError"))
+    if status_code == httpx.codes.CONFLICT:
+        raise exceptions.HttpAlreadyExistsError(format_err("HttpAlreadyExistsError"))
+    if status_code == httpx.codes.INTERNAL_SERVER_ERROR:
+        raise exceptions.InternalServerError(format_err("InternalServerError"))
+    if status_code == httpx.codes.NOT_IMPLEMENTED:
+        raise exceptions.NotImplementedError(format_err("NotImplementedError"))
+    if status_code == httpx.codes.BAD_GATEWAY:
+        raise exceptions.BadGatewayError(format_err("BadGatewayError"))
+    if status_code == httpx.codes.SERVICE_UNAVAILABLE:
+        raise exceptions.ServiceUnavailableError(format_err("ServiceUnavailableError"))
+    if status_code == httpx.codes.GATEWAY_TIMEOUT:
+        raise exceptions.GatewayTimeoutError(format_err("GatewayTimeoutError"))
+    if status_code == httpx.codes.UNAUTHORIZED:
+        raise exceptions.UnauthorizedAccessError(format_err("UnauthorizedAccessError"))
+
     if status_code > 400:
-        raise exceptions.UnknownError(err)
+        raise exceptions.UnknownError(format_err("UnknownError"))
 
 
 def get_default_app_dir(app_name: str) -> str:
@@ -125,7 +118,7 @@ def walk_pages(
 
         yield items
 
-        cont = getattr(getattr(data, "metadata", {}), "continue_", None)
+        cont: int | None = getattr(getattr(data, "metadata", {}), "continue_", None)
         if cont is None:
             break
 
@@ -164,6 +157,6 @@ async def walk_pages_async(
 
         yield items
 
-        cont = getattr(getattr(data, "metadata", {}), "continue_", None)
+        cont: int | None = getattr(getattr(data, "metadata", {}), "continue_", None)
         if cont is None:
             break
