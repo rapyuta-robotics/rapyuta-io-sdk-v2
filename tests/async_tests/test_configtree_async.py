@@ -329,7 +329,8 @@ async def test_put_key_in_revision_success(async_client, mocker: AsyncMock):
 
     # Call the put_key_in_revision method
     response = await async_client.put_key_in_revision(
-        tree_name="mock_configtree_name", revision_id="mock_revision_id", key="mock_key"
+        tree_name="mock_configtree_name", revision_id="mock_revision_id", key="mock_key",
+        body="value",
     )
 
     # Validate the response
