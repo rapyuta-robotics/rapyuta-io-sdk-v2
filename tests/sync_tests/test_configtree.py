@@ -232,7 +232,8 @@ def test_put_key_in_revision_success(client, mocker: MockFixture):
         },
     )
     response = client.put_key_in_revision(
-        tree_name="mock_configtree_name", revision_id="mock_revision_id", key="mock_key"
+        tree_name="mock_configtree_name", revision_id="mock_revision_id", key="mock_key",
+        body="value"
     )
     assert response["metadata"]["guid"] == "test_revision_guid"
     assert response["metadata"]["name"] == "test_revision"
