@@ -92,7 +92,7 @@ class UserSpec(BaseModel):
 class User(BaseObject):
     """User model."""
 
-    kind: Literal["User"] | None = "User"
+    kind: Literal["User", "ServiceAccount"] | None = "User"
     metadata: BaseMetadata
     spec: UserSpec
 
