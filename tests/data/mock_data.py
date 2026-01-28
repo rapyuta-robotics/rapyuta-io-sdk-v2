@@ -842,6 +842,106 @@ def managedservice_binding_model_mock() -> dict[str, Any]:
     }
 
 
+# -------------------- FILEUPLOAD --------------------
+
+
+@pytest.fixture
+def fileupload_body() -> dict[str, Any]:
+    return {
+        "apiVersion": "api.rapyuta.io/v2",
+        "kind": "DeviceFileUpload",
+        "spec": {
+            "file_path": "/home/user/data/sensor_data.log",
+            "file_name": "sensor_data.log",
+            "max_upload_rate": 1048576,
+            "override": False,
+            "purge_after": False,
+        },
+    }
+
+
+@pytest.fixture
+def fileupload_model_mock() -> dict[str, Any]:
+    return {
+        "apiVersion": "api.rapyuta.io/v2",
+        "kind": "DeviceFileUpload",
+        "metadata": {
+            "guid": "fileupload-mockupload12345678",
+            "name": "fileupload-mockupload12345678",
+            "projectGUID": "mock_project_guid",
+            "creatorGUID": "mock_user_guid",
+            "createdAt": "2026-01-27T10:00:00Z",
+            "updatedAt": "2026-01-27T10:00:00Z",
+        },
+        "spec": {
+            "device_guid": "device-mockdevice12345678910",
+            "file_name": "sensor_data.log",
+            "file_path": "/home/user/data/sensor_data.log",
+            "blob_ref_id": 12345,
+            "max_upload_rate": 1048576,
+            "override": False,
+            "purge_after": False,
+        },
+        "status": {
+            "status": "PENDING",
+            "total_size": 0,
+            "uploaded_bytes": 0,
+        },
+    }
+
+
+@pytest.fixture
+def fileuploadlist_model_mock(fileupload_model_mock) -> dict[str, Any]:
+    return {
+        "metadata": {
+            "continue": 1,
+        },
+        "items": [fileupload_model_mock],
+    }
+
+
+# -------------------- SHAREDURL --------------------
+
+
+@pytest.fixture
+def sharedurl_body() -> dict[str, Any]:
+    return {
+        "apiVersion": "api.rapyuta.io/v2",
+        "kind": "DeviceSharedURL",
+        "spec": {
+            "expiryTime": "2026-01-28T10:00:00Z",
+        },
+    }
+
+
+@pytest.fixture
+def sharedurl_model_mock() -> dict[str, Any]:
+    return {
+        "apiVersion": "api.rapyuta.io/v2",
+        "kind": "DeviceSharedURL",
+        "metadata": {
+            "guid": "sharedurl-mocksharedurl123456",
+            "name": "sharedurl-mocksharedurl123456",
+            "creatorGUID": "mock_user_guid",
+            "createdAt": "2026-01-27T10:00:00Z",
+            "updatedAt": "2026-01-27T10:00:00Z",
+        },
+        "spec": {
+            "expiryTime": "2026-01-28T10:00:00Z",
+        },
+    }
+
+
+@pytest.fixture
+def sharedurllist_model_mock(sharedurl_model_mock) -> dict[str, Any]:
+    return {
+        "metadata": {
+            "continue": 1,
+        },
+        "items": [sharedurl_model_mock],
+    }
+
+
 # -------------------- CONFIGURATION --------------------
 
 
