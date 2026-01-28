@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2024 Rapyuta Robotics
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,21 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # from rapyuta_io_sdk_v2.config import Configuration
-import asyncio
 import json
 import os
 import sys
 import typing
-from functools import wraps
 
 import httpx
-from munch import Munch, munchify
 
 import rapyuta_io_sdk_v2.exceptions as exceptions
 
 
 def handle_server_errors(response: httpx.Response):
-    status_code = response.status_code
+    status_code: int = response.status_code
 
     if status_code < 400:
         return
@@ -38,37 +34,35 @@ def handle_server_errors(response: httpx.Response):
     except json.JSONDecodeError:
         err = response.text
 
-    # 404 Not Found
-    if status_code == httpx.codes.NOT_FOUND:
-        raise exceptions.HttpNotFoundError(err)
-    # 405 Method Not Allowed
-    if status_code == httpx.codes.METHOD_NOT_ALLOWED:
-        raise exceptions.MethodNotAllowedError(err)
-    # 409 Conflict
-    if status_code == httpx.codes.CONFLICT:
-        raise exceptions.HttpAlreadyExistsError(err)
-    # 500 Internal Server Error
-    if status_code == httpx.codes.INTERNAL_SERVER_ERROR:
-        raise exceptions.InternalServerError(err)
-    # 501 Not Implemented
-    if status_code == httpx.codes.NOT_IMPLEMENTED:
-        raise exceptions.NotImplementedError(err)
-    # 502 Bad Gateway
-    if status_code == httpx.codes.BAD_GATEWAY:
-        raise exceptions.BadGatewayError(err)
-    # 503 Service Unavailable
-    if status_code == httpx.codes.SERVICE_UNAVAILABLE:
-        raise exceptions.ServiceUnavailableError(err)
-    # 504 Gateway Timeout
-    if status_code == httpx.codes.GATEWAY_TIMEOUT:
-        raise exceptions.GatewayTimeoutError(err)
-    # 401 UnAuthorize Access
-    if status_code == httpx.codes.UNAUTHORIZED:
-        raise exceptions.UnauthorizedAccessError(err)
+    # If err is empty, use exception type and status code
+    def format_err(exc_name):
+        return f"{exc_name} (status_code={status_code})" if not err else err
 
-    # Anything else that is not known
-    if status_code > 504:
-        raise exceptions.UnknownError(err)
+    if status_code == httpx.codes.BAD_REQUEST:
+        raise exceptions.MethodNotAllowedError(format_err("MethodNotAllowedError"))
+    if status_code == httpx.codes.FORBIDDEN:
+        raise exceptions.MethodNotAllowedError(format_err("MethodNotAllowedError"))
+    if status_code == httpx.codes.NOT_FOUND:
+        raise exceptions.HttpNotFoundError(format_err("HttpNotFoundError"))
+    if status_code == httpx.codes.METHOD_NOT_ALLOWED:
+        raise exceptions.MethodNotAllowedError(format_err("MethodNotAllowedError"))
+    if status_code == httpx.codes.CONFLICT:
+        raise exceptions.HttpAlreadyExistsError(format_err("HttpAlreadyExistsError"))
+    if status_code == httpx.codes.INTERNAL_SERVER_ERROR:
+        raise exceptions.InternalServerError(format_err("InternalServerError"))
+    if status_code == httpx.codes.NOT_IMPLEMENTED:
+        raise exceptions.NotImplementedError(format_err("NotImplementedError"))
+    if status_code == httpx.codes.BAD_GATEWAY:
+        raise exceptions.BadGatewayError(format_err("BadGatewayError"))
+    if status_code == httpx.codes.SERVICE_UNAVAILABLE:
+        raise exceptions.ServiceUnavailableError(format_err("ServiceUnavailableError"))
+    if status_code == httpx.codes.GATEWAY_TIMEOUT:
+        raise exceptions.GatewayTimeoutError(format_err("GatewayTimeoutError"))
+    if status_code == httpx.codes.UNAUTHORIZED:
+        raise exceptions.UnauthorizedAccessError(format_err("UnauthorizedAccessError"))
+
+    if status_code > 400:
+        raise exceptions.UnknownError(format_err("UnknownError"))
 
 
 def get_default_app_dir(app_name: str) -> str:
@@ -90,39 +84,13 @@ def get_default_app_dir(app_name: str) -> str:
     return os.path.join(xdg_config_home, app_name)
 
 
-# Decorator to handle server errors and munchify response
-def handle_and_munchify_response(func) -> typing.Callable:
-    """Decorator to handle server errors and munchify response.
-
-    Args:
-        func (callable): The function to decorate.
-    """
-
-    @wraps(func)
-    async def async_wrapper(*args, **kwargs) -> Munch:
-        response = await func(*args, **kwargs)
-        handle_server_errors(response)
-        return munchify(response.json())
-
-    @wraps(func)
-    def sync_wrapper(*args, **kwargs) -> Munch:
-        response = func(*args, **kwargs)
-        handle_server_errors(response)
-        return munchify(response.json())
-
-    if asyncio.iscoroutinefunction(func):
-        return async_wrapper
-
-    return sync_wrapper
-
-
 def walk_pages(
     func: typing.Callable,
     *args,
     limit: int = 50,
     cont: int = 0,
     **kwargs,
-) -> typing.Generator:
+):
     """A generator function to paginate through list API results.
 
     Args:
@@ -133,20 +101,24 @@ def walk_pages(
         **kwargs: Additional keyword arguments to pass to the API function.
 
     Yields:
-        Munch: Each item from the API response.
+        Dict[str, Any]: Each item from the API response.
     """
     while True:
-        data = func(cont, limit, *args, **kwargs)
+        call_kwargs = dict(kwargs or {})
+        if "cont" not in call_kwargs:
+            call_kwargs["cont"] = cont
+        if "limit" not in call_kwargs:
+            call_kwargs["limit"] = limit
 
-        items = data.get("items", [])
+        data = func(*args, **call_kwargs)
+
+        items = getattr(data, "items", None) or []
         if not items:
             break
 
-        for item in items:
-            yield munchify(item)
+        yield items
 
-        # Update `cont` for the next page
-        cont = data.get("metadata", {}).get("continue")
+        cont: int | None = getattr(getattr(data, "metadata", {}), "continue_", None)
         if cont is None:
             break
 
@@ -168,19 +140,23 @@ async def walk_pages_async(
         **kwargs: Additional keyword arguments to pass to the API function.
 
     Yields:
-        Munch: Each item from the API response.
+        Dict[str, Any]: Each item from the API response.
     """
     while True:
-        data = await func(cont, limit, *args, **kwargs)
+        call_kwargs = dict(kwargs or {})
+        if "cont" not in call_kwargs:
+            call_kwargs["cont"] = cont
+        if "limit" not in call_kwargs:
+            call_kwargs["limit"] = limit
 
-        items = data.get("items", [])
+        data = await func(*args, **call_kwargs)
+
+        items = getattr(data, "items", None) or []
         if not items:
             break
 
-        for item in items:
-            yield munchify(item)
+        yield items
 
-        # Update `cont` for the next page
-        cont = data.get("metadata", {}).get("continue")
+        cont: int | None = getattr(getattr(data, "metadata", {}), "continue_", None)
         if cont is None:
             break
