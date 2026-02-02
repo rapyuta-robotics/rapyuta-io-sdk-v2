@@ -66,7 +66,7 @@ class DeploymentVolume(BaseModel):
                 data["depends"] = None
         return data
 
-    @field_validator("mount_path", "sub_path", mode="before")
+    @field_validator("mount_path", mode="before")
     @classmethod
     def check_absolute_path(cls, v, info):
         if v is not None and not path.isabs(v):
