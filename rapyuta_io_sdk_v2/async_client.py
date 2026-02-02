@@ -2015,6 +2015,7 @@ class AsyncClient:
         limit: int = 50,
         label_selector: list[str] | None = None,
         name: str | None = None,
+        guid: str | None = None,
         **kwargs,
     ) -> UserGroupList:
         parameters: dict[str, Any] = {
@@ -2025,6 +2026,8 @@ class AsyncClient:
             parameters["labelSelector"] = label_selector
         if name:
             parameters["name"] = name
+        if guid:
+            parameters["guid"] = guid
 
         result = await self.c.get(
             url=f"{self.v2api_host}/v2/usergroups/",
