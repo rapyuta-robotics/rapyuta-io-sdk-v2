@@ -1323,7 +1323,7 @@ class AsyncClient:
             params["regions"] = regions
 
         result = await self.c.get(
-            url=f"{self.v2api_host}/v2/oauth2clients/",
+            url=f"{self.v2api_host}/v2/oauth2/clients/",
             headers=self.config.get_headers(**kwargs),
             params=params,
         )
@@ -1340,7 +1340,7 @@ class AsyncClient:
             OAuth2 client details as a dictionary.
         """
         result = await self.c.get(
-            url=f"{self.v2api_host}/v2/oauth2clients/{client_id}/",
+            url=f"{self.v2api_host}/v2/oauth2/clients/{client_id}/",
             headers=self.config.get_headers(**kwargs),
         )
         handle_server_errors(result)
@@ -1356,7 +1356,7 @@ class AsyncClient:
             OAuth2 client details as a dictionary.
         """
         result = await self.c.post(
-            url=f"{self.v2api_host}/v2/oauth2clients/",
+            url=f"{self.v2api_host}/v2/oauth2/clients/",
             headers=self.config.get_headers(**kwargs),
             json=body,
         )
@@ -1376,7 +1376,7 @@ class AsyncClient:
             OAuth2 client details as a dictionary.
         """
         result = await self.c.put(
-            url=f"{self.v2api_host}/v2/oauth2clients/{client_id}/",
+            url=f"{self.v2api_host}/v2/oauth2/clients/{client_id}/",
             headers=self.config.get_headers(**kwargs),
             json=body,
         )
@@ -1413,7 +1413,7 @@ class AsyncClient:
             None if successful.
         """
         result = await self.c.delete(
-            url=f"{self.v2api_host}/v2/oauth2clients/{client_id}/",
+            url=f"{self.v2api_host}/v2/oauth2/clients/{client_id}/",
             headers=self.config.get_headers(**kwargs),
         )
         handle_server_errors(result)

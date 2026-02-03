@@ -1280,7 +1280,7 @@ class Client:
             params["regions"] = regions
 
         result = self.c.get(
-            url=f"{self.v2api_host}/v2/oauth2clients/",
+            url=f"{self.v2api_host}/v2/oauth2/clients/",
             headers=self.config.get_headers(**kwargs),
             params=params,
         )
@@ -1297,7 +1297,7 @@ class Client:
             OAuth2 client details as a dictionary.
         """
         result = self.c.get(
-            url=f"{self.v2api_host}/v2/oauth2clients/{client_id}/",
+            url=f"{self.v2api_host}/v2/oauth2/clients/{client_id}/",
             headers=self.config.get_headers(**kwargs),
         )
         handle_server_errors(result)
