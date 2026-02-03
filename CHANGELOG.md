@@ -1,3 +1,11 @@
+## [0.3.1](https://github.com/rapyuta-robotics/rapyuta-io-sdk-v2/compare/v0.3.0...v0.3.1) (2026-02-03)
+
+
+### Bug Fixes
+
+* allow name in ExecutableStatus to be optional ([ae15e8e](https://github.com/rapyuta-robotics/rapyuta-io-sdk-v2/commit/ae15e8ef596aef585321ce295f5adff386addf1c))
+* oauth2 endpoints ([4023a0e](https://github.com/rapyuta-robotics/rapyuta-io-sdk-v2/commit/4023a0e93faf51eda1f37797bd04c5f1ccaa4629))
+
 # [0.3.0](https://github.com/rapyuta-robotics/rapyuta-io-sdk-v2/compare/v0.2.4...v0.3.0) (2026-01-28)
 
 
