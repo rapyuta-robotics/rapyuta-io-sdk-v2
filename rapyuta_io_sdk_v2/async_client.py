@@ -1395,7 +1395,7 @@ class AsyncClient:
         Returns:
             OAuth2 client details as a dictionary.
         """
-        result = await self.c.patch(
+        result = await self.c.put(
             url=f"{self.v2api_host}/v2/oauth2/clients/{client_id}/uris/",
             headers=self.config.get_headers(**kwargs),
             json=update.model_dump(by_alias=True),
