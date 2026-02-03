@@ -190,7 +190,7 @@ class DeploymentSpec(BaseModel):
 
 
 class ExecutableStatus(BaseModel):
-    name: str
+    name: str | None = None
     status: ExecutableStatusType | None = None
     error_code: str | None = None
     reason: str | None = None
