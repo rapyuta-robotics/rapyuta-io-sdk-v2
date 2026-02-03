@@ -148,10 +148,7 @@ class Configuration:
         if name == "local":
             # Allow overriding the local API host via environment variables.
             # Priority: LOCAL_V2API_HOST > default fallback.
-            override_host = (
-                os.getenv("LOCAL_V2API_HOST")
-                or "http://gateway/io"
-            )
+            override_host = os.getenv("LOCAL_V2API_HOST") or "http://gateway/io"
             self.hosts["environment"] = name
             self.hosts["v2api_host"] = override_host
             return
