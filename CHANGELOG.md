@@ -1,3 +1,10 @@
+# [0.4.0](https://github.com/rapyuta-robotics/rapyuta-io-sdk-v2/compare/v0.3.1...v0.4.0) (2026-02-04)
+
+
+### Features
+
+* **client:** add optional guid parameter to user group retrieval ([f3154b7](https://github.com/rapyuta-robotics/rapyuta-io-sdk-v2/commit/f3154b72efabb3abeb1821414bd584a9999c578d))
+
 ## [0.3.1](https://github.com/rapyuta-robotics/rapyuta-io-sdk-v2/compare/v0.3.0...v0.3.1) (2026-02-03)
 
 
