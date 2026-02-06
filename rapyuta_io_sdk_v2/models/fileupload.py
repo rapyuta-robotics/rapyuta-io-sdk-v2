@@ -140,6 +140,11 @@ class FileUploadSpec(BaseModel):
         default=None,
         description="Custom metadata",
     )
+    shared_urls: list["SharedURL"] | None = Field(
+        default=None,
+        description="List of shared URLs",
+        alias="sharedURLs",
+    )
 
 
 class FileUploadStatus(BaseModel):
@@ -227,11 +232,6 @@ class FileUpload(BaseObject):
     )
     spec: FileUploadSpec = Field(description="Specification for the FileUpload resource")
     status: FileUploadStatus | None = Field(default=None)
-    shared_urls: list[SharedURL] | None = Field(
-        default=None,
-        description="List of shared URLs",
-        alias="sharedURLs",
-    )
 
 
 class FileUploadList(BaseList[FileUpload]):
