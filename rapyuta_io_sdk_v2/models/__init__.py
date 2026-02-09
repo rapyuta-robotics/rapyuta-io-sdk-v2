@@ -107,11 +107,9 @@ from rapyuta_io_sdk_v2.models.serviceaccount import (
 from rapyuta_io_sdk_v2.models.fileupload import (
     FileUpload as FileUpload,
     FileUploadList as FileUploadList,
-    FileUploadRequest as FileUploadRequest,
     FileUploadSpec as FileUploadSpec,
     FileUploadStatus as FileUploadStatus,
     SharedURL as SharedURL,
     SharedURLList as SharedURLList,
-    SharedURLRequest as SharedURLRequest,
     SharedURLSpec as SharedURLSpec,
 )
