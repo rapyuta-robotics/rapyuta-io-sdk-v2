@@ -2396,7 +2396,7 @@ class Client:
         result = self.c.post(
             url=f"{self.v2api_host}/v2/devices/{device_guid}/fileuploads/",
             headers=self.config.get_headers(**kwargs),
-            json=body.model_dump(by_alias=True, exclude_none=True),
+            json=body.model_dump(by_alias=True, exclude_none=True, mode="json"),
         )
         handle_server_errors(result)
         return FileUpload(**result.json())
