@@ -45,7 +45,7 @@ class FileUploadSpec(BaseModel):
         alias="blob_ref_id",
     )
     max_upload_rate: int | None = Field(
-        default=None,
+        default=DEFAULT_LOG_UPLOAD_BANDWIDTH,
         description="Maximum upload rate in bytes/sec",
         alias="max_upload_rate",
     )
