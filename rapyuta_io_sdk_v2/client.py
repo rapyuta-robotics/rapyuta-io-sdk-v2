@@ -54,6 +54,10 @@ from rapyuta_io_sdk_v2.models import (
     OAuth2UpdateURI,
     ServiceAccountList,
     ServiceAccount,
+    FileUpload,
+    FileUploadList,
+    SharedURL,
+    SharedURLList,
 )
 from rapyuta_io_sdk_v2.models.serviceaccount import (
     ServiceAccountToken,
@@ -2307,3 +2311,235 @@ class Client:
         handle_server_errors(result)
 
         return None
+
+    # -------------------FileUpload-------------------
+    def list_fileuploads(
+        self,
+        device_guid: str,
+        cont: int = 0,
+        limit: int = 50,
+        guids: list[str] | None = None,
+        status: list[str] | None = None,
+        **kwargs,
+    ) -> FileUploadList:
+        """List all file uploads for a device.
+
+        Args:
+            device_guid (str): Device GUID.
+            cont (int, optional): Start index of file uploads. Defaults to 0.
+            limit (int, optional): Number of file uploads to list. Defaults to 50.
+            guids (List[str], optional): Filter by file upload GUIDs. Defaults to None.
+            status (List[str], optional): Filter by upload status.
+                Available values: PENDING, IN PROGRESS, FAILED, COMPLETED, CANCELLED.
+                Defaults to None.
+
+        Returns:
+            FileUploadList: List of file uploads.
+        """
+        params: dict[str, Any] = {
+            "continue": cont,
+            "limit": limit,
+        }
+        if guids:
+            params["guids"] = guids
+        if status:
+            params["status"] = status
+
+        result = self.c.get(
+            url=f"{self.v2api_host}/v2/devices/{device_guid}/fileuploads/",
+            headers=self.config.get_headers(**kwargs),
+            params=params,
+        )
+        handle_server_errors(result)
+        return FileUploadList(**result.json())
+
+    def get_fileupload(
+        self,
+        device_guid: str,
+        guid: str,
+        **kwargs,
+    ) -> FileUpload:
+        """Get a file upload by its GUID.
+
+        Args:
+            device_guid (str): Device GUID.
+            guid (str): File upload GUID.
+
+        Returns:
+            FileUpload: File upload details.
+        """
+        result = self.c.get(
+            url=f"{self.v2api_host}/v2/devices/{device_guid}/fileuploads/{guid}/",
+            headers=self.config.get_headers(**kwargs),
+        )
+        handle_server_errors(result)
+        return FileUpload(**result.json())
+
+    def create_fileupload(
+        self,
+        device_guid: str,
+        body: FileUpload | dict[str, Any],
+        **kwargs,
+    ) -> FileUpload:
+        """Create a new file upload for a device.
+
+        Args:
+            device_guid (str): Device GUID.
+            body (FileUpload | dict): File upload specification.
+
+        Returns:
+            FileUpload: Created file upload details.
+        """
+        if isinstance(body, dict):
+            body = FileUpload.model_validate(body)
+
+        result = self.c.post(
+            url=f"{self.v2api_host}/v2/devices/{device_guid}/fileuploads/",
+            headers=self.config.get_headers(**kwargs),
+            json=body.model_dump(by_alias=True, exclude_none=True, mode="json"),
+        )
+        handle_server_errors(result)
+        return FileUpload(**result.json())
+
+    def delete_fileupload(
+        self,
+        device_guid: str,
+        guid: str,
+        **kwargs,
+    ) -> None:
+        """Delete a file upload by its GUID.
+
+        Args:
+            device_guid (str): Device GUID.
+            guid (str): File upload GUID.
+
+        Note:
+            Cannot delete files with PENDING or IN PROGRESS status.
+        """
+        result = self.c.delete(
+            url=f"{self.v2api_host}/v2/devices/{device_guid}/fileuploads/{guid}/",
+            headers=self.config.get_headers(**kwargs),
+        )
+        handle_server_errors(result)
+
+    def cancel_fileupload(
+        self,
+        device_guid: str,
+        guid: str,
+        **kwargs,
+    ) -> None:
+        """Cancel a file upload.
+
+        Args:
+            device_guid (str): Device GUID.
+            guid (str): File upload GUID.
+
+        Returns:
+            None if successful.
+        """
+        result = self.c.post(
+            url=f"{self.v2api_host}/v2/devices/{device_guid}/fileuploads/{guid}/cancel/",
+            headers=self.config.get_headers(**kwargs),
+        )
+        handle_server_errors(result)
+
+    def download_fileupload(
+        self,
+        device_guid: str,
+        guid: str,
+        **kwargs,
+    ) -> dict[str, Any]:
+        """Get the download URL for a file upload.
+
+        Args:
+            device_guid (str): Device GUID.
+            guid (str): File upload GUID.
+
+        Returns:
+            dict[str, Any]: Dictionary containing the signed download URL.
+        """
+        result = self.c.get(
+            url=f"{self.v2api_host}/v2/devices/{device_guid}/fileuploads/{guid}/download/",
+            headers=self.config.get_headers(**kwargs),
+        )
+        handle_server_errors(result)
+        return result.json()
+
+    # -------------------SharedURL-------------------
+    def list_sharedurls(
+        self,
+        fileupload_guid: str,
+        cont: int = 0,
+        limit: int = 50,
+        **kwargs,
+    ) -> SharedURLList:
+        """List all shared URLs for a file upload.
+
+        Args:
+            fileupload_guid (str): File upload GUID.
+            cont (int, optional): Start index of shared URLs. Defaults to 0.
+            limit (int, optional): Number of shared URLs to list. Defaults to 50.
+
+        Returns:
+            SharedURLList: List of shared URLs.
+        """
+        result = self.c.get(
+            url=f"{self.v2api_host}/v2/devices/fileuploads/{fileupload_guid}/sharedurls/",
+            headers=self.config.get_headers(**kwargs),
+            params={
+                "continue": cont,
+                "limit": limit,
+            },
+        )
+        handle_server_errors(result)
+        return SharedURLList(**result.json())
+
+    def get_sharedurl(
+        self,
+        url_guid: str,
+        **kwargs,
+    ) -> httpx.Response:
+        """Get a shared URL and redirect to the signed download URL.
+
+        Args:
+            url_guid (str): Shared URL GUID.
+
+        Returns:
+            httpx.Response: Response with redirect to signed download URL.
+        """
+        result = self.c.get(
+            url=f"{self.v2api_host}/v2/devices/fileuploads/sharedurls/{url_guid}/",
+            headers=self.config.get_headers(**kwargs),
+            follow_redirects=False,
+        )
+        handle_server_errors(result)
+        return result
+
+    def create_sharedurl(
+        self,
+        fileupload_guid: str,
+        body: SharedURL | dict[str, Any],
+        **kwargs,
+    ) -> SharedURL:
+        """Create a shared URL for a file upload.
+
+        Args:
+            fileupload_guid (str): File upload GUID.
+            body (SharedURL | dict): Shared URL specification with expiry time.
+
+        Returns:
+            SharedURL: Created shared URL details.
+
+        Note:
+            File upload must be in PENDING, IN PROGRESS, or COMPLETED status.
+        """
+        if isinstance(body, dict):
+            body = SharedURL.model_validate(body)
+
+        result = self.c.post(
+            url=f"{self.v2api_host}/v2/devices/fileuploads/{fileupload_guid}/sharedurls/",
+            headers=self.config.get_headers(**kwargs),
+            json=body.model_dump(by_alias=True, exclude_none=True, mode="json"),
+        )
+        handle_server_errors(result)
+        return SharedURL(**result.json())
