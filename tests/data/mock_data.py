@@ -861,3 +861,75 @@ def config_obj() -> Configuration:
         organization_guid="mock_org_guid",
         auth_token="mock_auth_token",
     )
+
+
+# -------------------- USER PERMISSIONS --------------------
+
+
+@pytest.fixture
+def user_permissions_mock() -> dict[str, Any]:
+    """Mock data for user permissions response."""
+    return {
+        "organization": {
+            "projects": {
+                "create": ["allowed"],
+                "list": ["allowed"],
+                "get": ["allowed"],
+            },
+            "users": {
+                "create": ["allowed"],
+                "list": ["allowed"],
+                "delete": ["allowed"],
+            },
+            "packages": {
+                "create": ["allowed"],
+                "list": ["allowed"],
+            },
+        },
+        "projects": {
+            "project-aaaaaaaaaaaaaaaaaaaa": {
+                "deployments": {
+                    "create": ["allowed"],
+                    "list": ["allowed"],
+                    "get": ["allowed"],
+                    "update": ["allowed"],
+                    "delete": ["allowed"],
+                },
+                "packages": {
+                    "create": ["allowed"],
+                    "list": ["allowed"],
+                    "get": ["allowed"],
+                },
+                "networks": {
+                    "create": ["allowed"],
+                    "list": ["allowed"],
+                    "delete": ["allowed"],
+                },
+            },
+            "project-bbbbbbbbbbbbbbbbbbbb": {
+                "deployments": {
+                    "list": ["allowed"],
+                    "get": ["allowed"],
+                },
+                "packages": {
+                    "list": ["allowed"],
+                    "get": ["allowed"],
+                },
+            },
+        },
+        "groups": {
+            "group-aaaaaaaaaaaaaaaaaaaa": {
+                "secrets": {
+                    "create": ["allowed"],
+                    "list": ["allowed"],
+                    "get": ["allowed"],
+                    "delete": ["allowed"],
+                },
+                "staticroutes": {
+                    "create": ["allowed"],
+                    "list": ["allowed"],
+                },
+            },
+        },
+    }
+

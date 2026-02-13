@@ -84,6 +84,7 @@ from rapyuta_io_sdk_v2.models.staticroute import (
 from rapyuta_io_sdk_v2.models.user import (
     User as User,
     UserList as UserList,
+    UserPermissions as UserPermissions,
 )
 
 # User Group models
