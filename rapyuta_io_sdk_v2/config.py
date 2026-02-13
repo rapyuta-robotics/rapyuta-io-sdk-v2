@@ -76,17 +76,24 @@ class Configuration:
         project_guid: str | None = None,
         with_group: bool = False,
         group_guid: str | None = None,
+        user_guid: str | None = None,
         **kwargs,
     ) -> dict[str, str]:
         """Get the headers for the configuration.
 
         Args:
-            organization_guid (str): The organization guid.
-            with_project (bool): Whether to include the project headers.
-            project_guid (str): The project guid.
+            with_organization (bool): Whether to include the organization headers. Defaults to True.
+            organization_guid (str, optional): The organization guid. Defaults to None.
+            with_project (bool): Whether to include the project headers. Defaults to True.
+            project_guid (str, optional): The project guid. Defaults to None.
+            with_group (bool): Whether to include the group headers. Defaults to False.
+            group_guid (str, optional): The group guid. Defaults to None.
+            user_guid (str, optional): The user guid. If provided, adds 'userguid' header. Defaults to None.
+            **kwargs: Additional keyword arguments (e.g., x_checksum, content_type).
 
         Returns:
-            dict: Headers for the configuration.
+            dict: Headers for the configuration, including Authorization, organizationguid,
+                  project, groupguid, userguid (if applicable), and other custom headers.
         """
         auth_value = self.auth_token.strip() if self.auth_token else None
         if auth_value and not auth_value.lower().startswith("bearer "):
@@ -103,6 +110,9 @@ class Configuration:
 
         if with_group and group_guid:
             headers["groupguid"] = group_guid
+
+        if user_guid:
+            headers["userguid"] = user_guid
 
         custom_client_request_id = os.getenv("REQUEST_ID")
         if custom_client_request_id:
