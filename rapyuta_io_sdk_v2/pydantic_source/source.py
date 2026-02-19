@@ -1,4 +1,3 @@
-import ast
 from typing import Any
 from collections.abc import Iterable
 from benedict import benedict
@@ -9,6 +8,8 @@ from pydantic.fields import FieldInfo
 
 from rapyuta_io_sdk_v2 import Client, Configuration
 import base64
+
+import json
 
 
 class ConfigTreeSource(PydanticBaseSettingsSource):
@@ -40,7 +41,7 @@ class ConfigTreeSource(PydanticBaseSettingsSource):
         response = self._client.get_configtree(
             name=self._tree_name,
             include_data=True,
-            content_types="kv",
+            content_types=["kv"],
             key_prefixes=[self._top_prefix],
             with_project=self._with_project,
         )
@@ -49,7 +50,8 @@ class ConfigTreeSource(PydanticBaseSettingsSource):
                 f"'keys' not found in response for config tree '{self._tree_name}' "
                 f"with prefix '{self._top_prefix}'"
             )
-        return self._extract_data_api(input_data=response["keys"].toDict())
+
+        return self._extract_data_api(input_data=response["keys"])
 
     def _load_from_local_file(self):
         """
@@ -92,7 +94,7 @@ class ConfigTreeSource(PydanticBaseSettingsSource):
 
         try:
             # Safely evaluate the decoded string to Python data structures (e.g., lists, dicts)
-            return ast.literal_eval(decoded_data)
+            return json.loads(decoded_data)
         except (ValueError, SyntaxError):
             return decoded_data
 
