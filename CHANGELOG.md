@@ -1,3 +1,10 @@
+## [0.4.1](https://github.com/rapyuta-robotics/rapyuta-io-sdk-v2/compare/v0.4.0...v0.4.1) (2026-02-19)
+
+
+### Bug Fixes
+
+* **pydantic_source:** replace ast.literal_eval with json.loads for safer data parsing ([#33](https://github.com/rapyuta-robotics/rapyuta-io-sdk-v2/issues/33)) ([f465e1f](https://github.com/rapyuta-robotics/rapyuta-io-sdk-v2/commit/f465e1f2fee60096fd1d11dc86494929a68b67b3))
+
 # [0.4.0](https://github.com/rapyuta-robotics/rapyuta-io-sdk-v2/compare/v0.3.1...v0.4.0) (2026-02-04)
 
 

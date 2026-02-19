@@ -44,4 +44,4 @@ from rapyuta_io_sdk_v2.models import (
 )
 from rapyuta_io_sdk_v2.utils import walk_pages as walk_pages
 
-__version__ = "0.4.0"
+__version__ = "0.4.1"
