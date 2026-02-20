@@ -83,7 +83,7 @@ class Client:
             ),
             headers={
                 "User-Agent": (
-                    f"rio-sdk-v2;N/A;{platform.processor() or platform.machine()};{platform.system()};{platform.release()} {platform.version()}"
+                    f"rio-sdk-v2;N/A;{platform.processor() or platform.machine()};{platform.system()};{platform.release()};{platform.version()}".rstrip()
                 )
             },
         )
