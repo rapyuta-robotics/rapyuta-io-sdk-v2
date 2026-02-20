@@ -29,6 +29,7 @@ from rapyuta_io_sdk_v2.models import (
     Project,
     Network,
     User,
+    UserPermissions,
     ProjectList,
     DeploymentList,
     DiskList,
@@ -377,6 +378,36 @@ class AsyncClient:
         )
         handle_server_errors(result)
         return None
+
+    async def get_user_permissions(
+        self,
+        user_guid: str,
+        organization_guid: str | None = None,
+        **kwargs,
+    ) -> UserPermissions:
+        """Get user permissions for an organization.
+
+        Args:
+            user_guid (str): User GUID
+            organization_guid (str, optional): Organization GUID. Defaults to None.
+            **kwargs: Additional keyword arguments
+
+        Returns:
+            UserPermissions: User permissions object containing organization, projects, and groups permissions
+        """
+        organization_guid = organization_guid or self.config.organization_guid
+
+        result = await self.c.get(
+            url=f"{self.v2api_host}/v2/users/permissions/",
+            headers=self.config.get_headers(
+                with_project=False,
+                organization_guid=organization_guid,
+                user_guid=user_guid,
+                **kwargs,
+            ),
+        )
+        handle_server_errors(result)
+        return UserPermissions(**result.json())
 
     # ----------------- Projects -----------------
     async def list_projects(

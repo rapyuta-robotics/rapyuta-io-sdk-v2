@@ -18,6 +18,18 @@ from pydantic import AliasChoices, BaseModel, Field, model_validator
 
 from rapyuta_io_sdk_v2.models.utils import BaseList, BaseMetadata, BaseObject
 
+# Type aliases for permissions
+ActionMap = dict[str, list[str]]
+ResourceMap = dict[str, ActionMap]
+
+
+class UserPermissions(BaseModel):
+    """User permissions model."""
+
+    organization: ResourceMap | None = Field(default=None)
+    projects: dict[str, ResourceMap] | None = Field(default=None)
+    groups: dict[str, ResourceMap] | None = Field(default=None)
+
 
 class UserOrganization(BaseModel):
     """User organization model."""
