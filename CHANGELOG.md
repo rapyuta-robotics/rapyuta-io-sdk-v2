@@ -1,3 +1,10 @@
+## [0.4.2](https://github.com/rapyuta-robotics/rapyuta-io-sdk-v2/compare/v0.4.1...v0.4.2) (2026-02-20)
+
+
+### Bug Fixes
+
+* **client:** strip the User-Agent header to prevent trailing spaces ([f214f47](https://github.com/rapyuta-robotics/rapyuta-io-sdk-v2/commit/f214f47ab82fa08d77983f7549e0ab4b6f478103))
+
 ## [0.4.1](https://github.com/rapyuta-robotics/rapyuta-io-sdk-v2/compare/v0.4.0...v0.4.1) (2026-02-19)
 
 
