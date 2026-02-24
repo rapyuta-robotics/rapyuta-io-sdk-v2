@@ -1,3 +1,10 @@
+## [0.4.3](https://github.com/rapyuta-robotics/rapyuta-io-sdk-v2/compare/v0.4.2...v0.4.3) (2026-02-24)
+
+
+### Bug Fixes
+
+* ensure both 'value' and 'metadata' keys are present before processing ([0c83f7c](https://github.com/rapyuta-robotics/rapyuta-io-sdk-v2/commit/0c83f7c79984ad1fe0173686f523dda6a23e9653))
+
 ## [0.4.2](https://github.com/rapyuta-robotics/rapyuta-io-sdk-v2/compare/v0.4.1...v0.4.2) (2026-02-20)
 
 
