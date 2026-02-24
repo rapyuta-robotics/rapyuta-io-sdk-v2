@@ -34,9 +34,11 @@ class Configuration:
     project_guid: str = None
     organization_guid: str = None
     environment: str = "ga"  # Default environment is prod
+    v2_api_host: str = None
+    rip_host: str = None
 
     def __post_init__(self):
-        self.hosts = {}
+        self.hosts = {"v2api_host": self.v2_api_host, "rip_host": self.rip_host}
         self.set_environment(self.environment)
 
     @classmethod
@@ -145,23 +147,36 @@ class Configuration:
         """
         name = name or "ga"  # Default to prod.
 
+        # Validate before doing anything else.
+        if (
+            name not in ("local", "ga")
+            and name not in NAMED_ENVIRONMENTS
+            and not name.startswith("pr")
+        ):
+            raise ValidationError("invalid environment")
+
+        # Set environment name once, then configure hosts per environment.
+        self.hosts["environment"] = name
+
         if name == "local":
             # Allow overriding the local API host via environment variables.
             # Priority: LOCAL_V2API_HOST > default fallback.
-            override_host = os.getenv("LOCAL_V2API_HOST") or "http://gateway/io"
-            self.hosts["environment"] = name
-            self.hosts["v2api_host"] = override_host
-            return
-
-        if name == "ga":
-            self.hosts["environment"] = "ga"
-            self.hosts["rip_host"] = "https://garip.apps.okd4v2.prod.rapyuta.io"
-            self.hosts["v2api_host"] = "https://api.rapyuta.io"
-            return
-
-        if not (name in NAMED_ENVIRONMENTS or name.startswith("pr")):
-            raise ValidationError("invalid environment")
-
-        self.hosts["environment"] = name
-        self.hosts["rip_host"] = f"https://{name}rip.{STAGING_ENVIRONMENT_SUBDOMAIN}"
-        self.hosts["v2api_host"] = f"https://{name}api.{STAGING_ENVIRONMENT_SUBDOMAIN}"
+            if self.hosts["v2api_host"] is None:
+                self.hosts["v2api_host"] = (
+                    os.getenv("LOCAL_V2API_HOST") or "http://gateway/io"
+                )
+        elif name == "ga":
+            if self.hosts["rip_host"] is None:
+                self.hosts["rip_host"] = "https://garip.apps.okd4v2.prod.rapyuta.io"
+            if self.hosts["v2api_host"] is None:
+                self.hosts["v2api_host"] = "https://api.rapyuta.io"
+        else:
+            # Staging environments: qa, dev, pr*
+            if self.hosts["rip_host"] is None:
+                self.hosts["rip_host"] = (
+                    f"https://{name}rip.{STAGING_ENVIRONMENT_SUBDOMAIN}"
+                )
+            if self.hosts["v2api_host"] is None:
+                self.hosts["v2api_host"] = (
+                    f"https://{name}api.{STAGING_ENVIRONMENT_SUBDOMAIN}"
+                )
