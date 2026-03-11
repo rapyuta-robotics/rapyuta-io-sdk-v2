@@ -3,7 +3,11 @@ import pytest
 
 # ruff: noqa: F811, F401
 from rapyuta_io_sdk_v2.exceptions import UnauthorizedAccessError
-from tests.data.mock_data import mock_response_user as mock_response_user, user_body, user_permissions_mock
+from tests.data.mock_data import (
+    mock_response_user as mock_response_user,
+    user_body,
+    user_permissions_mock,
+)
 from tests.utils.fixtures import async_client
 
 
@@ -121,7 +125,9 @@ async def test_get_user_permissions_success(async_client, user_permissions_mock,
 
 
 @pytest.mark.asyncio
-async def test_get_user_permissions_with_config_org(async_client, user_permissions_mock, mocker):
+async def test_get_user_permissions_with_config_org(
+    async_client, user_permissions_mock, mocker
+):
     """Test async get_user_permissions using organization_guid from config."""
     mock_get = mocker.patch("httpx.AsyncClient.get")
 
@@ -158,4 +164,3 @@ async def test_get_user_permissions_unauthorized(async_client, mocker):
             organization_guid="org-testorg123456789abcdef",
         )
     assert "user cannot be authenticated" in str(exc.value)
-

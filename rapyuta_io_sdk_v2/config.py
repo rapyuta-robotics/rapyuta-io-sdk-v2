@@ -109,7 +109,6 @@ class Configuration:
         if with_group and group_guid:
             headers["groupguid"] = group_guid
 
-
         custom_client_request_id = os.getenv("REQUEST_ID")
         if custom_client_request_id:
             headers["X-Request-ID"] = custom_client_request_id

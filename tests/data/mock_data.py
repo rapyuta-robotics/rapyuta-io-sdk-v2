@@ -1033,3 +1033,19 @@ def user_permissions_mock() -> dict[str, Any]:
         },
     }
 
+
+# -------------------- SSH KEY --------------------
+
+
+@pytest.fixture
+def ssh_key_sign_request_body() -> dict[str, Any]:
+    return {
+        "publicKey": "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQC... user@example.com",
+    }
+
+
+@pytest.fixture
+def ssh_key_sign_response_mock() -> dict[str, Any]:
+    return {
+        "certificate": "ssh-rsa-cert-v01@openssh.com AAAAHHNza...",
+    }
