@@ -1,3 +1,11 @@
+# [0.5.0](https://github.com/rapyuta-robotics/rapyuta-io-sdk-v2/compare/v0.4.3...v0.5.0) (2026-03-11)
+
+
+### Features
+
+* **fileupload:** add support for file upload and shared url ([dda7ee3](https://github.com/rapyuta-robotics/rapyuta-io-sdk-v2/commit/dda7ee3a90d2961ffa914b6b3944d15cf140283d))
+* **users:** support for user permissions ([409cf48](https://github.com/rapyuta-robotics/rapyuta-io-sdk-v2/commit/409cf48d697ec9489ea900fbe2dc5b612470e5b2))
+
 ## [0.4.3](https://github.com/rapyuta-robotics/rapyuta-io-sdk-v2/compare/v0.4.2...v0.4.3) (2026-02-24)
 
 
