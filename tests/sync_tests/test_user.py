@@ -112,7 +112,9 @@ def test_get_user_permissions_success(client, user_permissions_mock, mocker: Moc
     assert call_kwargs["headers"]["userguid"] == user_guid
 
 
-def test_get_user_permissions_with_config_org(client, user_permissions_mock, mocker: MockFixture):
+def test_get_user_permissions_with_config_org(
+    client, user_permissions_mock, mocker: MockFixture
+):
     """Test get_user_permissions using organization_guid from config."""
     mock_get = mocker.patch("httpx.Client.get")
 
@@ -148,4 +150,3 @@ def test_get_user_permissions_unauthorized(client, mocker: MockFixture):
             organization_guid="org-testorg123456789abcdef",
         )
     assert "user cannot be authenticated" in str(exc.value)
-
