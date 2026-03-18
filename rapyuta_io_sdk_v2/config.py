@@ -34,8 +34,17 @@ class Configuration:
     project_guid: str = None
     organization_guid: str = None
     environment: str = "ga"  # Default environment is prod
+    v2_api_host: str = None
+    rip_host: str = None
 
     def __post_init__(self):
+        # Normalize empty or whitespace-only host strings to None so that they
+        # are treated the same as "not provided".
+        if isinstance(self.v2_api_host, str):
+            self.v2_api_host = self.v2_api_host.strip() or None
+        if isinstance(self.rip_host, str):
+            self.rip_host = self.rip_host.strip() or None
+
         self.hosts = {}
         self.set_environment(self.environment)
 
@@ -109,7 +118,6 @@ class Configuration:
         if with_group and group_guid:
             headers["groupguid"] = group_guid
 
-
         custom_client_request_id = os.getenv("REQUEST_ID")
         if custom_client_request_id:
             headers["X-Request-ID"] = custom_client_request_id
@@ -143,31 +151,47 @@ class Configuration:
     def set_environment(self, name: str = None) -> None:
         """Set the environment for the configuration.
 
+        Populates ``hosts`` with the correct URLs for *name*.  If the caller
+        provided ``v2_api_host`` or ``rip_host`` at construction time those
+        values are used as-is; otherwise the canonical defaults for the
+        environment are applied.  Calling this method again with a different
+        environment name always recomputes the default slots so that switching
+        environments produces correct URLs.
+
         Args:
-            name (str): Name of the environment, default is ga.
+            name (str): Name of the environment. Defaults to ``"ga"`` (production).
 
         Raises:
-            ValidationError: If the environment is invalid.
+            ValidationError: If *name* is not a recognised environment.
         """
-        name = name or "ga"  # Default to prod.
+        name = name or "ga"
 
-        if name == "local":
-            # Allow overriding the local API host via environment variables.
-            # Priority: LOCAL_V2API_HOST > default fallback.
-            override_host = os.getenv("LOCAL_V2API_HOST") or "http://gateway/io"
-            self.hosts["environment"] = name
-            self.hosts["v2api_host"] = override_host
-            return
-
-        if name == "ga":
-            self.hosts["environment"] = "ga"
-            self.hosts["rip_host"] = "https://garip.apps.okd4v2.prod.rapyuta.io"
-            self.hosts["v2api_host"] = "https://api.rapyuta.io"
-            return
-
-        if not (name in NAMED_ENVIRONMENTS or name.startswith("pr")):
+        if (
+            name not in ("local", "ga")
+            and name not in NAMED_ENVIRONMENTS
+            and not name.startswith("pr")
+        ):
             raise ValidationError("invalid environment")
 
         self.hosts["environment"] = name
-        self.hosts["rip_host"] = f"https://{name}rip.{STAGING_ENVIRONMENT_SUBDOMAIN}"
-        self.hosts["v2api_host"] = f"https://{name}api.{STAGING_ENVIRONMENT_SUBDOMAIN}"
+
+        if name == "local":
+            self.hosts["v2api_host"] = self.v2_api_host or (
+                os.getenv("LOCAL_V2API_HOST") or "http://gateway/io"
+            )
+            self.hosts["rip_host"] = self.rip_host or (
+                os.getenv("LOCAL_RIP_HOST") or "http://rip"
+            )
+        elif name == "ga":
+            self.hosts["rip_host"] = (
+                self.rip_host or "https://garip.apps.okd4v2.prod.rapyuta.io"
+            )
+            self.hosts["v2api_host"] = self.v2_api_host or "https://api.rapyuta.io"
+        else:
+            # Staging environments: qa, dev, pr*
+            self.hosts["rip_host"] = (
+                self.rip_host or f"https://{name}rip.{STAGING_ENVIRONMENT_SUBDOMAIN}"
+            )
+            self.hosts["v2api_host"] = (
+                self.v2_api_host or f"https://{name}api.{STAGING_ENVIRONMENT_SUBDOMAIN}"
+            )
