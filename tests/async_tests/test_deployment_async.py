@@ -10,6 +10,8 @@ from tests.data import (
     deploymentlist_model_mock,
     cloud_deployment_model_mock,
     device_deployment_model_mock,
+    cloud_deployment_with_service_account_body,
+    cloud_deployment_with_service_account_mock,
 )
 
 
@@ -111,6 +113,23 @@ async def test_create_deployment_unauthorized(
 
 
 @pytest.mark.asyncio
+async def test_create_deployment_success(
+    async_client, deployment_body, device_deployment_model_mock, mocker: MockFixture
+):
+    mock_post = mocker.patch("httpx.AsyncClient.post")
+    mock_post.return_value = httpx.Response(
+        status_code=200,
+        json=device_deployment_model_mock,
+    )
+
+    response = await async_client.create_deployment(body=deployment_body)
+
+    assert isinstance(response, Deployment)
+    assert response.metadata.guid == "dep-device-001"
+    assert response.spec.runtime == "device"
+
+
+@pytest.mark.asyncio
 async def test_update_deployment_success(
     async_client, deployment_body, device_deployment_model_mock, mocker: MockFixture
 ):
@@ -136,3 +155,27 @@ async def test_delete_deployment_success(async_client, mocker: MockFixture):
     response = await async_client.delete_deployment(name="mock_deployment_name")
 
     assert response is None
+
+
+@pytest.mark.asyncio
+async def test_create_deployment_with_service_account(
+    async_client,
+    cloud_deployment_with_service_account_body,
+    cloud_deployment_with_service_account_mock,
+    mocker: MockFixture,
+):
+    mock_post = mocker.patch("httpx.AsyncClient.post")
+    mock_post.return_value = httpx.Response(
+        status_code=200,
+        json=cloud_deployment_with_service_account_mock,
+    )
+
+    response = await async_client.create_deployment(
+        body=cloud_deployment_with_service_account_body
+    )
+
+    assert isinstance(response, Deployment)
+    assert response.spec.serviceAccount == "my-service-account"
+    assert response.spec.runtime == "cloud"
+    assert response.metadata.guid == "dep-cloud-002"
+
