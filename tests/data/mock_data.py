@@ -351,7 +351,64 @@ def deploymentlist_model_mock(
     }
 
 
-# -------------------- DISK --------------------
+@pytest.fixture
+def cloud_deployment_with_service_account_body() -> dict[str, Any]:
+    return {
+        "apiVersion": "apiextensions.rapyuta.io/v1",
+        "kind": "Deployment",
+        "metadata": {
+            "name": "cloud_deployment_sample",
+            "depends": {
+                "kind": "package",
+                "nameOrGUID": "cloud-package",
+                "version": "1.0.0",
+            },
+            "labels": {"app": "cloudapp"},
+        },
+        "spec": {
+            "runtime": "cloud",
+            "serviceAccount": "my-service-account",
+            "envArgs": [
+                {"name": "CLOUD_ENV", "value": "true"},
+            ],
+        },
+    }
+
+
+@pytest.fixture
+def cloud_deployment_with_service_account_mock() -> dict[str, Any]:
+    return {
+        "kind": "Deployment",
+        "apiVersion": "api.rapyuta.io/v2",
+        "metadata": {
+            "name": "cloud_deployment_sample",
+            "guid": "dep-cloud-002",
+            "projectGUID": "project-sample-001",
+            "organizationGUID": "org-sample-001",
+            "creatorGUID": "user-sample-001",
+            "createdAt": "2025-01-01T10:00:00Z",
+            "updatedAt": "2025-01-01T11:00:00Z",
+            "depends": {
+                "kind": "package",
+                "nameOrGUID": "cloud-package",
+                "version": "1.0.0",
+            },
+            "generation": 1,
+            "labels": {"app": "cloudapp"},
+        },
+        "spec": {
+            "runtime": "cloud",
+            "serviceAccount": "my-service-account",
+            "envArgs": [
+                {"name": "CLOUD_ENV", "value": "true"},
+            ],
+        },
+        "status": {
+            "status": "Running",
+            "phase": "Succeeded",
+        },
+    }
+
 
 
 @pytest.fixture
