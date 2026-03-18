@@ -160,6 +160,7 @@ class DeploymentSpec(BaseModel):
     rosNetworks: list[DeploymentROSNetwork] | None = None
     features: DeploymentFeatures | None = None
     staticRoutes: list[DeploymentStaticRoute] | None = None
+    serviceAccount: str | None = None
 
     @model_validator(mode="after")
     def validate_runtime_and_volumes(self):
