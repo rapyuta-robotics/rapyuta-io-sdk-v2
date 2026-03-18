@@ -1032,4 +1032,3 @@ def user_permissions_mock() -> dict[str, Any]:
             },
         },
     }
-
