@@ -123,9 +123,11 @@ def test_set_environment_pr_hosts():
     assert config.hosts["rip_host"] == f"https://pr123rip.{STAGING_ENVIRONMENT_SUBDOMAIN}"
 
 
-def test_set_environment_local_default_host():
+def test_set_environment_local_default_host(monkeypatch):
     # "local" environment falls back to hardcoded defaults for both hosts
     # when neither instance fields nor env vars are set.
+    monkeypatch.delenv("LOCAL_V2API_HOST", raising=False)
+    monkeypatch.delenv("LOCAL_RIP_HOST", raising=False)
     config = Configuration(environment="local")
     assert config.hosts["environment"] == "local"
     assert config.hosts["v2api_host"] == "http://gateway/io"
