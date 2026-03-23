@@ -1,3 +1,10 @@
+## [0.5.1](https://github.com/rapyuta-robotics/rapyuta-io-sdk-v2/compare/v0.5.0...v0.5.1) (2026-03-23)
+
+
+### Bug Fixes
+
+* **config:** allow changing v2-apiserver host. ([#39](https://github.com/rapyuta-robotics/rapyuta-io-sdk-v2/issues/39)) ([3fb8c98](https://github.com/rapyuta-robotics/rapyuta-io-sdk-v2/commit/3fb8c98a14495f5037822e20ae7316d34a6b23c3))
+
 # [0.5.0](https://github.com/rapyuta-robotics/rapyuta-io-sdk-v2/compare/v0.4.3...v0.5.0) (2026-03-11)
 
 
