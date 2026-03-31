@@ -41,6 +41,8 @@ from rapyuta_io_sdk_v2.models import (
     ServiceAccountTokenList as ServiceAccountTokenList,
     ServiceAccountToken as ServiceAccountToken,
     ServiceAccountTokenInfo as ServiceAccountTokenInfo,
+    SSHKeySignRequest as SSHKeySignRequest,
+    SSHKeySignResponse as SSHKeySignResponse,
 )
 from rapyuta_io_sdk_v2.utils import walk_pages as walk_pages
 

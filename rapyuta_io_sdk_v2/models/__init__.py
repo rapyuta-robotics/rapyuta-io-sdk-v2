@@ -114,3 +114,9 @@ from rapyuta_io_sdk_v2.models.fileupload import (
     SharedURLList as SharedURLList,
     SharedURLSpec as SharedURLSpec,
 )
+
+# SSH Key models
+from rapyuta_io_sdk_v2.models.sshkey import (
+    SSHKeySignRequest as SSHKeySignRequest,
+    SSHKeySignResponse as SSHKeySignResponse,
+)
