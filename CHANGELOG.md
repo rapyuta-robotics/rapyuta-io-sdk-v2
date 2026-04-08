@@ -1,3 +1,10 @@
+# [0.6.0](https://github.com/rapyuta-robotics/rapyuta-io-sdk-v2/compare/v0.5.1...v0.6.0) (2026-04-08)
+
+
+### Features
+
+* support custom sa in deployments ([ee54639](https://github.com/rapyuta-robotics/rapyuta-io-sdk-v2/commit/ee54639b11ef3dfd2286dac1e2df7d793126a339))
+
 ## [0.5.1](https://github.com/rapyuta-robotics/rapyuta-io-sdk-v2/compare/v0.5.0...v0.5.1) (2026-03-23)
 
 
