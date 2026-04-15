@@ -1,3 +1,10 @@
+# [0.7.0](https://github.com/rapyuta-robotics/rapyuta-io-sdk-v2/compare/v0.6.0...v0.7.0) (2026-04-15)
+
+
+### Features
+
+* **models:** add networkInterface field to DeploymentSpec ([14c45dc](https://github.com/rapyuta-robotics/rapyuta-io-sdk-v2/commit/14c45dc75495e7ae3f56754b42212f68c484ec6b))
+
 # [0.6.0](https://github.com/rapyuta-robotics/rapyuta-io-sdk-v2/compare/v0.5.1...v0.6.0) (2026-04-08)
 
 
