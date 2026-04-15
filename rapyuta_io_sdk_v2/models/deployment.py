@@ -161,6 +161,13 @@ class DeploymentSpec(BaseModel):
     features: DeploymentFeatures | None = None
     staticRoutes: list[DeploymentStaticRoute] | None = None
     serviceAccount: str | None = None
+    networkInterface: str | None = Field(
+        default=None,
+        description=(
+            "Network interface to use for ROS networks. "
+            "Takes precedence over any interface specified in rosNetworks entries."
+        ),
+    )
 
     @model_validator(mode="after")
     def validate_runtime_and_volumes(self):
