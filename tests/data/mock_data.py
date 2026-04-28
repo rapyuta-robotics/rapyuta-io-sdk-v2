@@ -999,6 +999,167 @@ def sharedurllist_model_mock(sharedurl_model_mock) -> dict[str, Any]:
     }
 
 
+# -------------------- DATABASE --------------------
+
+
+@pytest.fixture
+def database_body() -> dict[str, Any]:
+    return {
+        "apiVersion": "api.rapyuta.io/v2",
+        "kind": "Database",
+        "metadata": {
+            "name": "test-postgres-db",
+            "labels": {"app": "postgres", "env": "test"},
+        },
+        "spec": {
+            "type": "postgres",
+            "postgres": {
+                "version": "16",
+                "primary": {
+                    "deviceName": "test-device-001",
+                    "deviceGUID": "device-mockdevice12345678910",
+                    "dataDirectory": "/var/lib/postgresql/data",
+                },
+                "credentials": {
+                    "username": "postgresuser",
+                    "password": "securepassword123",
+                },
+                "multipleDatabase": ["testdb1", "testdb2"],
+                "parameters": {
+                    "max_connections": "100",
+                    "shared_buffers": "256MB",
+                },
+            },
+        },
+    }
+
+
+@pytest.fixture
+def database_model_mock() -> dict[str, Any]:
+    return {
+        "apiVersion": "api.rapyuta.io/v2",
+        "kind": "Database",
+        "metadata": {
+            "name": "test-postgres-db",
+            "guid": "database-mockdb123456789012",
+            "projectGUID": "project-aaaaaaaaaaaaaaaaaaaa",
+            "organizationGUID": "org-mock-789",
+            "creatorGUID": "mock-user-guid-000",
+            "createdAt": "2026-01-27T10:00:00Z",
+            "updatedAt": "2026-01-27T10:30:00Z",
+            "deletedAt": None,
+            "organizationName": "Mock Org",
+            "projectName": "Mock Project",
+            "labels": {"app": "postgres", "env": "test"},
+        },
+        "spec": {
+            "type": "postgres",
+            "postgres": {
+                "version": "16",
+                "primary": {
+                    "deviceName": "test-device-001",
+                    "deviceGUID": "device-mockdevice12345678910",
+                    "dataDirectory": "/var/lib/postgresql/data",
+                },
+                "credentials": {
+                    "username": "postgresuser",
+                    "password": "securepassword123",
+                },
+                "multipleDatabase": ["testdb1", "testdb2"],
+                "parameters": {
+                    "max_connections": "100",
+                    "shared_buffers": "256MB",
+                },
+            },
+        },
+        "status": {
+            "postgres": {
+                "primary": {
+                    "name": "test-postgres-db-primary",
+                    "phase": "running",
+                    "deviceName": "test-device-001",
+                    "port": 5432,
+                    "lastUpdated": "2026-01-27T10:30:00Z",
+                    "state": {
+                        "running": {
+                            "startedAt": "2026-01-27T10:05:00Z",
+                        }
+                    },
+                    "restartCount": 0,
+                }
+            },
+        },
+    }
+
+
+@pytest.fixture
+def databaselist_model_mock(database_model_mock) -> dict[str, Any]:
+    return {
+        "metadata": {
+            "continue": 1,
+        },
+        "items": [database_model_mock],
+    }
+
+
+@pytest.fixture
+def database_patch_body() -> dict[str, Any]:
+    return {
+        "spec": {
+            "type": "postgres",
+            "postgres": {
+                "version": "16",
+                "primary": {
+                    "deviceName": "test-device-001",
+                    "deviceGUID": "device-mockdevice12345678910",
+                    "dataDirectory": "/var/lib/postgresql/data",
+                },
+                "parameters": {
+                    "max_connections": "200",
+                    "shared_buffers": "512MB",
+                },
+            },
+        }
+    }
+
+
+# -------------------- BACKUP --------------------
+
+
+@pytest.fixture
+def backup_model_mock() -> dict[str, Any]:
+    return {
+        "apiVersion": "api.rapyuta.io/v2",
+        "kind": "Backup",
+        "metadata": {
+            "name": "backup-20260127-100000",
+            "guid": "backup-mockbackup123456789",
+            "projectGUID": "project-aaaaaaaaaaaaaaaaaaaa",
+            "organizationGUID": "org-mock-789",
+            "creatorGUID": "mock-user-guid-000",
+            "createdAt": "2026-01-27T10:00:00Z",
+            "updatedAt": "2026-01-27T10:15:00Z",
+        },
+        "spec": {
+            "id": "backup-20260127-100000",
+            "deviceGUID": "device-mockdevice12345678910",
+            "databaseName": "test-postgres-db",
+            "fileUploadGUID": "fileupload-mockupload12345678",
+            "status": "COMPLETED",
+        },
+    }
+
+
+@pytest.fixture
+def backuplist_model_mock(backup_model_mock) -> dict[str, Any]:
+    return {
+        "metadata": {
+            "continue": 1,
+        },
+        "items": [backup_model_mock],
+    }
+
+
 # -------------------- CONFIGURATION --------------------
 
 

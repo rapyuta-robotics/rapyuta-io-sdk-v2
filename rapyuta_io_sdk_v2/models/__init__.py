@@ -96,6 +96,16 @@ from rapyuta_io_sdk_v2.models.usergroup import (
 
 from rapyuta_io_sdk_v2.models.daemons import Daemon as Daemon
 
+# Database models
+from rapyuta_io_sdk_v2.models.database import (
+    Backup as Backup,
+    BackupList as BackupList,
+    Database as Database,
+    DatabaseCreate as DatabaseCreate,
+    DatabaseList as DatabaseList,
+    DatabasePatch as DatabasePatch,
+)
+
 from rapyuta_io_sdk_v2.models.serviceaccount import (
     ServiceAccount as ServiceAccount,
     ServiceAccountList as ServiceAccountList,
