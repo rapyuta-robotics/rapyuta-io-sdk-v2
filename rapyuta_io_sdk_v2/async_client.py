@@ -2765,7 +2765,7 @@ class AsyncClient:
         if isinstance(body, dict):
             body = DatabasePatch.model_validate(body)
 
-        result = await self.c.put(
+        result = await self.c.patch(
             url=f"{self.v2api_host}/v2/databases/{name}/",
             headers=self.config.get_headers(**kwargs),
             json=body.model_dump(by_alias=True, exclude_none=True, mode="json"),

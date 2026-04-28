@@ -1048,6 +1048,7 @@ def database_model_mock() -> dict[str, Any]:
             "createdAt": "2026-01-27T10:00:00Z",
             "updatedAt": "2026-01-27T10:30:00Z",
             "deletedAt": None,
+            "markForDelete": False,
             "organizationName": "Mock Org",
             "projectName": "Mock Project",
             "labels": {"app": "postgres", "env": "test"},
@@ -1073,7 +1074,6 @@ def database_model_mock() -> dict[str, Any]:
             },
         },
         "status": {
-            "phase": "running",
             "postgres": {
                 "primary": {
                     "name": "test-postgres-db-primary",
@@ -1144,9 +1144,12 @@ def backup_model_mock() -> dict[str, Any]:
         "spec": {
             "id": "backup-20260127-100000",
             "deviceGUID": "device-mockdevice12345678910",
+            "path": "/var/lib/postgresql/backups/backup-20260127-100000.tar.gz",
             "databaseName": "test-postgres-db",
             "fileUploadGUID": "fileupload-mockupload12345678",
             "status": "COMPLETED",
+            "type": "postgres",
+            "version": "16",
         },
     }
 

@@ -98,7 +98,7 @@ async def test_get_database_success(
     assert response.spec.type == "postgres"
     assert response.spec.postgres.version == "16"
     assert response.spec.postgres.primary.deviceName == "test-device-001"
-    assert response.status.phase == "running"
+    assert response.status.postgres.primary.phase == "running"
     assert response.status.postgres.primary.port == 5432
 
 
@@ -124,7 +124,7 @@ async def test_create_database_success(
     mock_post = mocker.patch("httpx.AsyncClient.post")
 
     mock_post.return_value = httpx.Response(
-        status_code=201,
+        status_code=202,
         json=database_model_mock,
     )
 
@@ -147,7 +147,7 @@ async def test_create_database_with_dict(
     mock_post = mocker.patch("httpx.AsyncClient.post")
 
     mock_post.return_value = httpx.Response(
-        status_code=201,
+        status_code=202,
         json=database_model_mock,
     )
 
@@ -201,7 +201,7 @@ async def test_create_database_conflict(
 async def test_update_database_success(
     async_client, database_patch_body, database_model_mock, mocker: MockFixture
 ):
-    mock_put = mocker.patch("httpx.AsyncClient.put")
+    mock_patch = mocker.patch("httpx.AsyncClient.patch")
 
     # Update the mock to reflect the changes
     updated_mock = database_model_mock.copy()
@@ -210,7 +210,7 @@ async def test_update_database_success(
         "shared_buffers": "512MB",
     }
 
-    mock_put.return_value = httpx.Response(
+    mock_patch.return_value = httpx.Response(
         status_code=200,
         json=updated_mock,
     )
@@ -231,9 +231,9 @@ async def test_update_database_with_dict(
     async_client, database_model_mock, mocker: MockFixture
 ):
     """Test update_database with dict input instead of model."""
-    mock_put = mocker.patch("httpx.AsyncClient.put")
+    mock_patch = mocker.patch("httpx.AsyncClient.patch")
 
-    mock_put.return_value = httpx.Response(
+    mock_patch.return_value = httpx.Response(
         status_code=200,
         json=database_model_mock,
     )
@@ -265,9 +265,9 @@ async def test_update_database_with_dict(
 async def test_update_database_not_found(
     async_client, database_patch_body, mocker: MockFixture
 ):
-    mock_put = mocker.patch("httpx.AsyncClient.put")
+    mock_patch = mocker.patch("httpx.AsyncClient.patch")
 
-    mock_put.return_value = httpx.Response(
+    mock_patch.return_value = httpx.Response(
         status_code=404,
         json={"error": "database not found"},
     )
@@ -350,6 +350,9 @@ async def test_list_backups_success(
     assert backup.spec.id == MOCK_BACKUP_ID
     assert backup.spec.databaseName == MOCK_DATABASE_NAME
     assert backup.spec.status == "COMPLETED"
+    assert backup.spec.path == "/var/lib/postgresql/backups/backup-20260127-100000.tar.gz"
+    assert backup.spec.type == "postgres"
+    assert backup.spec.version == "16"
 
 
 @pytest.mark.asyncio
@@ -409,6 +412,9 @@ async def test_get_backup_success(
     assert response.spec.id == MOCK_BACKUP_ID
     assert response.spec.databaseName == MOCK_DATABASE_NAME
     assert response.spec.status == "COMPLETED"
+    assert response.spec.path == "/var/lib/postgresql/backups/backup-20260127-100000.tar.gz"
+    assert response.spec.type == "postgres"
+    assert response.spec.version == "16"
 
 
 @pytest.mark.asyncio
@@ -538,8 +544,12 @@ async def test_database_with_standby_and_backup(
         "directory": "/backups",
     }
     enhanced_mock["status"]["postgres"]["standby"] = {
-        "phase": "running",
-        "replicationLagSeconds": 5,
+        "devices": {
+            "device-standby123456789": {
+                "conditions": [],
+            }
+        },
+        "lastUpdated": "2026-01-27T10:30:00Z",
     }
     enhanced_mock["status"]["postgres"]["backup"] = {
         "lastStatus": "Success",
@@ -558,7 +568,8 @@ async def test_database_with_standby_and_backup(
     assert response.spec.postgres.standby.primaryIP == "192.168.1.100"
     assert len(response.spec.postgres.standby.devices) == 1
     assert response.spec.postgres.backup.enabled is True
-    assert response.status.postgres.standby.replicationLagSeconds == 5
+    assert response.status.postgres.standby.devices["device-standby123456789"] is not None
+    assert response.status.postgres.standby.lastUpdated == "2026-01-27T10:30:00Z"
     assert response.status.postgres.backup.lastStatus == "Success"
 
 
