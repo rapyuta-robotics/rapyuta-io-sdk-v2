@@ -98,7 +98,7 @@ async def test_get_database_success(
     assert response.spec.type == "postgres"
     assert response.spec.postgres.version == "16"
     assert response.spec.postgres.primary.deviceName == "test-device-001"
-    assert response.status.phase == "running"
+    assert response.status.postgres.primary.phase == "running"
     assert response.status.postgres.primary.port == 5432
 
 
@@ -124,7 +124,7 @@ async def test_create_database_success(
     mock_post = mocker.patch("httpx.AsyncClient.post")
 
     mock_post.return_value = httpx.Response(
-        status_code=201,
+        status_code=202,
         json=database_model_mock,
     )
 
@@ -147,7 +147,7 @@ async def test_create_database_with_dict(
     mock_post = mocker.patch("httpx.AsyncClient.post")
 
     mock_post.return_value = httpx.Response(
-        status_code=201,
+        status_code=202,
         json=database_model_mock,
     )
 
@@ -538,8 +538,12 @@ async def test_database_with_standby_and_backup(
         "directory": "/backups",
     }
     enhanced_mock["status"]["postgres"]["standby"] = {
-        "phase": "running",
-        "replicationLagSeconds": 5,
+        "devices": {
+            "device-standby123456789": {
+                "conditions": [],
+            }
+        },
+        "lastUpdated": "2026-01-27T10:30:00Z",
     }
     enhanced_mock["status"]["postgres"]["backup"] = {
         "lastStatus": "Success",
@@ -558,7 +562,8 @@ async def test_database_with_standby_and_backup(
     assert response.spec.postgres.standby.primaryIP == "192.168.1.100"
     assert len(response.spec.postgres.standby.devices) == 1
     assert response.spec.postgres.backup.enabled is True
-    assert response.status.postgres.standby.replicationLagSeconds == 5
+    assert response.status.postgres.standby.devices["device-standby123456789"] is not None
+    assert response.status.postgres.standby.lastUpdated == "2026-01-27T10:30:00Z"
     assert response.status.postgres.backup.lastStatus == "Success"
 
 

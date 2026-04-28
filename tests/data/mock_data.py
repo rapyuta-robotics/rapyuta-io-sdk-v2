@@ -1073,7 +1073,6 @@ def database_model_mock() -> dict[str, Any]:
             },
         },
         "status": {
-            "phase": "running",
             "postgres": {
                 "primary": {
                     "name": "test-postgres-db-primary",

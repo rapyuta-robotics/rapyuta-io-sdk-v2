@@ -90,7 +90,7 @@ def test_get_database_success(client, database_model_mock, mocker: MockFixture):
     assert response.spec.type == "postgres"
     assert response.spec.postgres.version == "16"
     assert response.spec.postgres.primary.deviceName == "test-device-001"
-    assert response.status.phase == "running"
+    assert response.status.postgres.primary.phase == "running"
     assert response.status.postgres.primary.port == 5432
 
 
@@ -114,7 +114,7 @@ def test_create_database_success(
     mock_post = mocker.patch("httpx.Client.post")
 
     mock_post.return_value = httpx.Response(
-        status_code=201,
+        status_code=202,
         json=database_model_mock,
     )
 
@@ -134,7 +134,7 @@ def test_create_database_with_dict(client, database_model_mock, mocker: MockFixt
     mock_post = mocker.patch("httpx.Client.post")
 
     mock_post.return_value = httpx.Response(
-        status_code=201,
+        status_code=202,
         json=database_model_mock,
     )
 
@@ -481,8 +481,12 @@ def test_database_with_standby_and_backup(client, database_model_mock, mocker: M
         "directory": "/backups",
     }
     enhanced_mock["status"]["postgres"]["standby"] = {
-        "phase": "running",
-        "replicationLagSeconds": 5,
+        "devices": {
+            "device-standby123456789": {
+                "conditions": [],
+            }
+        },
+        "lastUpdated": "2026-01-27T10:30:00Z",
     }
     enhanced_mock["status"]["postgres"]["backup"] = {
         "lastStatus": "Success",
@@ -501,7 +505,8 @@ def test_database_with_standby_and_backup(client, database_model_mock, mocker: M
     assert response.spec.postgres.standby.primaryIP == "192.168.1.100"
     assert len(response.spec.postgres.standby.devices) == 1
     assert response.spec.postgres.backup.enabled is True
-    assert response.status.postgres.standby.replicationLagSeconds == 5
+    assert response.status.postgres.standby.devices["device-standby123456789"] is not None
+    assert response.status.postgres.standby.lastUpdated == "2026-01-27T10:30:00Z"
     assert response.status.postgres.backup.lastStatus == "Success"
 
 
@@ -532,3 +537,78 @@ def test_database_with_migration(client, database_model_mock, mocker: MockFixtur
     assert response.spec.postgres.migration.sourceDataDirectory == "/var/lib/postgresql/old"
     assert response.status.postgres.migration.phase == "running"
     assert response.status.postgres.migration.sourceVersion == "14"
+
+
+def test_recovery_spec_server_injected_fields(client, database_model_mock, mocker: MockFixture):
+    """RecoverySpec should deserialize fileUploadGUID and deviceGUID injected by the server."""
+    mock_get = mocker.patch("httpx.Client.get")
+
+    recovery_mock = database_model_mock.copy()
+    recovery_mock["spec"]["postgres"]["recovery"] = {
+        "sourceBackupID": "backup-20260127-100000",
+        "fileUploadGUID": "fileupload-mockupload12345678",
+        "deviceGUID": "device-mockdevice12345678910",
+    }
+
+    mock_get.return_value = httpx.Response(status_code=200, json=recovery_mock)
+    response = client.get_database(name=MOCK_DATABASE_NAME)
+
+    assert isinstance(response, Database)
+    recovery = response.spec.postgres.recovery
+    assert recovery.sourceBackupID == "backup-20260127-100000"
+    assert recovery.fileUploadGUID == "fileupload-mockupload12345678"
+    assert recovery.deviceGUID == "device-mockdevice12345678910"
+
+
+def test_standby_status_devices_map(client, database_model_mock, mocker: MockFixture):
+    """StandbyStatus.devices should be a dict keyed by device GUID."""
+    mock_get = mocker.patch("httpx.Client.get")
+
+    standby_mock = database_model_mock.copy()
+    standby_mock["status"]["postgres"]["standby"] = {
+        "devices": {
+            "device-primary-guid": {"conditions": [{"type": "Ready", "status": "True"}]},
+            "device-standby-guid": {"conditions": []},
+        },
+        "lastUpdated": "2026-01-27T10:30:00Z",
+    }
+
+    mock_get.return_value = httpx.Response(status_code=200, json=standby_mock)
+    response = client.get_database(name=MOCK_DATABASE_NAME)
+
+    standby = response.status.postgres.standby
+    assert standby is not None
+    assert "device-primary-guid" in standby.devices
+    assert standby.devices["device-primary-guid"].conditions[0].type == "Ready"
+    assert standby.devices["device-standby-guid"].conditions == []
+    assert standby.lastUpdated == "2026-01-27T10:30:00Z"
+
+
+def test_backup_status_barman_conditions_map(client, database_model_mock, mocker: MockFixture):
+    """BackupStatus.barmanConditions should be a nested string dict keyed by Monit service name."""
+    mock_get = mocker.patch("httpx.Client.get")
+
+    barman_mock = database_model_mock.copy()
+    barman_mock["status"]["postgres"]["backup"] = {
+        "lastStatus": "Success",
+        "barmanConditions": {
+            "barman_receive_wal": {"MONIT_PROGRAM_STATUS": "0", "description": "ok"},
+            "barman_cron": {"MONIT_PROGRAM_STATUS": "1", "description": "failed"},
+        },
+    }
+
+    mock_get.return_value = httpx.Response(status_code=200, json=barman_mock)
+    response = client.get_database(name=MOCK_DATABASE_NAME)
+
+    barman_conds = response.status.postgres.backup.barmanConditions
+    assert barman_conds is not None
+    assert barman_conds["barman_receive_wal"]["MONIT_PROGRAM_STATUS"] == "0"
+    assert barman_conds["barman_cron"]["description"] == "failed"
+
+
+def test_database_status_has_no_top_level_phase(database_model_mock):
+    """DatabaseStatus should NOT have a top-level phase field — phase lives inside postgres.primary."""
+    from rapyuta_io_sdk_v2.models.database import DatabaseStatus
+
+    status = DatabaseStatus.model_validate(database_model_mock["status"])
+    assert not hasattr(status, "phase")

@@ -8,12 +8,12 @@ The server uses a custom JSON encoding for DatabaseSpec:
   {"type": "postgres", "postgres": {...PostgresSpec...}}
 
 And for DatabaseStatus:
-  {"phase": "running", "postgres": {...PostgresStatus...}}
+  {"postgres": {...PostgresStatus...}}
 """
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, Field
 
 from rapyuta_io_sdk_v2.models.utils import BaseList, BaseMetadata, BaseObject
 
@@ -73,6 +73,12 @@ class RecoverySpec(BaseModel):
     """Point-in-time recovery configuration."""
 
     sourceBackupID: str = Field(description="Source backup ID to restore from")
+    fileUploadGUID: str | None = Field(
+        default=None, description="File upload GUID injected by server after backup lookup"
+    )
+    deviceGUID: str | None = Field(
+        default=None, description="Device GUID injected by server after backup lookup"
+    )
 
 
 class PostgresSpec(BaseModel):
@@ -181,9 +187,17 @@ class PrimaryStatus(BaseModel):
     restartCount: int | None = None
 
 
+class StandbyDeviceStatus(BaseModel):
+    """Per-device standby status reported by the on-device reconciler."""
+
+    conditions: list[DatabaseCondition] | None = None
+
+
 class StandbyStatus(BaseModel):
-    phase: DatabasePhase | None = None
-    replicationLagSeconds: int | None = None
+    """Aggregate standby state keyed by device GUID."""
+
+    devices: dict[str, StandbyDeviceStatus] | None = None
+    lastUpdated: str | None = None
 
 
 BackupLastStatus = Literal["Success", "Failed", "Unknown"]
@@ -195,7 +209,7 @@ class BackupStatus(BaseModel):
     failureReason: str | None = None
     barmanPhase: DatabasePhase | None = None
     conditions: list[DatabaseCondition] | None = None
-    barmanConditions: list[DatabaseCondition] | None = None
+    barmanConditions: dict[str, dict[str, str]] | None = None
 
 
 class MigrationStatus(BaseModel):
@@ -229,12 +243,9 @@ class PostgresStatus(BaseModel):
 class DatabaseStatus(BaseModel):
     """Database status.
 
-    JSON form: {"phase": "running", "postgres": {...PostgresStatus...}}
+    JSON form: {"postgres": {...PostgresStatus...}}
     """
 
-    model_config = ConfigDict(extra="allow")
-
-    phase: DatabasePhase | None = None
     postgres: PostgresStatus | None = None
 
 
