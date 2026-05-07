@@ -195,3 +195,20 @@ class Domain(BaseModel):
             raise ValueError("either 'name' or 'guid' should be specified")
 
         return self
+
+
+class SecretKeyRef(BaseModel):
+    name: str | None = Field(default=None, description="Name of the Secret resource")
+    key: str | None = Field(default=None, description="Key within the Secret")
+    value: str | None = Field(
+        default=None, description="Resolved value (read-only, returned by server)"
+    )
+
+
+class ValueFrom(BaseModel):
+    secret_key_ref: SecretKeyRef | None = Field(
+        default=None,
+        alias="secretKeyRef",
+        description="Selects a key of a Secret in the same namespace",
+    )
+

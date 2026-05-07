@@ -16,8 +16,9 @@ from rapyuta_io_sdk_v2.models.utils import (
     BaseMetadata,
     RestartPolicy,
     Runtime,
+    SecretDepends,
+    ValueFrom,
 )
-from .utils import SecretDepends
 
 # --- Helper Models ---
 
@@ -75,6 +76,10 @@ class EnvironmentSpec(BaseModel):
     name: str
     description: str | None = None
     default: str | None = None
+    valueFrom: ValueFrom | None = Field(
+        default=None,
+        description="Populate the env var's value from a Secret key reference",
+    )
     exposed: bool | None = Field(default=None)
     exposedName: str | None = None
 

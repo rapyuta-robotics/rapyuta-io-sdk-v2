@@ -27,6 +27,7 @@ from rapyuta_io_sdk_v2.models.utils import (
     RestartPolicy,
     Runtime,
     StaticRouteDepends,
+    ValueFrom,
 )
 
 
@@ -40,6 +41,10 @@ class DeploymentMetadata(BaseMetadata):
 class EnvArgsSpec(BaseModel):
     name: str
     value: str | None = None
+    valueFrom: ValueFrom | None = Field(
+        default=None,
+        description="Populate the env var's value from a Secret key reference",
+    )
     exposed: bool | None = None
     exposed_name: str | None = Field(default=None, alias="exposedName")
 
