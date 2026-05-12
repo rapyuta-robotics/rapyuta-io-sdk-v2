@@ -112,15 +112,22 @@ def walk_pages(
 
         data = func(*args, **call_kwargs)
 
-        items = getattr(data, "items", None) or []
+        if isinstance(data, dict):
+            items = data.get("items", [])
+            cont_next = data.get("metadata", {}).get("continue")
+        else:
+            items = getattr(data, "items", [])
+            cont_next = getattr(getattr(data, "metadata", {}), "continue_", None)
+
         if not items:
             break
 
         yield items
 
-        cont: int | None = getattr(getattr(data, "metadata", {}), "continue_", None)
-        if cont is None:
+        if cont_next is None or len(items) < limit:
             break
+
+        cont = cont_next
 
 
 async def walk_pages_async(
@@ -151,12 +158,20 @@ async def walk_pages_async(
 
         data = await func(*args, **call_kwargs)
 
-        items = getattr(data, "items", None) or []
+        if isinstance(data, dict):
+            items = data.get("items", [])
+            cont_next = data.get("metadata", {}).get("continue")
+        else:
+            items = getattr(data, "items", [])
+            cont_next = getattr(getattr(data, "metadata", {}), "continue_", None)
+
         if not items:
             break
 
         yield items
 
-        cont: int | None = getattr(getattr(data, "metadata", {}), "continue_", None)
-        if cont is None:
+        if cont_next is None or len(items) < limit:
             break
+
+        cont = cont_next
+
