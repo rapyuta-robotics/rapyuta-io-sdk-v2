@@ -167,6 +167,32 @@ def test_commit_revision_success(client, mocker: MockFixture):
     assert response["metadata"]["name"] == "test_revision"
 
 
+def test_commit_revision_with_labels(client, mocker: MockFixture):
+    mock_patch = mocker.patch("httpx.Client.patch")
+    mock_patch.return_value = httpx.Response(
+        status_code=200,
+        json={
+            "metadata": {
+                "guid": "test_revision_guid",
+                "name": "test_revision",
+                "labels": {"rapyuta.io/milestone": "v1.0"},
+            },
+        },
+    )
+    response = client.commit_revision(
+        tree_name="mock_configtree_name",
+        revision_id="mock_revision_id",
+        labels={"rapyuta.io/milestone": "v1.0"},
+    )
+    assert response["metadata"]["guid"] == "test_revision_guid"
+    assert response["metadata"]["labels"]["rapyuta.io/milestone"] == "v1.0"
+
+    # Verify the request body included metadata.labels
+    call_kwargs = mock_patch.call_args
+    body = call_kwargs.kwargs.get("json") or call_kwargs[1].get("json")
+    assert body["metadata"]["labels"] == {"rapyuta.io/milestone": "v1.0"}
+
+
 def test_get_key_in_revision_str(client, mocker: MockFixture):  # noqa: F811
     # Mock the httpx.Client.get method
     mock_get = mocker.patch("httpx.Client.get")

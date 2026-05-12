@@ -1705,6 +1705,7 @@ class AsyncClient:
         author: str | None = None,
         message: str | None = None,
         project_guid: str | None = None,
+        labels: dict[str, str] | None = None,
         **kwargs,
     ) -> dict[str, Any]:
         """Commit a revision.
@@ -1715,6 +1716,7 @@ class AsyncClient:
             author (str, optional): Revision Author. Defaults to None.
             message (str, optional): Revision Message. Defaults to None.
             project_guid (str, optional): Project GUID. Defaults to None.
+            labels (dict, optional): Labels to set on the revision. Defaults to None.
 
         Returns:
             Revision details as a dictionary.
@@ -1723,6 +1725,9 @@ class AsyncClient:
             "author": author,
             "message": message,
         }
+
+        if labels:
+            config_tree_revision["metadata"] = {"labels": labels}
 
         result = await self.c.patch(
             url=f"{self.v2api_host}/v2/configtrees/{tree_name}/revisions/{revision_id}/",
