@@ -261,6 +261,33 @@ async def test_commit_revision_success(async_client, mocker: AsyncMock):
 
 
 @pytest.mark.asyncio
+async def test_commit_revision_with_labels(async_client, mocker: AsyncMock):
+    mock_patch = mocker.patch("httpx.AsyncClient.patch")
+    mock_patch.return_value = httpx.Response(
+        status_code=200,
+        json={
+            "metadata": {
+                "guid": "test_revision_guid",
+                "name": "test_revision",
+                "labels": {"rapyuta.io/milestone": "v1.0"},
+            },
+        },
+    )
+    response = await async_client.commit_revision(
+        tree_name="mock_configtree_name",
+        revision_id="mock_revision_id",
+        labels={"rapyuta.io/milestone": "v1.0"},
+    )
+    assert response["metadata"]["guid"] == "test_revision_guid"
+    assert response["metadata"]["labels"]["rapyuta.io/milestone"] == "v1.0"
+
+    # Verify the request body included metadata.labels
+    call_kwargs = mock_patch.call_args
+    body = call_kwargs.kwargs.get("json") or call_kwargs[1].get("json")
+    assert body["metadata"]["labels"] == {"rapyuta.io/milestone": "v1.0"}
+
+
+@pytest.mark.asyncio
 async def test_get_key_in_revision_str(async_client, mocker: AsyncMock):  # noqa: F811
     # Mock the httpx.AsyncClient.get method
     mock_get = mocker.patch("httpx.AsyncClient.get")
