@@ -20,6 +20,7 @@ from rapyuta_io_sdk_v2.models.utils import BaseList, BaseMetadata, BaseObject
 
 DatabasePhase = Literal["provisioning", "running", "stopped", "error"]
 UploadStatus = Literal["PENDING", "IN PROGRESS", "FAILED", "COMPLETED", "CANCELLED", "UNKNOWN"]
+RecoveryPhase = Literal["Running", "Completed", "Failed"]
 
 
 class DeviceSpec(BaseModel):
@@ -224,7 +225,7 @@ class MigrationStatus(BaseModel):
 class RecoveryStatus(BaseModel):
     lastRecoveryID: str | None = None
     backupSource: str | None = None
-    phase: DatabasePhase | None = None
+    phase: RecoveryPhase | None = None
     failureReason: str | None = None
     startedAt: str | None = None
     completedAt: str | None = None
