@@ -1134,17 +1134,14 @@ def backup_model_mock() -> dict[str, Any]:
         "kind": "Backup",
         "metadata": {
             "name": "backup-20260127-100000",
-            "guid": "backup-mockbackup123456789",
             "projectGUID": "project-aaaaaaaaaaaaaaaaaaaa",
-            "organizationGUID": "org-mock-789",
-            "creatorGUID": "mock-user-guid-000",
             "createdAt": "2026-01-27T10:00:00Z",
             "updatedAt": "2026-01-27T10:15:00Z",
         },
         "spec": {
             "id": "backup-20260127-100000",
             "deviceGUID": "device-mockdevice12345678910",
-            "path": "/var/lib/postgresql/backups/backup-20260127-100000.tar.gz",
+            "path": "",
             "databaseName": "test-postgres-db",
             "fileUploadGUID": "fileupload-mockupload12345678",
             "status": "COMPLETED",

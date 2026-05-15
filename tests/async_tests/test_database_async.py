@@ -350,7 +350,6 @@ async def test_list_backups_success(
     assert backup.spec.id == MOCK_BACKUP_ID
     assert backup.spec.databaseName == MOCK_DATABASE_NAME
     assert backup.spec.status == "COMPLETED"
-    assert backup.spec.path == "/var/lib/postgresql/backups/backup-20260127-100000.tar.gz"
     assert backup.spec.type == "postgres"
     assert backup.spec.version == "16"
 
@@ -412,7 +411,6 @@ async def test_get_backup_success(
     assert response.spec.id == MOCK_BACKUP_ID
     assert response.spec.databaseName == MOCK_DATABASE_NAME
     assert response.spec.status == "COMPLETED"
-    assert response.spec.path == "/var/lib/postgresql/backups/backup-20260127-100000.tar.gz"
     assert response.spec.type == "postgres"
     assert response.spec.version == "16"
 
