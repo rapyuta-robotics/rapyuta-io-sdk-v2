@@ -57,6 +57,15 @@ class EnvArgsSpec(BaseModel):
             return str(v).lower() if isinstance(v, bool) else str(v)
         return v
 
+    @model_validator(mode="after")
+    def validate_value_or_value_from(self):
+        if self.value is None and self.valueFrom is None:
+            raise ValueError(
+                f"EnvArgsSpec '{self.name}': either 'value' or 'valueFrom' must be provided."
+            )
+        return self
+
+
 class DeploymentVolume(BaseModel):
     """Unified volume spec matching Go DeploymentVolume struct."""
 

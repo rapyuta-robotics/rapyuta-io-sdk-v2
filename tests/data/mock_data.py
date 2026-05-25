@@ -117,6 +117,7 @@ def cloud_package_model_mock() -> dict[str, Any]:
                 {
                     "name": "DEVICE_NAME",
                     "description": "Device Name in Tailscale",
+                    "default": "",
                 }
             ],
             "ros": {},

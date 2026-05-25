@@ -90,6 +90,14 @@ class EnvironmentSpec(BaseModel):
             raise ValueError("exposedName is required when exposed is True")
         return v
 
+    @model_validator(mode="after")
+    def validate_default_or_value_from(self):
+        if self.default is None and self.valueFrom is None:
+            raise ValueError(
+                f"EnvironmentSpec '{self.name}': either 'default' or 'valueFrom' must be provided."
+            )
+        return self
+
 
 class Limits(BaseModel):
     cpu: float | None = Field(default=None, ge=0, le=256)

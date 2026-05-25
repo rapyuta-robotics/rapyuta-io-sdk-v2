@@ -85,9 +85,9 @@ class SecretCreate(Secret):
     def validate_create_fields(self):
         spec = self.spec
         if spec.type == "Docker":
-            if spec.docker is None or not spec.docker.password:
+            if spec.docker is None:
                 raise ValueError(
-                    "'spec.docker.password' is required when creating a Docker secret"
+                    "'spec.docker' is required when creating a Docker secret"
                 )
         elif spec.type == "Opaque":
             if not spec.data:
