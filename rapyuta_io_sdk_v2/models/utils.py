@@ -1,6 +1,7 @@
+from datetime import datetime
 from typing import Generic, Literal, TypeVar
 
-from pydantic import AliasChoices, BaseModel, Field, model_validator
+from pydantic import AliasChoices, BaseModel, Field, field_validator, model_validator
 
 # Type variable for generic list items
 T = TypeVar("T")
@@ -47,6 +48,13 @@ class BaseMetadata(BaseModel):
     createdAt: str | None = Field(default=None, description="Time of resource creation")
     updatedAt: str | None = Field(default=None, description="Time of resource update")
     deletedAt: str | None = Field(default=None, description="Time of resource deletion")
+
+    @field_validator("createdAt", "updatedAt", "deletedAt", mode="before")
+    @classmethod
+    def coerce_datetime_to_str(cls, v):
+        if isinstance(v, datetime):
+            return v.isoformat()
+        return v
 
     # Human-readable names
     organizationName: str | None = Field(default=None, description="Organization name")
