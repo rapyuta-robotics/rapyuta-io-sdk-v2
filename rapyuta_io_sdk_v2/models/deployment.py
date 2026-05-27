@@ -43,6 +43,14 @@ class EnvArgsSpec(BaseModel):
     exposed: bool | None = None
     exposed_name: str | None = Field(default=None, alias="exposedName")
 
+    @field_validator("value", mode="before")
+    @classmethod
+    def coerce_value_to_str(cls, v):
+        if v is None:
+            return v
+        if not isinstance(v, str):
+            return str(v).lower() if isinstance(v, bool) else str(v)
+        return v
 
 class DeploymentVolume(BaseModel):
     """Unified volume spec matching Go DeploymentVolume struct."""
