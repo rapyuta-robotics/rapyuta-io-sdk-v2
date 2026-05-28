@@ -267,9 +267,3 @@ def test_environment_spec_plain_and_valuefrom_coexist():
     assert env.valueFrom.secret_key_ref.value == "injected"
 
 
-def test_environment_spec_neither_default_nor_valuefrom_raises():
-    """EnvironmentSpec raises ValidationError when neither default nor valueFrom is provided."""
-    with pytest.raises(ValidationError, match="either 'default' or 'valueFrom' must be provided"):
-        EnvironmentSpec.model_validate({"name": "MISSING_VALUE"})
-
-

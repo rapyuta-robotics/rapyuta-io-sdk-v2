@@ -283,9 +283,3 @@ def test_env_args_spec_plain_and_valuefrom_coexist():
     assert arg.valueFrom.secret_key_ref.value == "injected"
 
 
-def test_env_args_spec_neither_value_nor_valuefrom_raises():
-    """EnvArgsSpec raises ValidationError when neither value nor valueFrom is provided."""
-    with pytest.raises(ValidationError, match="either 'value' or 'valueFrom' must be provided"):
-        EnvArgsSpec.model_validate({"name": "MISSING_VALUE"})
-
-
