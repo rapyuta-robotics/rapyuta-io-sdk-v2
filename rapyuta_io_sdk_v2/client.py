@@ -1743,7 +1743,7 @@ class Client:
             Key details as a dictionary.
         """
         result = self.c.put(
-            url=f"{self.v2api_host}/v2/configtrees/{tree_name}/revisions/{revision_id}/{key}/",
+            url=f"{self.v2api_host}/v2/configtrees/{tree_name}/revisions/{revision_id}/{key}",
             headers=self.config.get_headers(project_guid=project_guid, **kwargs),
             content=body,
         )
@@ -1770,7 +1770,7 @@ class Client:
             None if successful.
         """
         result = self.c.delete(
-            url=f"{self.v2api_host}/v2/configtrees/{tree_name}/revisions/{revision_id}/{key}/",
+            url=f"{self.v2api_host}/v2/configtrees/{tree_name}/revisions/{revision_id}/{key}",
             headers=self.config.get_headers(project_guid=project_guid, **kwargs),
         )
         handle_server_errors(result)
@@ -1797,7 +1797,7 @@ class Client:
             Key details as a dictionary.
         """
         result = self.c.patch(
-            url=f"{self.v2api_host}/v2/configtrees/{tree_name}/revisions/{revision_id}/{key}/",
+            url=f"{self.v2api_host}/v2/configtrees/{tree_name}/revisions/{revision_id}/{key}",
             headers=self.config.get_headers(project_guid=project_guid, **kwargs),
             json=config_key_rename,
         )
