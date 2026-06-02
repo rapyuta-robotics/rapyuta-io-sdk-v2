@@ -59,6 +59,12 @@ from rapyuta_io_sdk_v2.models import (
     FileUploadList,
     SharedURL,
     SharedURLList,
+    Database,
+    DatabaseCreate,
+    DatabaseList,
+    DatabasePatch,
+    Backup,
+    BackupList,
 )
 from rapyuta_io_sdk_v2.models.serviceaccount import (
     ServiceAccountToken,
@@ -2683,3 +2689,198 @@ class AsyncClient:
         )
         handle_server_errors(result)
         return SSHKeySignResponse(**result.json())
+
+    # -------------------Databases-------------------
+
+    async def list_databases(
+        self,
+        cont: int = 0,
+        limit: int = 50,
+        **kwargs,
+    ) -> DatabaseList:
+        """List all databases in a project.
+
+        Args:
+            cont (int, optional): Start index for pagination. Defaults to 0.
+            limit (int, optional): Number of databases to return. Defaults to 50.
+
+        Returns:
+            DatabaseList: List of databases.
+        """
+        result = await self.c.get(
+            url=f"{self.v2api_host}/v2/databases/",
+            headers=self.config.get_headers(**kwargs),
+            params={"continue": cont, "limit": limit},
+        )
+        handle_server_errors(result)
+        return DatabaseList(**result.json())
+
+    async def get_database(self, name: str, **kwargs) -> Database:
+        """Get a database by name.
+
+        Args:
+            name (str): Database name.
+
+        Returns:
+            Database: Database details.
+        """
+        result = await self.c.get(
+            url=f"{self.v2api_host}/v2/databases/{name}/",
+            headers=self.config.get_headers(**kwargs),
+        )
+        handle_server_errors(result)
+        return Database(**result.json())
+
+    async def create_database(self, body: DatabaseCreate | dict[str, Any], **kwargs) -> Database:
+        """Create a new database.
+
+        Args:
+            body (DatabaseCreate | dict): Database specification.
+
+        Returns:
+            Database: Created database details.
+        """
+        if isinstance(body, dict):
+            body = DatabaseCreate.model_validate(body)
+
+        result = await self.c.post(
+            url=f"{self.v2api_host}/v2/databases/",
+            headers=self.config.get_headers(**kwargs),
+            json=body.model_dump(by_alias=True, exclude_none=True, mode="json"),
+        )
+        handle_server_errors(result)
+        return Database(**result.json())
+
+    async def update_database(
+        self, name: str, body: DatabasePatch | dict[str, Any], **kwargs
+    ) -> Database:
+        """Update a database by name.
+
+        Args:
+            name (str): Database name.
+            body (DatabasePatch | dict): Updated database spec.
+
+        Returns:
+            Database: Updated database details.
+        """
+        if isinstance(body, dict):
+            body = DatabasePatch.model_validate(body)
+
+        result = await self.c.patch(
+            url=f"{self.v2api_host}/v2/databases/{name}/",
+            headers=self.config.get_headers(**kwargs),
+            json=body.model_dump(by_alias=True, exclude_none=True, mode="json"),
+        )
+        handle_server_errors(result)
+        return Database(**result.json())
+
+    async def delete_database(self, name: str, **kwargs) -> None:
+        """Delete a database by name.
+
+        Args:
+            name (str): Database name.
+
+        Returns:
+            None if successful.
+        """
+        result = await self.c.delete(
+            url=f"{self.v2api_host}/v2/databases/{name}/",
+            headers=self.config.get_headers(**kwargs),
+        )
+        handle_server_errors(result)
+
+    async def list_database_versions(self, **kwargs) -> list[str]:
+        """List supported database versions.
+
+        Returns:
+            list[str]: List of supported version strings.
+        """
+        result = await self.c.get(
+            url=f"{self.v2api_host}/v2/databases/versions/",
+            headers=self.config.get_headers(**kwargs),
+        )
+        handle_server_errors(result)
+        return result.json()
+
+    async def list_backups(
+        self,
+        database_name: str,
+        cont: int = 0,
+        limit: int = 50,
+        **kwargs,
+    ) -> BackupList:
+        """List backups for a database.
+
+        Args:
+            database_name (str): Database name.
+            cont (int, optional): Start index for pagination. Defaults to 0.
+            limit (int, optional): Number of backups to return. Defaults to 50.
+
+        Returns:
+            BackupList: List of backups.
+        """
+        result = await self.c.get(
+            url=f"{self.v2api_host}/v2/databases/{database_name}/backups/",
+            headers=self.config.get_headers(**kwargs),
+            params={"continue": cont, "limit": limit},
+        )
+        handle_server_errors(result)
+        return BackupList(**result.json())
+
+    async def get_backup(self, database_name: str, backup_id: str, **kwargs) -> Backup:
+        """Get a specific backup for a database.
+
+        Args:
+            database_name (str): Database name.
+            backup_id (str): Backup ID.
+
+        Returns:
+            Backup: Backup details.
+        """
+        result = await self.c.get(
+            url=f"{self.v2api_host}/v2/databases/{database_name}/backups/{backup_id}/",
+            headers=self.config.get_headers(**kwargs),
+        )
+        handle_server_errors(result)
+        return Backup(**result.json())
+
+    async def delete_backup(self, database_name: str, backup_id: str, **kwargs) -> None:
+        """Delete a backup for a database.
+
+        Args:
+            database_name (str): Database name.
+            backup_id (str): Backup ID.
+
+        Returns:
+            None if successful.
+        """
+        result = await self.c.delete(
+            url=f"{self.v2api_host}/v2/databases/{database_name}/backups/{backup_id}/",
+            headers=self.config.get_headers(**kwargs),
+        )
+        handle_server_errors(result)
+
+    async def restore_backup(self, database_name: str, backup_id: str, target_time: str | None, databases: list[str] | None, **kwargs) -> None:
+        """Restore a database from a backup.
+
+        Args:
+            database_name (str): Database name.
+            backup_id (str): Backup ID to restore from.
+            target_time (str | None): Target time for PITR in RFC3339 format; if not specified, defaults to latest.
+            databases (list[str] | None): List of database names to recover; if not specified, all databases will be recovered.
+
+        Returns:
+            None if accepted.
+        """
+        payload: dict[str, Any] = {}
+        if target_time:
+            payload["targetTime"] = target_time
+        if databases:
+            payload["databases"] = databases
+
+        result = await self.c.post(
+            url=f"{self.v2api_host}/v2/databases/{database_name}/backups/{backup_id}/restore/",
+            headers=self.config.get_headers(**kwargs),
+            json=payload,
+        )
+        handle_server_errors(result)

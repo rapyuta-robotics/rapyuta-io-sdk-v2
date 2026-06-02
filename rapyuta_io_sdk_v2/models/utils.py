@@ -21,7 +21,7 @@ class BaseMetadata(BaseModel):
     """
 
     # Name of the resource
-    name: str = Field(description="Name of the resource")
+    name: str | None = Field(description="Name of the resource")
 
     # GUID is a globally unique identifier on Rapyuta.io platform
     guid: str | None = Field(default=None, description="GUID of the resource")
