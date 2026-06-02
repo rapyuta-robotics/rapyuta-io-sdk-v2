@@ -2791,18 +2791,27 @@ class Client:
         )
         handle_server_errors(result)
 
-    def restore_backup(self, database_name: str, backup_id: str, **kwargs) -> None:
+    def restore_backup(self, database_name: str, backup_id: str, target_time: str | None, databases: list[str] | None, **kwargs) -> None:
         """Restore a database from a backup.
 
         Args:
             database_name (str): Database name.
             backup_id (str): Backup ID to restore from.
+            target_time (str | None): Target time for PITR in RFC3339 format; if not specified, defaults to latest.
+            databases (list[str] | None): List of database names to recover; if not specified, all databases will be recovered.
 
         Returns:
             None if accepted.
         """
+        payload: dict[str, Any] = {}
+        if target_time:
+            payload["targetTime"] = target_time
+        if databases:
+            payload["databases"] = databases
+            
         result = self.c.post(
             url=f"{self.v2api_host}/v2/databases/{database_name}/backups/{backup_id}/restore/",
             headers=self.config.get_headers(**kwargs),
+            json=payload,
         )
         handle_server_errors(result)

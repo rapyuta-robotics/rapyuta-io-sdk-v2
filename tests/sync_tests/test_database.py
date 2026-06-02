@@ -429,9 +429,57 @@ def test_restore_backup_success(client, mocker: MockFixture):
     response = client.restore_backup(
         database_name=MOCK_DATABASE_NAME,
         backup_id=MOCK_BACKUP_ID,
+        target_time="2026-01-27T10:30:00Z",
+        databases=["test-db"],
     )
 
     assert response is None
+
+
+def test_restore_backup_success_with_none_args(client, mocker: MockFixture):
+    mock_post = mocker.patch("httpx.Client.post")
+
+    mock_post.return_value = httpx.Response(
+        status_code=202,
+    )
+
+    response = client.restore_backup(
+        database_name=MOCK_DATABASE_NAME,
+        backup_id=MOCK_BACKUP_ID,
+        target_time=None,
+        databases=None,
+    )
+
+    assert response is None
+    assert mock_post.call_args.kwargs["json"] == {}
+
+
+def test_restore_backup_success_with_partial_none_args(client, mocker: MockFixture):
+    mock_post = mocker.patch("httpx.Client.post")
+
+    mock_post.return_value = httpx.Response(
+        status_code=202,
+    )
+
+    response = client.restore_backup(
+        database_name=MOCK_DATABASE_NAME,
+        backup_id=MOCK_BACKUP_ID,
+        target_time="2026-01-27T10:30:00Z",
+        databases=None,
+    )
+
+    assert response is None
+    assert mock_post.call_args.kwargs["json"] == {"targetTime": "2026-01-27T10:30:00Z"}
+
+    response = client.restore_backup(
+        database_name=MOCK_DATABASE_NAME,
+        backup_id=MOCK_BACKUP_ID,
+        target_time=None,
+        databases=["test-db"],
+    )
+
+    assert response is None
+    assert mock_post.call_args.kwargs["json"] == {"databases": ["test-db"]}
 
 
 def test_restore_backup_not_found(client, mocker: MockFixture):
@@ -443,7 +491,12 @@ def test_restore_backup_not_found(client, mocker: MockFixture):
     )
 
     with pytest.raises(Exception) as exc:
-        client.restore_backup(database_name=MOCK_DATABASE_NAME, backup_id=MOCK_BACKUP_ID)
+        client.restore_backup(
+            database_name=MOCK_DATABASE_NAME,
+            backup_id=MOCK_BACKUP_ID,
+            target_time="2026-01-27T10:30:00Z",
+            databases=["test-db"],
+        )
 
     assert str(exc.value) == "backup not found"
 
@@ -458,7 +511,12 @@ def test_restore_backup_conflict(client, mocker: MockFixture):
     )
 
     with pytest.raises(Exception) as exc:
-        client.restore_backup(database_name=MOCK_DATABASE_NAME, backup_id=MOCK_BACKUP_ID)
+        client.restore_backup(
+            database_name=MOCK_DATABASE_NAME,
+            backup_id=MOCK_BACKUP_ID,
+            target_time="2026-01-27T10:30:00Z",
+            databases=["test-db"],
+        )
 
     assert "not in stopped state" in str(exc.value)
 
@@ -616,3 +674,45 @@ def test_database_status_has_no_top_level_phase(database_model_mock):
 
     status = DatabaseStatus.model_validate(database_model_mock["status"])
     assert not hasattr(status, "phase")
+
+
+def test_get_database_with_redacted_credentials(client, database_model_mock, mocker: MockFixture):
+    """Responses with omitted/redacted sensitive fields (credentials, serviceAccountToken)
+    must still deserialize correctly, guarding against model drift."""
+    redacted_mock = {
+        **database_model_mock,
+        "spec": {
+            "type": "postgres",
+            "postgres": {
+                **database_model_mock["spec"]["postgres"],
+                "credentials": None,
+                "serviceAccountToken": None,
+            },
+        },
+    }
+    mock_get = mocker.patch("httpx.Client.get")
+    mock_get.return_value = httpx.Response(status_code=200, json=redacted_mock)
+
+    response = client.get_database(name=MOCK_DATABASE_NAME)
+
+    assert isinstance(response, Database)
+    assert response.spec.postgres.credentials is None
+    assert response.spec.postgres.serviceAccountToken is None
+
+
+def test_get_database_with_sensitive_fields_absent(client, database_model_mock, mocker: MockFixture):
+    """Responses that omit sensitive fields entirely (not null, just absent) must deserialize."""
+    postgres_spec = {k: v for k, v in database_model_mock["spec"]["postgres"].items()
+                     if k not in ("credentials", "serviceAccountToken")}
+    absent_mock = {
+        **database_model_mock,
+        "spec": {"type": "postgres", "postgres": postgres_spec},
+    }
+    mock_get = mocker.patch("httpx.Client.get")
+    mock_get.return_value = httpx.Response(status_code=200, json=absent_mock)
+
+    response = client.get_database(name=MOCK_DATABASE_NAME)
+
+    assert isinstance(response, Database)
+    assert response.spec.postgres.credentials is None
+    assert response.spec.postgres.serviceAccountToken is None

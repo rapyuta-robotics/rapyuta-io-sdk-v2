@@ -80,6 +80,12 @@ class RecoverySpec(BaseModel):
     deviceGUID: str | None = Field(
         default=None, description="Device GUID injected by server after backup lookup"
     )
+    targetTime: str | None = Field(
+        default=None, description="Target time for PITR in RFC3339 format; if not specified, defaults to latest"
+    )
+    databases: list[str] | None = Field(
+        default=None, description="List of database names to recover; if not specified, all databases will be recovered"
+    )
 
 
 class PostgresSpec(BaseModel):
@@ -98,6 +104,10 @@ class PostgresSpec(BaseModel):
     standby: StandbySpec | None = Field(default=None, description="Standby replication spec")
     backup: BackupSpec | None = Field(default=None, description="Backup spec")
     recovery: RecoverySpec | None = Field(default=None, description="Recovery spec")
+    serviceAccountToken: str | None = Field(
+        default=None,
+        description="Server-managed service account token (sensitive; redacted in most API responses)",
+    )
 
 
 class PostgresSpecCreate(PostgresSpec):

@@ -60,6 +60,7 @@ from rapyuta_io_sdk_v2.models import (
     SharedURL,
     SharedURLList,
     Database,
+    DatabaseCreate,
     DatabaseList,
     DatabasePatch,
     Backup,
@@ -2730,17 +2731,17 @@ class AsyncClient:
         handle_server_errors(result)
         return Database(**result.json())
 
-    async def create_database(self, body: Database | dict[str, Any], **kwargs) -> Database:
+    async def create_database(self, body: DatabaseCreate | dict[str, Any], **kwargs) -> Database:
         """Create a new database.
 
         Args:
-            body (Database | dict): Database specification.
+            body (DatabaseCreate | dict): Database specification.
 
         Returns:
             Database: Created database details.
         """
         if isinstance(body, dict):
-            body = Database.model_validate(body)
+            body = DatabaseCreate.model_validate(body)
 
         result = await self.c.post(
             url=f"{self.v2api_host}/v2/databases/",
@@ -2859,18 +2860,27 @@ class AsyncClient:
         )
         handle_server_errors(result)
 
-    async def restore_backup(self, database_name: str, backup_id: str, **kwargs) -> None:
+    async def restore_backup(self, database_name: str, backup_id: str, target_time: str | None, databases: list[str] | None, **kwargs) -> None:
         """Restore a database from a backup.
 
         Args:
             database_name (str): Database name.
             backup_id (str): Backup ID to restore from.
+            target_time (str | None): Target time for PITR in RFC3339 format; if not specified, defaults to latest.
+            databases (list[str] | None): List of database names to recover; if not specified, all databases will be recovered.
 
         Returns:
             None if accepted.
         """
+        payload: dict[str, Any] = {}
+        if target_time:
+            payload["targetTime"] = target_time
+        if databases:
+            payload["databases"] = databases
+
         result = await self.c.post(
             url=f"{self.v2api_host}/v2/databases/{database_name}/backups/{backup_id}/restore/",
             headers=self.config.get_headers(**kwargs),
+            json=payload,
         )
         handle_server_errors(result)
