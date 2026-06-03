@@ -65,6 +65,10 @@ from rapyuta_io_sdk_v2.models.serviceaccount import (
     ServiceAccountTokenInfo,
     ServiceAccountTokenList,
 )
+from rapyuta_io_sdk_v2.models.sshkey import (
+    SSHKeySignRequest,
+    SSHKeySignResponse,
+)
 from rapyuta_io_sdk_v2.utils import handle_server_errors
 
 
@@ -1705,6 +1709,7 @@ class AsyncClient:
         author: str | None = None,
         message: str | None = None,
         project_guid: str | None = None,
+        labels: dict[str, str] | None = None,
         **kwargs,
     ) -> dict[str, Any]:
         """Commit a revision.
@@ -1715,6 +1720,7 @@ class AsyncClient:
             author (str, optional): Revision Author. Defaults to None.
             message (str, optional): Revision Message. Defaults to None.
             project_guid (str, optional): Project GUID. Defaults to None.
+            labels (dict, optional): Labels to set on the revision. Defaults to None.
 
         Returns:
             Revision details as a dictionary.
@@ -1723,6 +1729,9 @@ class AsyncClient:
             "author": author,
             "message": message,
         }
+
+        if labels:
+            config_tree_revision["metadata"] = {"labels": labels}
 
         result = await self.c.patch(
             url=f"{self.v2api_host}/v2/configtrees/{tree_name}/revisions/{revision_id}/",
@@ -2646,3 +2655,31 @@ class AsyncClient:
         )
         handle_server_errors(result)
         return SharedURL(**result.json())
+
+    # -------------------SSH Certificates-------------------
+    async def sign_ssh_public_key(
+        self,
+        body: SSHKeySignRequest | dict[str, Any],
+        **kwargs,
+    ) -> SSHKeySignResponse:
+        """Sign an SSH public key.
+
+        Sends the provided SSH public key to the server for signing
+        and returns a signed SSH certificate.
+
+        Args:
+            body (SSHKeySignRequest | dict): The SSH public key to sign.
+
+        Returns:
+            SSHKeySignResponse: The signed SSH certificate.
+        """
+        if isinstance(body, dict):
+            body = SSHKeySignRequest.model_validate(body)
+
+        result = await self.c.post(
+            url=f"{self.v2api_host}/v2/certs/ssh/sign/",
+            headers=self.config.get_headers(**kwargs),
+            json=body.model_dump(by_alias=True),
+        )
+        handle_server_errors(result)
+        return SSHKeySignResponse(**result.json())

@@ -65,6 +65,10 @@ from rapyuta_io_sdk_v2.models.serviceaccount import (
     ServiceAccountTokenInfo,
     ServiceAccountTokenList,
 )
+from rapyuta_io_sdk_v2.models.sshkey import (
+    SSHKeySignRequest,
+    SSHKeySignResponse,
+)
 from rapyuta_io_sdk_v2.utils import handle_server_errors
 
 
@@ -1657,6 +1661,7 @@ class Client:
         author: str | None = None,
         message: str | None = None,
         project_guid: str | None = None,
+        labels: dict[str, str] | None = None,
         **kwargs,
     ) -> dict[str, Any]:
         """Commit a revision.
@@ -1667,6 +1672,7 @@ class Client:
             author (str, optional): Revision Author. Defaults to None.
             message (str, optional): Revision Message. Defaults to None.
             project_guid (str, optional): Project GUID. Defaults to None.
+            labels (dict, optional): Labels to set on the revision. Defaults to None.
 
         Returns:
             Revision details as a dictionary.
@@ -1675,6 +1681,10 @@ class Client:
             "author": author,
             "message": message,
         }
+
+        if labels:
+            config_tree_revision["metadata"] = {"labels": labels}
+
         result = self.c.patch(
             url=f"{self.v2api_host}/v2/configtrees/{tree_name}/revisions/{revision_id}/",
             headers=self.config.get_headers(project_guid=project_guid, **kwargs),
@@ -1733,7 +1743,7 @@ class Client:
             Key details as a dictionary.
         """
         result = self.c.put(
-            url=f"{self.v2api_host}/v2/configtrees/{tree_name}/revisions/{revision_id}/{key}/",
+            url=f"{self.v2api_host}/v2/configtrees/{tree_name}/revisions/{revision_id}/{key}",
             headers=self.config.get_headers(project_guid=project_guid, **kwargs),
             content=body,
         )
@@ -1760,7 +1770,7 @@ class Client:
             None if successful.
         """
         result = self.c.delete(
-            url=f"{self.v2api_host}/v2/configtrees/{tree_name}/revisions/{revision_id}/{key}/",
+            url=f"{self.v2api_host}/v2/configtrees/{tree_name}/revisions/{revision_id}/{key}",
             headers=self.config.get_headers(project_guid=project_guid, **kwargs),
         )
         handle_server_errors(result)
@@ -1787,7 +1797,7 @@ class Client:
             Key details as a dictionary.
         """
         result = self.c.patch(
-            url=f"{self.v2api_host}/v2/configtrees/{tree_name}/revisions/{revision_id}/{key}/",
+            url=f"{self.v2api_host}/v2/configtrees/{tree_name}/revisions/{revision_id}/{key}",
             headers=self.config.get_headers(project_guid=project_guid, **kwargs),
             json=config_key_rename,
         )
@@ -2576,3 +2586,31 @@ class Client:
         )
         handle_server_errors(result)
         return SharedURL(**result.json())
+
+    # -------------------SSH Certificates-------------------
+    def sign_ssh_public_key(
+        self,
+        body: SSHKeySignRequest | dict[str, Any],
+        **kwargs,
+    ) -> SSHKeySignResponse:
+        """Sign an SSH public key.
+
+        Sends the provided SSH public key to the server for signing
+        and returns a signed SSH certificate.
+
+        Args:
+            body (SSHKeySignRequest | dict): The SSH public key to sign.
+
+        Returns:
+            SSHKeySignResponse: The signed SSH certificate.
+        """
+        if isinstance(body, dict):
+            body = SSHKeySignRequest.model_validate(body)
+
+        result = self.c.post(
+            url=f"{self.v2api_host}/v2/certs/ssh/sign/",
+            headers=self.config.get_headers(**kwargs),
+            json=body.model_dump(by_alias=True),
+        )
+        handle_server_errors(result)
+        return SSHKeySignResponse(**result.json())
