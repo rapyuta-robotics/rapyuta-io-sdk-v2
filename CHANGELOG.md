@@ -1,3 +1,18 @@
+# [0.8.0](https://github.com/rapyuta-robotics/rapyuta-io-sdk-v2/compare/v0.7.0...v0.8.0) (2026-06-03)
+
+
+### Bug Fixes
+
+* **client:** fixes configtree clients for get, rename, delete, put key in revision ([348bdad](https://github.com/rapyuta-robotics/rapyuta-io-sdk-v2/commit/348bdad0b01b97bcf87ece56542c97324c4d4faa))
+* **models:** coerce datetime and bool values in pydantic model ([#51](https://github.com/rapyuta-robotics/rapyuta-io-sdk-v2/issues/51)) ([d23d8da](https://github.com/rapyuta-robotics/rapyuta-io-sdk-v2/commit/d23d8da23f5b341892cc5c837dffeaa81bc1b302))
+* support dict responses in walk_pages and walk_pages_async ([3ba9269](https://github.com/rapyuta-robotics/rapyuta-io-sdk-v2/commit/3ba9269a25e664d6603b8f856572ecc303426200))
+
+
+### Features
+
+* add labels parameter to commit_revision ([4880e82](https://github.com/rapyuta-robotics/rapyuta-io-sdk-v2/commit/4880e82ce74f9ad440623bdb838181c091025774))
+* add support for ssh certificate ([#41](https://github.com/rapyuta-robotics/rapyuta-io-sdk-v2/issues/41)) ([9d976ed](https://github.com/rapyuta-robotics/rapyuta-io-sdk-v2/commit/9d976ed41ffa215cbde39a11fe2a79dfb3694a3c))
+
 # [0.7.0](https://github.com/rapyuta-robotics/rapyuta-io-sdk-v2/compare/v0.6.0...v0.7.0) (2026-04-15)
 
 
