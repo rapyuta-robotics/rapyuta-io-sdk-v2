@@ -2,6 +2,8 @@ from rapyuta_io_sdk_v2.async_client import AsyncClient as AsyncClient
 from rapyuta_io_sdk_v2.client import Client as Client
 from rapyuta_io_sdk_v2.config import Configuration as Configuration
 from rapyuta_io_sdk_v2.models import (
+    Database as Database,
+    DatabaseList as DatabaseList,
     Deployment as Deployment,
     DeploymentList as DeploymentList,
     Disk as Disk,
