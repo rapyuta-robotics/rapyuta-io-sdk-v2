@@ -2,8 +2,6 @@
 Pydantic models for Database and Backup resources.
 """
 
-from __future__ import annotations
-
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -15,9 +13,8 @@ class DeviceSpec(BaseModel):
     """Device placement for a Postgres instance."""
 
     device_name: str = Field(alias="deviceName")
-    device_guid: str | None = Field(alias="deviceGuid", default=None)
-    data_directory: str | None = Field(alias="dataDirectory", default=None)
-    port: int | None = Field(default=None)
+    data_directory: str = Field(alias="dataDirectory")
+    port: int = Field(default=5432)
 
 
 class Credentials(BaseModel):
@@ -27,21 +24,16 @@ class Credentials(BaseModel):
     password: str | None = Field(default=None)
 
 
-class PostgresParameters(BaseModel):
-    max_connections: str = Field(default="200")
-    shared_buffers: str = Field(default="512MB")
-
-
 class PostgresSpec(BaseModel):
     """Specification for a PostgreSQL database instance."""
 
-    version: Literal["16", "17", "18"]
-    postgres_image: str = Field(alias="postgresImage")
-
+    version: str
     primary: DeviceSpec
     credentials: Credentials
-    multiple_database: list[str] | None = Field(default=None, alias="multipleDatabase")
-    parameters: PostgresParameters | None = Field(default=None)
+    multiple_database: list[str] | None = Field(
+        default=None, alias="multipleDatabase"
+    )
+    parameters: dict[str, str] | None = Field(default=None)
 
 
 class DatabaseSpec(BaseModel):
@@ -61,6 +53,18 @@ class ContainerState(BaseModel):
     message: str | None = Field(default=None)
 
 
+class Condition(BaseModel):
+    """Kubernetes-style condition."""
+
+    type: str
+    status: Literal["True", "False", "Unknown"]
+    reason: str | None = Field(default=None)
+    message: str | None = Field(default=None)
+    last_transition_time: str | None = Field(
+        default=None, alias="lastTransitionTime"
+    )
+
+
 class PrimaryStatus(BaseModel):
     """Status of the Postgres primary container."""
 
@@ -71,6 +75,7 @@ class PrimaryStatus(BaseModel):
     state: ContainerState | None = Field(default=None)
     last_state: ContainerState | None = Field(default=None, alias="lastState")
     restart_count: int | None = Field(default=None, alias="restartCount")
+    conditions: list[Condition] | None = Field(default=None)
     last_updated: str | None = Field(default=None, alias="lastUpdated")
 
     @field_validator("state", "last_state", mode="before")
@@ -93,6 +98,7 @@ class DatabaseStatus(BaseModel):
     phase: str | None = Field(default=None)
     message: str | None = Field(default=None)
     postgres: PostgresStatus | None = Field(default=None)
+    conditions: list[Condition] | None = Field(default=None)
 
 
 class Database(BaseObject):
