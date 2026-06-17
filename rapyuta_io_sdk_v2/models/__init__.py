@@ -4,6 +4,12 @@ Models package for Rapyuta IO SDK v2.
 This module provides flattened imports for all model classes.
 """
 
+# Database models
+from rapyuta_io_sdk_v2.models.database import (
+    Database as Database,
+    DatabaseList as DatabaseList,
+)
+
 # Deployment models
 from rapyuta_io_sdk_v2.models.deployment import (
     Deployment as Deployment,

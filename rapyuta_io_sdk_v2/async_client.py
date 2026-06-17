@@ -61,6 +61,8 @@ from rapyuta_io_sdk_v2.models import (
     FileUploadList,
     SharedURL,
     SharedURLList,
+    Database,
+    DatabaseList,
 )
 from rapyuta_io_sdk_v2.models.serviceaccount import (
     ServiceAccountToken,
@@ -958,6 +960,113 @@ class AsyncClient:
         )
         handle_server_errors(result)
         return None
+
+    # -------------------Database------------------------
+
+    async def list_databases(
+        self,
+        cont: int = 0,
+        label_selector: list[str] | None = None,
+        limit: int = 50,
+        names: list[str] | None = None,
+        **kwargs,
+    ) -> DatabaseList:
+        """List all databases in a project.
+
+        Args:
+            cont (int, optional): Start index. Defaults to 0.
+            label_selector (List[str], optional): Filter by labels. Defaults to None.
+            limit (int, optional): Number of results. Defaults to 50.
+            names (List[str], optional): Filter by names. Defaults to None.
+
+        Returns:
+            DatabaseList: Paginated list of databases.
+        """
+        result = await self.c.get(
+            url=f"{self.v2api_host}/v2/databases/",
+            headers=self.config.get_headers(**kwargs),
+            params={
+                "continue": cont,
+                "limit": limit,
+                "labelSelector": label_selector,
+                "names": names,
+            },
+        )
+        handle_server_errors(result)
+        return DatabaseList(**result.json())
+
+    async def get_database(self, name: str, **kwargs) -> Database:
+        """Get a database by its name.
+
+        Args:
+            name (str): Database name.
+
+        Returns:
+            Database: Database details.
+        """
+        result = await self.c.get(
+            url=f"{self.v2api_host}/v2/databases/{name}/",
+            headers=self.config.get_headers(**kwargs),
+        )
+        handle_server_errors(result)
+        return Database(**result.json())
+
+    async def create_database(
+        self, body: Database | dict[str, Any], **kwargs
+    ) -> Database:
+        """Create a new database.
+
+        Args:
+            body (Database | dict): Database manifest.
+
+        Returns:
+            Database: Created database details.
+        """
+        if isinstance(body, dict):
+            body = Database.model_validate(body)
+
+        result = await self.c.post(
+            url=f"{self.v2api_host}/v2/databases/",
+            headers=self.config.get_headers(**kwargs),
+            json=body.model_dump(by_alias=True),
+        )
+        handle_server_errors(result)
+        return Database(**result.json())
+
+    async def update_database(
+        self, name: str, body: Database | dict[str, Any], **kwargs
+    ) -> Database:
+        """Update a database by its name.
+
+        Args:
+            name (str): Database name.
+            body (Database | dict): Updated database manifest.
+
+        Returns:
+            Database: Updated database details.
+        """
+        if isinstance(body, dict):
+            body = Database.model_validate(body)
+
+        result = await self.c.put(
+            url=f"{self.v2api_host}/v2/databases/{name}/",
+            headers=self.config.get_headers(**kwargs),
+            json=body.model_dump(by_alias=True),
+        )
+        handle_server_errors(result)
+        return Database(**result.json())
+
+    async def delete_database(self, name: str, **kwargs) -> None:
+        """Delete a database by its name.
+
+        Args:
+            name (str): Database name.
+        """
+        result = await self.c.delete(
+            url=f"{self.v2api_host}/v2/databases/{name}/",
+            headers=self.config.get_headers(**kwargs),
+        )
+        handle_server_errors(result)
 
     # -------------------Device--------------------------
 
