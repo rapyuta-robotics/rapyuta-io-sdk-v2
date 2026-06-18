@@ -1188,16 +1188,36 @@ wheels = [
 
 [[package]]
 name = "python-benedict"
+version = "0.34.1"
+source = { registry = "https://pypi.org/simple" }
+resolution-markers = [
+    "python_full_version == '3.9.*'",
+    "python_full_version < '3.9'",
+]
+dependencies = [
+    { name = "python-fsutil", marker = "python_full_version < '3.10'" },
+    { name = "python-slugify", marker = "python_full_version < '3.10'" },
+    { name = "requests", version = "2.32.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
+    { name = "requests", version = "2.32.5", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.9.*'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/b3/a8/744dce47aeba978a516f13c0d728fa1236217fa9e75e2619891df8100e85/python_benedict-0.34.1.tar.gz", hash = "sha256:0a81784c826c8983c485bb647ed5e6c8fad139c3921ea1844b21e41da0ff0dc0", size = 53340, upload-time = "2025-01-18T14:52:04.684Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/94/65/c59fb6eec8859047394ccd73eaf1623ce9fd82c48d880d9a072045669bc5/python_benedict-0.34.1-py3-none-any.whl", hash = "sha256:f09711ca2d8e716ca40440f1e26dfa3ccff15e08f1baa88de594fbba799cf87a", size = 51308, upload-time = "2025-01-18T14:52:01.886Z" },
+]
+
+[[package]]
+name = "python-benedict"
 version = "0.35.0"
 source = { registry = "https://pypi.org/simple" }
+resolution-markers = [
+    "python_full_version >= '3.10'",
+]
 dependencies = [
-    { name = "python-fsutil" },
-    { name = "python-slugify" },
-    { name = "requests", version = "2.32.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
-    { name = "requests", version = "2.32.5", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
-    { name = "typing-extensions", version = "4.13.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
-    { name = "typing-extensions", version = "4.15.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
-    { name = "useful-types" },
+    { name = "python-fsutil", marker = "python_full_version >= '3.10'" },
+    { name = "python-slugify", marker = "python_full_version >= '3.10'" },
+    { name = "requests", version = "2.32.5", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
+    { name = "typing-extensions", version = "4.15.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
+    { name = "useful-types", marker = "python_full_version >= '3.10'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/bc/7f/670cea45a5de7ba79b820b9e58c19ec28070e65f8fe4584edc14b3b86ff2/python_benedict-0.35.0.tar.gz", hash = "sha256:ca825742cb60641939857417b799c6ca6680ba1ed7d3a92cf722103bc8dcb3ea", size = 58486, upload-time = "2025-09-30T22:57:42.206Z" }
 wheels = [
@@ -1339,7 +1359,8 @@ dependencies = [
     { name = "pydantic-settings", version = "2.8.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
     { name = "pydantic-settings", version = "2.11.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.9.*'" },
     { name = "pydantic-settings", version = "2.12.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
-    { name = "python-benedict" },
+    { name = "python-benedict", version = "0.34.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
+    { name = "python-benedict", version = "0.35.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
     { name = "pyyaml" },
 ]
 
@@ -1369,7 +1390,8 @@ requires-dist = [
     { name = "eval-type-backport", marker = "python_full_version < '3.10'", specifier = ">=0.1.3" },
     { name = "httpx", specifier = ">=0.27.2" },
     { name = "pydantic-settings", specifier = ">=2.7.1" },
-    { name = "python-benedict", specifier = ">=0.30" },
+    { name = "python-benedict", marker = "python_full_version < '3.10'", specifier = ">=0.30,<0.35" },
+    { name = "python-benedict", marker = "python_full_version >= '3.10'", specifier = ">=0.30" },
     { name = "pyyaml", specifier = ">=6.0.2" },
 ]
 
@@ -1561,8 +1583,7 @@ name = "useful-types"
 version = "0.2.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "typing-extensions", version = "4.13.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
-    { name = "typing-extensions", version = "4.15.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
+    { name = "typing-extensions", version = "4.15.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/92/d6/0d6db1f8766e9b5e7ec259666c40ceae6bbb9326caf50e08717639e167b7/useful_types-0.2.1.tar.gz", hash = "sha256:870a0bcc8fcb7d0b2f14055438c1cab7e248fded942b0943a4d7019e7fbbdacd", size = 4748, upload-time = "2024-04-20T08:58:15.195Z" }
 wheels = [
