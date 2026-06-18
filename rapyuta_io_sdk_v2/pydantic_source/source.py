@@ -17,7 +17,7 @@ import json
 class ConfigTreeSource(PydanticBaseSettingsSource):
     def __init__(
         self,
-        settings_cls: type["BaseSettings"],
+        settings_cls: type[BaseSettings],
         config: Configuration,
         tree_name: str = "default",
         key_prefix: str = "",

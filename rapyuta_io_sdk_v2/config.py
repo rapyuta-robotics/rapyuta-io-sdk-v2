@@ -51,11 +51,11 @@ class Configuration:
         self.set_environment(self.environment)
 
     @classmethod
-    def from_env(cls) -> "Configuration":
+    def from_env(cls) -> Configuration:
         raise NotImplementedError
 
     @classmethod
-    def from_file(cls, file_path: str = None) -> "Configuration":
+    def from_file(cls, file_path: str = None) -> Configuration:
         """Create a configuration object from a file.
 
         Args:

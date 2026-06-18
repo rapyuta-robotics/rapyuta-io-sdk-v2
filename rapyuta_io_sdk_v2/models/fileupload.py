@@ -64,7 +64,7 @@ class FileUploadSpec(BaseModel):
         default=None,
         description="Custom metadata",
     )
-    shared_urls: list["SharedURL"] | None = Field(
+    shared_urls: list[SharedURL] | None = Field(
         default=None,
         description="List of shared URLs",
         alias="sharedURLs",
