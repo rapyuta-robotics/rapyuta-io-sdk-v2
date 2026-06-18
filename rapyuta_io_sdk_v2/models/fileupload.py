@@ -5,6 +5,8 @@ This module contains Pydantic models that correspond to the FileUpload and Share
 JSON schemas, providing validation for device file upload resources.
 """
 
+from __future__ import annotations
+
 from datetime import datetime
 from typing import Literal
 
