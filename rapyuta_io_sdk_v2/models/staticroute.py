@@ -6,6 +6,8 @@ providing validation for StaticRoute resources to help users identify missing or
 incorrect fields.
 """
 
+from __future__ import annotations
+
 import re
 from typing import Literal
 

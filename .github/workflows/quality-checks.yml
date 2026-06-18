@@ -26,6 +26,11 @@ jobs:
 
       - name: Run unit tests
         run: |
-          uv sync --all-extras --dev
-          source .venv/bin/activate
-          uv run pytest tests/ --cov
+          uv sync --python ${{ matrix.python-version }} --all-extras --dev
+          uv run --python ${{ matrix.python-version }} python -c "
+          import rapyuta_io_sdk_v2
+          from rapyuta_io_sdk_v2 import Client, AsyncClient
+          from rapyuta_io_sdk_v2.pydantic_source.source import ConfigTreeSource
+          print('smoke imports OK')
+          "
+          uv run --python ${{ matrix.python-version }} pytest tests/ --cov
