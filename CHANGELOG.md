@@ -1,3 +1,10 @@
+## [0.8.1](https://github.com/rapyuta-robotics/rapyuta-io-sdk-v2/compare/v0.8.0...v0.8.1) (2026-06-19)
+
+
+### Bug Fixes
+
+* add Python 3.8 compatibility to the SDK ([#56](https://github.com/rapyuta-robotics/rapyuta-io-sdk-v2/issues/56)) ([c381b59](https://github.com/rapyuta-robotics/rapyuta-io-sdk-v2/commit/c381b599c330fedc956a129e5198d2cfcccc4009))
+
 # [0.8.0](https://github.com/rapyuta-robotics/rapyuta-io-sdk-v2/compare/v0.7.0...v0.8.0) (2026-06-03)
 
 
