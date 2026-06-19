@@ -6,6 +6,8 @@ providing validation for Deployment resources to help users identify missing or
 incorrect fields.
 """
 
+from __future__ import annotations
+
 from os import path
 
 from typing import Literal

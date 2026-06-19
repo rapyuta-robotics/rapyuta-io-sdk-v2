@@ -6,7 +6,9 @@ providing validation for Package resources to help users identify missing or
 incorrect fields.
 """
 
-from typing import Literal
+from __future__ import annotations
+
+from typing import Dict, Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -32,7 +34,7 @@ EndpointProto = Literal[
 ]
 
 
-class StringMap(dict[str, str]):
+class StringMap(Dict[str, str]):
     pass
 
 

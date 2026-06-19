@@ -5,6 +5,8 @@ This module mirrors the Go `ServiceAccount` and related types from the
 `package extensions` snippet provided by the user.
 """
 
+from __future__ import annotations
+
 from typing import Literal
 from datetime import datetime
 

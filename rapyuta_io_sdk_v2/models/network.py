@@ -6,6 +6,8 @@ providing validation for Network resources to help users identify missing or
 incorrect fields.
 """
 
+from __future__ import annotations
+
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, AliasChoices

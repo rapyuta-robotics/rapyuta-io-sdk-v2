@@ -11,6 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from __future__ import annotations
+
 import json
 import os
 from dataclasses import dataclass
@@ -49,11 +51,11 @@ class Configuration:
         self.set_environment(self.environment)
 
     @classmethod
-    def from_env(cls) -> "Configuration":
+    def from_env(cls) -> Configuration:
         raise NotImplementedError
 
     @classmethod
-    def from_file(cls, file_path: str = None) -> "Configuration":
+    def from_file(cls, file_path: str = None) -> Configuration:
         """Create a configuration object from a file.
 
         Args:

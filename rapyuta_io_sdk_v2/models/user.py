@@ -12,15 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Literal
+from __future__ import annotations
+
+from typing import Dict, List, Literal
 
 from pydantic import AliasChoices, BaseModel, Field, model_validator
 
 from rapyuta_io_sdk_v2.models.utils import BaseList, BaseMetadata, BaseObject
 
 # Type aliases for permissions
-ActionMap = dict[str, list[str]]
-ResourceMap = dict[str, ActionMap]
+ActionMap = Dict[str, List[str]]
+ResourceMap = Dict[str, ActionMap]
 
 
 class UserPermissions(BaseModel):
