@@ -4,6 +4,8 @@ from rapyuta_io_sdk_v2.config import Configuration as Configuration
 from rapyuta_io_sdk_v2.models import (
     Database as Database,
     DatabaseList as DatabaseList,
+    Backup as Backup,
+    BackupList as BackupList,
     Deployment as Deployment,
     DeploymentList as DeploymentList,
     Disk as Disk,
