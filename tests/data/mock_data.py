@@ -1108,3 +1108,155 @@ def ssh_key_sign_response_mock() -> dict[str, Any]:
     return {
         "certificate": "ssh-rsa-cert-v01@openssh.com AAAAHHNza...",
     }
+
+
+# -------------------- DATABASE --------------------
+
+
+@pytest.fixture
+def database_body() -> dict[str, Any]:
+    return {
+        "apiVersion": "api.rapyuta.io/v2",
+        "kind": "Database",
+        "metadata": {
+            "name": "orders-db",
+            "labels": {"app": "orders"},
+        },
+        "spec": {
+            "type": "postgres",
+            "postgres": {
+                "version": "17",
+                "primary": {
+                    "deviceName": "edge-node-01",
+                    "dataDirectory": "/opt/rapyuta/volumes/orders-db",
+                    "port": 5432,
+                },
+                "credentials": {
+                    "username": "app",
+                    "password": "secret",
+                },
+            },
+        },
+    }
+
+
+@pytest.fixture
+def database_model_mock() -> dict[str, Any]:
+    return {
+        "kind": "Database",
+        "apiVersion": "api.rapyuta.io/v2",
+        "metadata": {
+            "name": "orders-db",
+            "guid": "database-mockdb1234567890123",
+            "projectGUID": "project-aaaaaaaaaaaaaaaaaaaa",
+            "organizationGUID": "org-mock-789",
+            "creatorGUID": "mock-user-guid-000",
+            "createdAt": "2025-01-01T00:00:00Z",
+            "updatedAt": "2025-01-01T01:00:00Z",
+            "deletedAt": None,
+        },
+        "spec": {
+            "type": "postgres",
+            "postgres": {
+                "version": "17",
+                "primary": {
+                    "deviceName": "edge-node-01",
+                    "dataDirectory": "/opt/rapyuta/volumes/orders-db",
+                    "port": 5432,
+                },
+                "credentials": {
+                    "username": "app",
+                },
+            },
+        },
+        "status": {
+            "phase": "Running",
+            "postgres": {
+                "primary": {
+                    "deviceName": "edge-node-01",
+                    "port": 5432,
+                    "phase": "running",
+                },
+            },
+        },
+    }
+
+
+@pytest.fixture
+def databaselist_model_mock(database_model_mock) -> dict[str, Any]:
+    return {
+        "metadata": {
+            "continue": 1,
+        },
+        "items": [database_model_mock],
+    }
+
+
+# -------------------- BACKUP --------------------
+
+
+@pytest.fixture
+def backup_body() -> dict[str, Any]:
+    return {
+        "apiVersion": "api.rapyuta.io/v2",
+        "kind": "Backup",
+        "metadata": {
+            "name": "orders-nightly",
+            "labels": {"app": "orders"},
+        },
+        "spec": {
+            "type": "scheduled",
+            "database": "orders-db",
+            "schedule": "0 2 * * *",
+        },
+    }
+
+
+@pytest.fixture
+def backup_model_mock() -> dict[str, Any]:
+    return {
+        "kind": "Backup",
+        "apiVersion": "api.rapyuta.io/v2",
+        "metadata": {
+            "name": "orders-nightly",
+            "guid": "backup-mockbackup12345678901",
+            "projectGUID": "project-aaaaaaaaaaaaaaaaaaaa",
+            "organizationGUID": "org-mock-789",
+            "creatorGUID": "mock-user-guid-000",
+            "createdAt": "2025-01-01T00:00:00Z",
+            "updatedAt": "2025-01-01T01:00:00Z",
+            "deletedAt": None,
+        },
+        "spec": {
+            "type": "scheduled",
+            "database": "orders-db",
+            "barmanImage": "barman:17",
+            "deviceGuid": "device-mockdevice12345678901",
+            "schedule": "0 2 * * *",
+        },
+        "status": {
+            "phase": "Ready",
+            "postgresVersion": "17",
+            "latestRun": {
+                "backupID": "20260101T020000",
+                "beginWAL": "000000010000000000000003",
+                "endWAL": "000000010000000000000004",
+                "verification": {
+                    "check": "Passed",
+                    "verifyBackup": "Passed",
+                    "restoreTest": "Skipped",
+                },
+                "completedAt": "2026-01-01T02:03:11Z",
+            },
+        },
+    }
+
+
+@pytest.fixture
+def backuplist_model_mock(backup_model_mock) -> dict[str, Any]:
+    return {
+        "metadata": {
+            "continue": 1,
+        },
+        "items": [backup_model_mock],
+    }
