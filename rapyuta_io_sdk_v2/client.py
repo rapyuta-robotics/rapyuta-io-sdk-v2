@@ -63,6 +63,8 @@ from rapyuta_io_sdk_v2.models import (
     SharedURLList,
     Database,
     DatabaseList,
+    Backup,
+    BackupList,
 )
 from rapyuta_io_sdk_v2.models.serviceaccount import (
     ServiceAccountToken,
@@ -1036,6 +1038,93 @@ class Client:
         """
         result = self.c.delete(
             url=f"{self.v2api_host}/v2/databases/{name}/",
+            headers=self.config.get_headers(**kwargs),
+        )
+        handle_server_errors(result)
+
+    # -------------------Backup--------------------------
+
+    def list_backups(
+        self,
+        cont: int = 0,
+        label_selector: list[str] | None = None,
+        limit: int = 50,
+        database: str | None = None,
+        **kwargs,
+    ) -> BackupList:
+        """List all backups in a project.
+
+        Backups are first-class resources keyed by GUID; they survive deletion
+        of their source database.
+
+        Args:
+            cont (int, optional): Start index. Defaults to 0.
+            label_selector (List[str], optional): Filter by labels. Defaults to None.
+            limit (int, optional): Number of results. Defaults to 50.
+            database (str, optional): Filter by source database name. Defaults to None.
+
+        Returns:
+            BackupList: Paginated list of backups.
+        """
+        result = self.c.get(
+            url=f"{self.v2api_host}/v2/backups/",
+            headers=self.config.get_headers(**kwargs),
+            params={
+                "continue": cont,
+                "limit": limit,
+                "labelSelector": label_selector,
+                "database": database,
+            },
+        )
+        handle_server_errors(result)
+        return BackupList(**result.json())
+
+    def get_backup(self, guid: str, **kwargs) -> Backup:
+        """Get a backup by its GUID.
+
+        Args:
+            guid (str): Backup GUID.
+
+        Returns:
+            Backup: Backup details.
+        """
+        result = self.c.get(
+            url=f"{self.v2api_host}/v2/backups/{guid}/",
+            headers=self.config.get_headers(**kwargs),
+        )
+        handle_server_errors(result)
+        return Backup(**result.json())
+
+    def create_backup(self, body: Backup | dict[str, Any], **kwargs) -> Backup:
+        """Create a new backup.
+
+        Args:
+            body (Backup | dict): Backup manifest.
+
+        Returns:
+            Backup: Created backup details.
+        """
+        if isinstance(body, dict):
+            body = Backup.model_validate(body)
+
+        result = self.c.post(
+            url=f"{self.v2api_host}/v2/backups/",
+            headers=self.config.get_headers(**kwargs),
+            json=body.model_dump(by_alias=True),
+        )
+        handle_server_errors(result)
+        return Backup(**result.json())
+
+    def delete_backup(self, guid: str, **kwargs) -> None:
+        """Delete a backup by its GUID.
+
+        Also deletes the backup's linked file-upload archives.
+
+        Args:
+            guid (str): Backup GUID.
+        """
+        result = self.c.delete(
+            url=f"{self.v2api_host}/v2/backups/{guid}/",
             headers=self.config.get_headers(**kwargs),
         )
         handle_server_errors(result)
