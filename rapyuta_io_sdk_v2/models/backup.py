@@ -2,6 +2,8 @@
 Pydantic models for Backup resources.
 """
 
+from __future__ import annotations
+
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -20,8 +22,6 @@ class BackupSpec(BaseModel):
     schedule: str | None = Field(
         default=None, description="Cron schedule (required when type=scheduled)"
     )
-    # Server-managed, read-only; redacted on public reads.
-    service_account_token: str | None = Field(default=None, alias="serviceAccountToken")
 
 
 class BackupVerification(BaseModel):
@@ -30,9 +30,6 @@ class BackupVerification(BaseModel):
     check: Literal["Passed", "Failed", "Skipped"] | None = Field(default=None)
     verify_backup: Literal["Passed", "Failed", "Skipped"] | None = Field(
         default=None, alias="verifyBackup"
-    )
-    restore_test: Literal["Passed", "Failed", "Skipped"] | None = Field(
-        default=None, alias="restoreTest"
     )
 
 
@@ -49,7 +46,7 @@ class BackupRun(BaseModel):
 class BackupStatus(BaseModel):
     """Status of a Backup resource."""
 
-    phase: str | None = Field(default=None)
+    phase: Literal["Pending", "Running", "Ready", "Failed"] | None = Field(default=None)
     message: str | None = Field(default=None)
     postgres_version: str | None = Field(default=None, alias="postgresVersion")
     latest_run: BackupRun | None = Field(default=None, alias="latestRun")
