@@ -22,6 +22,7 @@ class BackupSpec(BaseModel):
     schedule: str | None = Field(
         default=None, description="Cron schedule (required when type=scheduled)"
     )
+    postgres_version: str | None = Field(default=None, alias="postgresVersion")
 
 
 class BackupVerification(BaseModel):
@@ -48,7 +49,6 @@ class BackupStatus(BaseModel):
 
     phase: Literal["Pending", "Running", "Ready", "Failed"] | None = Field(default=None)
     message: str | None = Field(default=None)
-    postgres_version: str | None = Field(default=None, alias="postgresVersion")
     latest_run: BackupRun | None = Field(default=None, alias="latestRun")
 
 
