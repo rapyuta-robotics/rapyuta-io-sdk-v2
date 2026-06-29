@@ -90,7 +90,7 @@ class PostgresStatus(BaseModel):
 class DatabaseStatus(BaseModel):
     """Status of a Database resource."""
 
-    phase: str | None = Field(default=None)
+    phase: Literal["Pending", "Provisioning", "Running", "Degraded", "Deleting", "Failed"] | None = Field(default=None)
     message: str | None = Field(default=None)
     postgres: PostgresStatus | None = Field(default=None)
 
