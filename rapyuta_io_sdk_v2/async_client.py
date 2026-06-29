@@ -1107,17 +1107,17 @@ class AsyncClient:
         handle_server_errors(result)
         return BackupList(**result.json())
 
-    async def get_backup(self, guid: str, **kwargs) -> Backup:
-        """Get a backup by its GUID.
+    async def get_backup(self, name: str, **kwargs) -> Backup:
+        """Get a backup by its name.
 
         Args:
-            guid (str): Backup GUID.
+            name (str): Backup name.
 
         Returns:
             Backup: Backup details.
         """
         result = await self.c.get(
-            url=f"{self.v2api_host}/v2/backups/{guid}/",
+            url=f"{self.v2api_host}/v2/backups/{name}/",
             headers=self.config.get_headers(**kwargs),
         )
         handle_server_errors(result)
@@ -1143,16 +1143,16 @@ class AsyncClient:
         handle_server_errors(result)
         return Backup(**result.json())
 
-    async def delete_backup(self, guid: str, **kwargs) -> None:
-        """Delete a backup by its GUID.
+    async def delete_backup(self, name: str, **kwargs) -> None:
+        """Delete a backup by its name.
 
         Also deletes the backup's linked file-upload archives.
 
         Args:
-            guid (str): Backup GUID.
+            name (str): Backup name.
         """
         result = await self.c.delete(
-            url=f"{self.v2api_host}/v2/backups/{guid}/",
+            url=f"{self.v2api_host}/v2/backups/{name}/",
             headers=self.config.get_headers(**kwargs),
         )
         handle_server_errors(result)
