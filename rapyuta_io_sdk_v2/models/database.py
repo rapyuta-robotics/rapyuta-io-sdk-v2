@@ -25,6 +25,10 @@ class Credentials(BaseModel):
 
     username: str
     password: str | None = Field(default=None)
+    
+class PostgresUsers(BaseModel):
+    primary: Credentials | None = Field(default=None)
+    backup: Credentials | None = Field(default=None)
 
 
 class PostgresParameters(BaseModel):
@@ -36,10 +40,10 @@ class PostgresSpec(BaseModel):
     """Specification for a PostgreSQL database instance."""
 
     version: Literal["16", "17", "18"]
-    postgres_image: str = Field(alias="postgresImage")
+    postgres_image: str | None = Field(alias="postgresImage", default=None)
 
     primary: DeviceSpec
-    credentials: Credentials
+    users: PostgresUsers | None = Field(default=None)
     multiple_database: list[str] | None = Field(default=None, alias="multipleDatabase")
     parameters: PostgresParameters | None = Field(default=None)
 

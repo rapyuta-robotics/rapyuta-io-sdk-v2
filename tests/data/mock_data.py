@@ -1397,9 +1397,11 @@ def database_body() -> dict[str, Any]:
                     "dataDirectory": "/opt/rapyuta/volumes/orders-db",
                     "port": 5432,
                 },
-                "credentials": {
-                    "username": "app",
-                    "password": "secret",
+                "users": {
+                    "primary": {
+                        "username": "app",
+                        "password": "secret",
+                    },
                 },
             },
         },
@@ -1430,8 +1432,10 @@ def database_model_mock() -> dict[str, Any]:
                     "dataDirectory": "/opt/rapyuta/volumes/orders-db",
                     "port": 5432,
                 },
-                "credentials": {
-                    "username": "app",
+                "users": {
+                    "primary": {
+                        "username": "app",
+                    },
                 },
             },
         },
