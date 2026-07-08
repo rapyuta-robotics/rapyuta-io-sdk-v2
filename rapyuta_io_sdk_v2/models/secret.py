@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from rapyuta_io_sdk_v2.models.utils import (
     BaseList,
@@ -33,18 +33,41 @@ class DockerSpecCreate(DockerSpec):
     password: str = Field(description="Password for docker registry authentication")
 
 
+SecretType = Literal["Docker", "Opaque"]
+
+
 class SecretSpec(BaseModel):
     """Specification for Secret resource."""
 
-    docker: DockerSpec = Field(
-        description="Docker registry configuration when type is Docker"
+    type: SecretType = Field(
+        description="Type of the secret: Docker or Opaque",
+    )
+    docker: DockerSpec | None = Field(
+        default=None,
+        description="Docker registry configuration when type is Docker",
+    )
+    data: dict[str, str] | None = Field(
+        default=None,
+        description="Arbitrary key-value data for Opaque secrets",
+    )
+    secret_keys: list[str] | None = Field(
+        default=None,
+        alias="secretKeys",
+        description="List of keys present in the secret (read-only, returned by server)",
     )
     runtime: Runtime | None = None
     depends: DeviceDepends | None = None
 
 
 class SecretSpecCreate(BaseModel):
-    docker: DockerSpecCreate
+    type: SecretType = Field(
+        description="Type of the secret: Docker or Opaque",
+    )
+    docker: DockerSpecCreate | None = None
+    data: dict[str, str] | None = Field(
+        default=None,
+        description="Arbitrary key-value data for Opaque secrets",
+    )
     runtime: Runtime | None = None
     depends: DeviceDepends | None = None
 
@@ -59,6 +82,21 @@ class Secret(BaseObject):
 
 class SecretCreate(Secret):
     spec: SecretSpecCreate
+
+    @model_validator(mode="after")
+    def validate_create_fields(self):
+        spec = self.spec
+        if spec.type == "Docker":
+            if spec.docker is None:
+                raise ValueError(
+                    "'spec.docker' is required when creating a Docker secret"
+                )
+        elif spec.type == "Opaque":
+            if not spec.data:
+                raise ValueError(
+                    "'spec.data' is required when creating an Opaque secret"
+                )
+        return self
 
     def list_dependencies(self) -> list[str] | None:
         runtime = self.spec.runtime

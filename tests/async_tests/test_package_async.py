@@ -4,12 +4,15 @@ from pytest_mock import MockFixture
 
 # ruff: noqa: F811, F401
 from rapyuta_io_sdk_v2.models import PackageList, Package
+from rapyuta_io_sdk_v2.models.package import EnvironmentSpec
 from tests.utils.fixtures import async_client
 from tests.data import (
     package_body,
     cloud_package_model_mock,
     device_package_model_mock,
     packagelist_model_mock,
+    package_with_valuefrom_body,
+    package_with_valuefrom_mock,
 )
 
 
@@ -97,3 +100,73 @@ async def test_delete_package_success(async_client, mocker: MockFixture):
     response = await async_client.delete_package(name="gostproxy", version="v1.0.0")
 
     assert response is None
+
+
+# ── New: valueFrom / SecretKeyRef ────────────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_get_package_with_valuefrom_success(
+    async_client, package_with_valuefrom_mock, mocker: MockFixture
+):
+    """GET a package whose env vars are sourced from Secret key refs."""
+    mock_get = mocker.patch("httpx.AsyncClient.get")
+    mock_get.return_value = httpx.Response(
+        status_code=200,
+        json=package_with_valuefrom_mock,
+    )
+
+    response = await async_client.get_package(name="secret-injected-app")
+
+    assert isinstance(response, Package)
+    assert response.metadata.guid == "pkg-cccccccccccccccccccc"
+
+    api_key_var = next(
+        v for v in response.spec.environmentVars if v.name == "API_KEY"
+    )
+    assert api_key_var.valueFrom is not None
+    assert api_key_var.valueFrom.secret_key_ref.name == "my-api-secret"
+    assert api_key_var.valueFrom.secret_key_ref.key == "API_KEY"
+    assert api_key_var.valueFrom.secret_key_ref.value == "resolved-api-key"
+
+
+@pytest.mark.asyncio
+async def test_create_package_with_valuefrom_success(
+    async_client, package_with_valuefrom_body, package_with_valuefrom_mock, mocker: MockFixture
+):
+    """POST a package with valueFrom env vars and verify the response is parsed."""
+    mock_post = mocker.patch("httpx.AsyncClient.post")
+    mock_post.return_value = httpx.Response(
+        status_code=201,
+        json=package_with_valuefrom_mock,
+    )
+
+    response = await async_client.create_package(body=package_with_valuefrom_body)
+
+    assert isinstance(response, Package)
+    api_key_var = next(
+        v for v in response.spec.environmentVars if v.name == "API_KEY"
+    )
+    assert api_key_var.valueFrom.secret_key_ref.key == "API_KEY"
+
+
+# ── New: EnvironmentSpec model validation ────────────────────────────────────
+
+
+def test_environment_spec_valuefrom_model_validation():
+    """EnvironmentSpec correctly parses a valueFrom.secretKeyRef payload."""
+    env = EnvironmentSpec.model_validate(
+        {
+            "name": "MY_SECRET_VAR",
+            "valueFrom": {
+                "secretKeyRef": {
+                    "name": "my-secret",
+                    "key": "MY_KEY",
+                }
+            },
+        }
+    )
+    assert env.valueFrom.secret_key_ref.name == "my-secret"
+    assert env.valueFrom.secret_key_ref.key == "MY_KEY"
+    assert env.valueFrom.secret_key_ref.value is None
+

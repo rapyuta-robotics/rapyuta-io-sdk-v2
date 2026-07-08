@@ -119,6 +119,7 @@ def cloud_package_model_mock() -> dict[str, Any]:
                 {
                     "name": "DEVICE_NAME",
                     "description": "Device Name in Tailscale",
+                    "default": "",
                 }
             ],
             "ros": {},
@@ -189,6 +190,104 @@ def packagelist_model_mock(
             "continue": 1,
         },
         "items": [cloud_package_model_mock, device_package_model_mock],
+    }
+
+
+@pytest.fixture
+def package_with_valuefrom_body() -> dict[str, Any]:
+    """Create body for a package whose env vars are sourced from Secret key refs."""
+    return {
+        "apiVersion": "apiextensions.rapyuta.io/v1",
+        "kind": "Package",
+        "metadata": {
+            "name": "secret-injected-app",
+            "version": "v1.0.0",
+            "description": "App that injects secrets via valueFrom",
+        },
+        "spec": {
+            "runtime": "cloud",
+            "executables": [
+                {
+                    "name": "app",
+                    "type": "docker",
+                    "docker": {"image": "myapp:latest"},
+                    "limits": {"cpu": 0.5, "memory": 256},
+                }
+            ],
+            "environmentVars": [
+                {"name": "PLAIN_VAR", "default": "plain-value"},
+                {
+                    "name": "API_KEY",
+                    "valueFrom": {
+                        "secretKeyRef": {
+                            "name": "my-api-secret",
+                            "key": "API_KEY",
+                        }
+                    },
+                },
+            ],
+            "cloud": {"replicas": 1},
+        },
+    }
+
+
+@pytest.fixture
+def package_with_valuefrom_mock() -> dict[str, Any]:
+    """Server response for a package with env vars sourced from Secret key refs."""
+    return {
+        "apiVersion": "apiextensions.rapyuta.io/v1",
+        "kind": "Package",
+        "metadata": {
+            "name": "secret-injected-app",
+            "guid": "pkg-cccccccccccccccccccc",
+            "projectGUID": "project-aaaaaaaaaaaaaaaaaaaa",
+            "creatorGUID": "test-creator-guid",
+            "version": "v1.0.0",
+            "description": "App that injects secrets via valueFrom",
+        },
+        "spec": {
+            "runtime": "cloud",
+            "executables": [
+                {
+                    "name": "app",
+                    "type": "docker",
+                    "docker": {
+                        "image": "myapp:latest",
+                        "imagePullPolicy": "IfNotPresent",
+                        "pullSecret": {"depends": {}},
+                    },
+                    "limits": {"cpu": 0.5, "memory": 256},
+                }
+            ],
+            "environmentVars": [
+                {
+                    "name": "PLAIN_VAR",
+                    "default": "plain-value",
+                },
+                {
+                    "name": "API_KEY",
+                    "valueFrom": {
+                        "secretKeyRef": {
+                            "name": "my-api-secret",
+                            "key": "API_KEY",
+                            "value": "resolved-api-key",
+                        }
+                    },
+                },
+                {
+                    "name": "DB_PASS",
+                    "exposed": True,
+                    "exposedName": "DB_PASS",
+                    "valueFrom": {
+                        "secretKeyRef": {
+                            "name": "db-credentials",
+                            "key": "password",
+                        }
+                    },
+                },
+            ],
+            "cloud": {"replicas": 1},
+        },
     }
 
 
@@ -412,6 +511,95 @@ def cloud_deployment_with_service_account_mock() -> dict[str, Any]:
     }
 
 
+@pytest.fixture
+def cloud_deployment_with_valuefrom_body() -> dict[str, Any]:
+    """Deployment create body with envArgs sourced from Secret key refs."""
+    return {
+        "apiVersion": "apiextensions.rapyuta.io/v1",
+        "kind": "Deployment",
+        "metadata": {
+            "name": "cloud_deployment_secret_env",
+            "depends": {
+                "kind": "package",
+                "nameOrGUID": "cloud-package",
+                "version": "1.0.0",
+            },
+            "labels": {"app": "cloudapp"},
+        },
+        "spec": {
+            "runtime": "cloud",
+            "envArgs": [
+                {"name": "PLAIN_VAR", "value": "plain-value"},
+                {
+                    "name": "API_KEY",
+                    "valueFrom": {
+                        "secretKeyRef": {
+                            "name": "my-api-secret",
+                            "key": "API_KEY",
+                        }
+                    },
+                },
+            ],
+        },
+    }
+
+
+@pytest.fixture
+def cloud_deployment_with_valuefrom_mock() -> dict[str, Any]:
+    """Server response for a deployment with env args sourced from Secret key refs."""
+    return {
+        "kind": "Deployment",
+        "apiVersion": "api.rapyuta.io/v2",
+        "metadata": {
+            "name": "cloud_deployment_secret_env",
+            "guid": "dep-cloud-003",
+            "projectGUID": "project-sample-001",
+            "organizationGUID": "org-sample-001",
+            "creatorGUID": "user-sample-001",
+            "createdAt": "2025-01-01T10:00:00Z",
+            "updatedAt": "2025-01-01T11:00:00Z",
+            "depends": {
+                "kind": "package",
+                "nameOrGUID": "cloud-package",
+                "version": "1.0.0",
+            },
+            "generation": 1,
+            "labels": {"app": "cloudapp"},
+        },
+        "spec": {
+            "runtime": "cloud",
+            "envArgs": [
+                {"name": "PLAIN_VAR", "value": "plain-value"},
+                {
+                    "name": "API_KEY",
+                    "valueFrom": {
+                        "secretKeyRef": {
+                            "name": "my-api-secret",
+                            "key": "API_KEY",
+                            "value": "resolved-api-key",
+                        }
+                    },
+                },
+                {
+                    "name": "DB_PASS",
+                    "exposed": True,
+                    "exposedName": "DB_PASS",
+                    "valueFrom": {
+                        "secretKeyRef": {
+                            "name": "db-credentials",
+                            "key": "password",
+                        }
+                    },
+                },
+            ],
+        },
+        "status": {
+            "status": "Running",
+            "phase": "Succeeded",
+        },
+    }
+
+
 
 @pytest.fixture
 def disk_body() -> dict[str, Any]:
@@ -513,12 +701,13 @@ def secret_model_mock() -> dict[str, Any]:
             "updatedAt": "2025-01-01T01:00:00Z",
         },
         "spec": {
+            "type": "Docker",
             "docker": {
                 "email": "test@example.com",
-                "password": "password",
                 "registry": "docker.io",
                 "username": "testuser",
-            }
+            },
+            "secretKeys": ["username", "email", "registry"],
         },
     }
 
@@ -530,6 +719,83 @@ def secretlist_model_mock(secret_model_mock) -> dict[str, Any]:
             "continue": 1,
         },
         "items": [secret_model_mock],
+    }
+
+
+@pytest.fixture
+def docker_secret_typed_model_mock() -> dict[str, Any]:
+    """Docker secret returned by server — includes type and secretKeys, no password."""
+    return {
+        "apiVersion": "api.rapyuta.io/v2",
+        "kind": "Secret",
+        "metadata": {
+            "createdAt": "2025-01-01T00:00:00Z",
+            "creatorGUID": "mock-user-guid-000",
+            "deletedAt": None,
+            "guid": "secret-bbbbbbbbbbbbbbbbbbbb",
+            "labels": {"app": "test"},
+            "name": "docker_typed_secret",
+            "organizationGUID": "org-mock-789",
+            "projectGUID": "project-aaaaaaaaaaaaaaaaaaaa",
+            "updatedAt": "2025-01-01T01:00:00Z",
+        },
+        "spec": {
+            "type": "Docker",
+            "docker": {
+                "email": "test@example.com",
+                "registry": "docker.io",
+                "username": "testuser",
+            },
+            "secretKeys": ["username", "password", "email", "registry"],
+        },
+    }
+
+
+@pytest.fixture
+def opaque_secret_body() -> dict[str, Any]:
+    """Create body for an Opaque secret."""
+    return {
+        "apiVersion": "apiextensions.rapyuta.io/v1",
+        "kind": "Secret",
+        "metadata": {
+            "name": "opaque_test_secret",
+            "labels": {"app": "test"},
+        },
+        "spec": {
+            "type": "Opaque",
+            "data": {
+                "API_KEY": "my-api-key-value",
+                "DB_PASSWORD": "my-db-password",
+            },
+        },
+    }
+
+
+@pytest.fixture
+def opaque_secret_model_mock() -> dict[str, Any]:
+    """Server response for an Opaque secret with data and secretKeys."""
+    return {
+        "apiVersion": "api.rapyuta.io/v2",
+        "kind": "Secret",
+        "metadata": {
+            "createdAt": "2025-01-01T00:00:00Z",
+            "creatorGUID": "mock-user-guid-000",
+            "deletedAt": None,
+            "guid": "secret-cccccccccccccccccccc",
+            "labels": {"app": "test"},
+            "name": "opaque_test_secret",
+            "organizationGUID": "org-mock-789",
+            "projectGUID": "project-aaaaaaaaaaaaaaaaaaaa",
+            "updatedAt": "2025-01-01T01:00:00Z",
+        },
+        "spec": {
+            "type": "Opaque",
+            "data": {
+                "API_KEY": "my-api-key-value",
+                "DB_PASSWORD": "my-db-password",
+            },
+            "secretKeys": ["API_KEY", "DB_PASSWORD"],
+        },
     }
 
 
