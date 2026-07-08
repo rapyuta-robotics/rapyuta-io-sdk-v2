@@ -1,3 +1,10 @@
+## [0.8.2](https://github.com/rapyuta-robotics/rapyuta-io-sdk-v2/compare/v0.8.1...v0.8.2) (2026-07-08)
+
+
+### Bug Fixes
+
+* updates the pydantic models for secrets management ([37ef364](https://github.com/rapyuta-robotics/rapyuta-io-sdk-v2/commit/37ef364ac0fe88c310f958919e1a9f98a0e4c97f))
+
 ## [0.8.1](https://github.com/rapyuta-robotics/rapyuta-io-sdk-v2/compare/v0.8.0...v0.8.1) (2026-06-19)
 
 
