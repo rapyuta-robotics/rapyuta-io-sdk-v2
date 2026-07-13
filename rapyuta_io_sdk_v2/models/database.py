@@ -8,7 +8,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from rapyuta_io_sdk_v2.models.utils import BaseList, BaseMetadata, BaseObject
+from rapyuta_io_sdk_v2.models.utils import BaseList, BaseMetadata, BaseObject, ValueFrom
 
 
 class DeviceSpec(BaseModel):
@@ -23,8 +23,11 @@ class DeviceSpec(BaseModel):
 class Credentials(BaseModel):
     """Database credentials (password is immutable after creation)."""
 
-    username: str
-    password: str | None = Field(default=None)
+    username: ValueFrom
+    password: ValueFrom | None = Field(
+        default=None,
+        description="Populate the password from a Secret key reference",
+    )
 
 
 class PostgresParameters(BaseModel):
