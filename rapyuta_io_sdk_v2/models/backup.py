@@ -23,6 +23,7 @@ class BackupSpec(BaseModel):
         default=None, description="Cron schedule (required when type=scheduled)"
     )
     postgres_version: str | None = Field(default=None, alias="postgresVersion")
+    primary_port: int | None = Field(default=None, alias="primaryPort")
 
 
 class BackupVerification(BaseModel):
