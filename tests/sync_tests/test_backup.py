@@ -40,7 +40,7 @@ def test_get_backup_success(client, backup_model_mock, mocker: MockFixture):
         json=backup_model_mock,
     )
 
-    response = client.get_backup(guid="backup-mockbackup12345678901")
+    response = client.get_backup(name="backup-mockbackup12345678901")
 
     assert isinstance(response, Backup)
     assert response.metadata.guid == "backup-mockbackup12345678901"
@@ -56,7 +56,7 @@ def test_get_backup_not_found(client, mocker: MockFixture):
     )
 
     with pytest.raises(Exception) as exc:
-        client.get_backup(guid="notfound")
+        client.get_backup(name="notfound")
 
     assert str(exc.value) == "backup not found"
 
@@ -97,6 +97,6 @@ def test_delete_backup_success(client, mocker: MockFixture):
         json={"success": True},
     )
 
-    response = client.delete_backup(guid="backup-mockbackup12345678901")
+    response = client.delete_backup(name="backup-mockbackup12345678901")
 
     assert response is None

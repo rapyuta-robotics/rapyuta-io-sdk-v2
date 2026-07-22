@@ -40,7 +40,7 @@ async def test_get_backup_success(async_client, backup_model_mock, mocker: MockF
         json=backup_model_mock,
     )
 
-    response = await async_client.get_backup(guid="backup-mockbackup12345678901")
+    response = await async_client.get_backup(name="backup-mockbackup12345678901")
 
     assert isinstance(response, Backup)
     assert response.spec.schedule == "0 2 * * *"
@@ -56,7 +56,7 @@ async def test_get_backup_not_found(async_client, mocker: MockFixture):
     )
 
     with pytest.raises(Exception) as exc:
-        await async_client.get_backup(guid="notfound")
+        await async_client.get_backup(name="notfound")
 
     assert str(exc.value) == "backup not found"
 
@@ -99,6 +99,6 @@ async def test_delete_backup_success(async_client, mocker: MockFixture):
         json={"success": True},
     )
 
-    response = await async_client.delete_backup(guid="backup-mockbackup12345678901")
+    response = await async_client.delete_backup(name="backup-mockbackup12345678901")
 
     assert response is None
