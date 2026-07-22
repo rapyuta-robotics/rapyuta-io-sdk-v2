@@ -213,4 +213,3 @@ class ValueFrom(BaseModel):
         alias="secretKeyRef",
         description="Selects a key of a Secret in the same namespace",
     )
-

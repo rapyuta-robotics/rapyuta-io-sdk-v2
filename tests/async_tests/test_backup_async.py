@@ -33,9 +33,7 @@ async def test_list_backups_success(
 
 
 @pytest.mark.asyncio
-async def test_get_backup_success(
-    async_client, backup_model_mock, mocker: MockFixture
-):
+async def test_get_backup_success(async_client, backup_model_mock, mocker: MockFixture):
     mock_get = mocker.patch("httpx.AsyncClient.get")
     mock_get.return_value = httpx.Response(
         status_code=200,
@@ -80,9 +78,7 @@ async def test_create_backup_success(
 
 
 @pytest.mark.asyncio
-async def test_create_backup_unauthorized(
-    async_client, backup_body, mocker: MockFixture
-):
+async def test_create_backup_unauthorized(async_client, backup_body, mocker: MockFixture):
     mock_post = mocker.patch("httpx.AsyncClient.post")
     mock_post.return_value = httpx.Response(
         status_code=401,
