@@ -10,6 +10,12 @@ from rapyuta_io_sdk_v2.models.database import (
     DatabaseList as DatabaseList,
 )
 
+# Backup models
+from rapyuta_io_sdk_v2.models.backup import (
+    Backup as Backup,
+    BackupList as BackupList,
+)
+
 # Deployment models
 from rapyuta_io_sdk_v2.models.deployment import (
     Deployment as Deployment,
