@@ -8,7 +8,12 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from rapyuta_io_sdk_v2.models.utils import BaseList, BaseMetadata, BaseObject
+from rapyuta_io_sdk_v2.models.utils import (
+    BaseList,
+    BaseMetadata,
+    BaseObject,
+    SecretKeyRef,
+)
 
 
 class DeviceSpec(BaseModel):
@@ -21,10 +26,13 @@ class DeviceSpec(BaseModel):
 
 
 class Credentials(BaseModel):
-    """Database credentials (password is immutable after creation)."""
+    """References to the secret keys holding a Postgres user's username and
+    password. Only ``name``+``key`` are sent on create; the apiserver resolves
+    ``value`` onto the device-facing copy and never persists it. Immutable after
+    creation."""
 
-    username: str
-    password: str | None = Field(default=None)
+    username: SecretKeyRef | None = Field(default=None)
+    password: SecretKeyRef | None = Field(default=None)
 
 
 class PostgresUsers(BaseModel):
