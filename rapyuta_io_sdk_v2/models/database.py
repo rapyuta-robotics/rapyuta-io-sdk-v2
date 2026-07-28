@@ -35,9 +35,30 @@ class Credentials(BaseModel):
     password: SecretKeyRef | None = Field(default=None)
 
 
+class ReplicationCredentials(BaseModel):
+    """Streaming-replication user consumed by standbys. Server-generated and
+    redacted on read (password blanked), so these are plain resolved strings
+    rather than secret refs. Read-only."""
+
+    username: str | None = Field(default=None)
+    password: str | None = Field(default=None)
+
+
 class PostgresUsers(BaseModel):
     primary: Credentials | None = Field(default=None)
     backup: Credentials | None = Field(default=None)
+    replication: ReplicationCredentials | None = Field(default=None)
+
+
+class StandbySpec(BaseModel):
+    """Optional hot-standby topology. Each standby sits on a device distinct from
+    the primary and from every other standby."""
+
+    primary_interface: str | None = Field(alias="primaryInterface", default=None)
+    # Server-managed: resolved from the primary device record; consumed by
+    # standby devices as the replication host.
+    primary_host: str | None = Field(alias="primaryHost", default=None)
+    devices: list[DeviceSpec] | None = Field(default=None)
 
 
 class PostgresParameters(BaseModel):
@@ -67,6 +88,7 @@ class PostgresSpec(BaseModel):
     postgres_image: str | None = Field(alias="postgresImage", default=None)
 
     primary: DeviceSpec
+    standby: StandbySpec | None = Field(default=None)
     users: PostgresUsers | None = Field(default=None)
     multiple_database: list[str] | None = Field(default=None, alias="multipleDatabase")
     parameters: PostgresParameters | None = Field(default=None)
@@ -109,10 +131,31 @@ class PrimaryStatus(BaseModel):
         return value
 
 
+class StandbyStatus(BaseModel):
+    """Status of a Postgres standby container, reported per standby device."""
+
+    device_name: str = Field(alias="deviceName")
+    port: int
+    phase: str | None = Field(default=None)
+    message: str | None = Field(default=None)
+    state: ContainerState | None = Field(default=None)
+    last_state: ContainerState | None = Field(default=None, alias="lastState")
+    restart_count: int | None = Field(default=None, alias="restartCount")
+    last_updated: str | None = Field(default=None, alias="lastUpdated")
+
+    @field_validator("state", "last_state", mode="before")
+    @staticmethod
+    def normalize_container_state(value: Any) -> dict[str, Any] | None:
+        if isinstance(value, dict) and not value:
+            return None
+        return value
+
+
 class PostgresStatus(BaseModel):
     """Status of the Postgres instance."""
 
     primary: PrimaryStatus | None = Field(default=None)
+    standby: list[StandbyStatus] | None = Field(default=None)
 
 
 class DatabaseStatus(BaseModel):
