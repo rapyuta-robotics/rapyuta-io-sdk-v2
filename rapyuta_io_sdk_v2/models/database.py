@@ -35,19 +35,12 @@ class Credentials(BaseModel):
     password: SecretKeyRef | None = Field(default=None)
 
 
-class ReplicationCredentials(BaseModel):
-    """Streaming-replication user consumed by standbys. Server-generated and
-    redacted on read (password blanked), so these are plain resolved strings
-    rather than secret refs. Read-only."""
-
-    username: str | None = Field(default=None)
-    password: str | None = Field(default=None)
-
-
 class PostgresUsers(BaseModel):
     primary: Credentials | None = Field(default=None)
     backup: Credentials | None = Field(default=None)
-    replication: ReplicationCredentials | None = Field(default=None)
+    # Streaming-replication user consumed by standbys. Server-generated into the
+    # managed secret on create; read-only, with ``value`` blanked on read.
+    replication: Credentials | None = Field(default=None)
 
 
 class StandbySpec(BaseModel):

@@ -39,15 +39,31 @@ def _database_with_standby() -> dict:
                     ],
                 },
                 "users": {
-                    # replication user is server-generated; password redacted on read
-                    "replication": {"username": "rio_standby", "password": ""},
+                    # replication user is server-generated into the managed
+                    # secret; refs come back with `value` redacted
+                    "replication": {
+                        "username": {
+                            "name": "db-standby-db-credentials",
+                            "key": "replication_username",
+                            "value": "",
+                        },
+                        "password": {
+                            "name": "db-standby-db-credentials",
+                            "key": "replication_password",
+                            "value": "",
+                        },
+                    },
                 },
             },
         },
         "status": {
             "phase": "Running",
             "postgres": {
-                "primary": {"deviceName": "primary-dev", "port": 5432, "phase": "running"},
+                "primary": {
+                    "deviceName": "primary-dev",
+                    "port": 5432,
+                    "phase": "running",
+                },
                 "standby": [
                     {"deviceName": "standby-dev", "port": 5432, "phase": "running"}
                 ],
@@ -65,9 +81,11 @@ def test_standby_spec_parses_from_server_payload():
     assert sb.primary_host == "10.1.2.3"
     assert [d.device_name for d in sb.devices] == ["standby-dev"]
 
-    # server-generated replication user surfaces (password redacted)
-    assert db.spec.postgres.users.replication.username == "rio_standby"
-    assert db.spec.postgres.users.replication.password == ""
+    # server-generated replication user surfaces as secret refs, value redacted
+    repl = db.spec.postgres.users.replication
+    assert repl.username.key == "replication_username"
+    assert repl.password.key == "replication_password"
+    assert repl.username.value == ""
 
     # per-device standby status merged in
     st = db.status.postgres.standby
@@ -82,7 +100,7 @@ def test_standby_round_trip_survives_dump_reload():
 
     assert reloaded.spec.postgres.standby.primary_host == "10.1.2.3"
     assert reloaded.spec.postgres.standby.devices[0].device_name == "standby-dev"
-    assert reloaded.spec.postgres.users.replication.username == "rio_standby"
+    assert reloaded.spec.postgres.users.replication.username.key == "replication_username"
     assert reloaded.status.postgres.standby[0].device_name == "standby-dev"
 
 
