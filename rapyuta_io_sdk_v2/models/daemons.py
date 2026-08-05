@@ -50,12 +50,6 @@ class VPNConfig(BaseModel):
     advertise_routes: str | None = Field(default=None, description="Routes to advertise")
 
 
-class TelegrafConfig(BaseModel):
-    """Telegraf configuration for daemons."""
-
-    enable: bool = Field(description="Enable Telegraf")
-
-
 class DockerProxyConfig(BaseModel):
     """Docker proxy configuration."""
 
@@ -98,9 +92,6 @@ class DaemonSpec(BaseModel):
         default=None, description="Pull secret configuration"
     )
     vpn_config: VPNConfig | None = Field(default=None, description="VPN configuration")
-    telegraf_config: TelegrafConfig | None = Field(
-        default=None, description="Telegraf configuration"
-    )
     docker_cache_config: DockerCacheConfig | None = Field(
         default=None, description="Docker cache configuration"
     )
