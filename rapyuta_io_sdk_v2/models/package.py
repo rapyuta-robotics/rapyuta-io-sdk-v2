@@ -198,7 +198,11 @@ class PackageSpec(BaseModel):
 
 
 class PackageMetadata(BaseMetadata):
-    version: str | None
+    # A Package is identified by its name and version together, so the version
+    # is part of its identity rather than optional detail. Allowing it to be
+    # null or empty lets two distinct versions of a Package become
+    # indistinguishable to any consumer that keys on (name, version).
+    version: str = Field(min_length=1, description="Version of the package")
     description: str | None = Field(default=None)
 
 
