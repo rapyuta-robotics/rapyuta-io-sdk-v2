@@ -32,21 +32,22 @@ class PostgresUsers(BaseModel):
     backup: Credentials | None = Field(default=None)
 
 
-class PostgresParameters(BaseModel):
-    max_connections: str = Field(default="200")
-    shared_buffers: str = Field(default="512MB")
-
-
 class PostgresSpec(BaseModel):
     """Specification for a PostgreSQL database instance."""
 
-    version: Literal["16", "17", "18"]
+    # The apiserver validates the version against its configured Versions map, so the
+    # set of accepted values is deployment-specific. Modelling it as a closed Literal
+    # made the SDK raise on any database the server happily created.
+    version: str
     postgres_image: str | None = Field(alias="postgresImage", default=None)
 
     primary: DeviceSpec
     users: PostgresUsers | None = Field(default=None)
     multiple_database: list[str] | None = Field(default=None, alias="multipleDatabase")
-    parameters: PostgresParameters | None = Field(default=None)
+    # Raw postgresql.conf settings, passed through verbatim (apiserver type is
+    # map[string]string). Must not be a fixed struct: any key not modelled would be
+    # silently dropped in both directions.
+    parameters: dict[str, str] | None = Field(default=None)
 
 
 class DatabaseSpec(BaseModel):
@@ -57,13 +58,14 @@ class DatabaseSpec(BaseModel):
 
 
 class ContainerState(BaseModel):
-    """Container state details."""
+    """Container state details.
 
+    Mirrors the apiserver's ContainerState exactly: a status string
+    (running | terminated | waiting) and a start timestamp.
+    """
+
+    status: str | None = Field(default=None)
     started_at: str | None = Field(default=None, alias="startedAt")
-    finished_at: str | None = Field(default=None, alias="finishedAt")
-    exit_code: int | None = Field(default=None, alias="exitCode")
-    reason: str | None = Field(default=None)
-    message: str | None = Field(default=None)
 
 
 class PrimaryStatus(BaseModel):

@@ -8,6 +8,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from rapyuta_io_sdk_v2.models.database import Credentials
 from rapyuta_io_sdk_v2.models.utils import BaseList, BaseMetadata, BaseObject
 
 
@@ -19,11 +20,18 @@ class BackupSpec(BaseModel):
     # Server-resolved at creation time.
     barman_image: str | None = Field(default=None, alias="barmanImage")
     device_guid: str | None = Field(default=None, alias="deviceGuid")
+    database_guid: str | None = Field(default=None, alias="databaseGuid")
     schedule: str | None = Field(
         default=None, description="Cron schedule (required when type=scheduled)"
     )
     postgres_version: str | None = Field(default=None, alias="postgresVersion")
     primary_port: int | None = Field(default=None, alias="primaryPort")
+    backup_credentials: Credentials | None = Field(
+        default=None, alias="backupCredentials"
+    )
+    # Minted by the apiserver and blanked on user-facing reads; present so the field
+    # is not silently discarded when the server does return it.
+    service_account_token: str | None = Field(default=None, alias="serviceAccountToken")
 
 
 class BackupVerification(BaseModel):
