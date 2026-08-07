@@ -29,8 +29,10 @@ class BackupSpec(BaseModel):
     backup_credentials: Credentials | None = Field(
         default=None, alias="backupCredentials"
     )
-    # Note: spec.serviceAccountToken is deliberately not modelled. The apiserver mints
-    # it and blanks it on every non-internal read, so it can never reach an HTTP client.
+    # Minted by the apiserver. GetBackup/ListBackups blank it (and
+    # backupCredentials.password) for non-internal callers, but CreateBackup redacts
+    # nothing — so the create response does carry a live token and must not drop it.
+    service_account_token: str | None = Field(default=None, alias="serviceAccountToken")
 
 
 class BackupVerification(BaseModel):
