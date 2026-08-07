@@ -29,9 +29,8 @@ class BackupSpec(BaseModel):
     backup_credentials: Credentials | None = Field(
         default=None, alias="backupCredentials"
     )
-    # Minted by the apiserver and blanked on user-facing reads; present so the field
-    # is not silently discarded when the server does return it.
-    service_account_token: str | None = Field(default=None, alias="serviceAccountToken")
+    # Note: spec.serviceAccountToken is deliberately not modelled. The apiserver mints
+    # it and blanks it on every non-internal read, so it can never reach an HTTP client.
 
 
 class BackupVerification(BaseModel):
