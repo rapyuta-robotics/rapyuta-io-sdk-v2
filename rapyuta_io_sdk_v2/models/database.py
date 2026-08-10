@@ -41,8 +41,15 @@ class PostgresUsers(BaseModel):
 
 
 class PostgresParameters(BaseModel):
-    max_connections: str = Field(default="200")
-    shared_buffers: str = Field(default="512MB")
+    """Tunable ``postgresql.conf`` parameters. Omitted fields keep the Postgres
+    defaults."""
+
+    max_connections: int | None = Field(default=None, ge=1, le=262143)
+    # A positive integer, optionally suffixed with a unit. A bare number is a
+    # count of 8kB blocks.
+    shared_buffers: str | None = Field(
+        default=None, pattern=r"^[1-9][0-9]*(kB|MB|GB|TB)?$"
+    )
 
 
 class PostgresSpec(BaseModel):
