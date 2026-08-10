@@ -44,7 +44,15 @@ class PostgresParameters(BaseModel):
     """Tunable ``postgresql.conf`` parameters. Omitted fields keep the Postgres
     defaults."""
 
-    max_connections: int | None = Field(default=None, ge=1, le=262143)
+    # YAML manifests naturally write `max_connections: 200` unquoted, so coerce
+    # numbers to strings here rather than rejecting them. The wire payload must
+    # carry a string either way — see the field comment below.
+    model_config = ConfigDict(coerce_numbers_to_str=True)
+
+    # Both values are strings on the wire, matching postgresql.conf itself. Sending
+    # max_connections as a JSON number breaks devices that still model parameters
+    # as a string map, so it stays a decimal string here, e.g. "200".
+    max_connections: str | None = Field(default=None, pattern=r"^[1-9][0-9]*$")
     # A positive integer, optionally suffixed with a unit. A bare number is a
     # count of 8kB blocks.
     shared_buffers: str | None = Field(
