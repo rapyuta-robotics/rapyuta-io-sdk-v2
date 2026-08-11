@@ -219,9 +219,7 @@ def test_create_package_with_valuefrom_success(
 
     assert isinstance(response, Package)
     assert response.metadata.name == "secret-injected-app"
-    api_key_var = next(
-        v for v in response.spec.environmentVars if v.name == "API_KEY"
-    )
+    api_key_var = next(v for v in response.spec.environmentVars if v.name == "API_KEY")
     assert api_key_var.valueFrom.secret_key_ref.key == "API_KEY"
 
 
@@ -265,5 +263,3 @@ def test_environment_spec_plain_and_valuefrom_coexist():
     )
     assert env.default == "fallback"
     assert env.valueFrom.secret_key_ref.value == "injected"
-
-

@@ -1619,6 +1619,7 @@ def restore_body() -> dict[str, Any]:
             "database": "orders-db",
             "source": {
                 "type": "backup",
+                "fileUpload": "fileupload-mock1234",
                 "backupName": "orders-nightly",
             },
             "databases": ["orders"],
@@ -1663,6 +1664,7 @@ def restore_model_mock() -> dict[str, Any]:
             "database": "orders-db",
             "source": {
                 "type": "backup",
+                "fileUpload": "fileupload-mock1234",
                 "backupName": "orders-nightly",
                 "backupRunID": "20260101T020000",
                 # Signed links are blanked on every user-facing read.
