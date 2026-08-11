@@ -16,6 +16,12 @@ from rapyuta_io_sdk_v2.models.backup import (
     BackupList as BackupList,
 )
 
+# Restore models
+from rapyuta_io_sdk_v2.models.restore import (
+    Restore as Restore,
+    RestoreList as RestoreList,
+)
+
 # Deployment models
 from rapyuta_io_sdk_v2.models.deployment import (
     Deployment as Deployment,
