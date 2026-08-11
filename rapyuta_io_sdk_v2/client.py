@@ -65,6 +65,8 @@ from rapyuta_io_sdk_v2.models import (
     DatabaseList,
     Backup,
     BackupList,
+    Restore,
+    RestoreList,
 )
 from rapyuta_io_sdk_v2.models.serviceaccount import (
     ServiceAccountToken,
@@ -1125,6 +1127,107 @@ class Client:
         """
         result = self.c.delete(
             url=f"{self.v2api_host}/v2/backups/{name}/",
+            headers=self.config.get_headers(**kwargs),
+        )
+        handle_server_errors(result)
+
+    # -------------------Restore--------------------------
+
+    def list_restores(
+        self,
+        database: str,
+        cont: int = 0,
+        label_selector: list[str] | None = None,
+        limit: int = 50,
+        **kwargs,
+    ) -> RestoreList:
+        """List a database's restores.
+
+        Restore is a sub-resource of Database, so the target database is part of
+        the route rather than a filter.
+
+        Args:
+            database (str): Target database name.
+            cont (int, optional): Start index. Defaults to 0.
+            label_selector (List[str], optional): Filter by labels. Defaults to None.
+            limit (int, optional): Number of results. Defaults to 50.
+
+        Returns:
+            RestoreList: Paginated list of restores.
+        """
+        result = self.c.get(
+            url=f"{self.v2api_host}/v2/databases/{database}/restores/",
+            headers=self.config.get_headers(**kwargs),
+            params={
+                "continue": cont,
+                "limit": limit,
+                "labelSelector": label_selector,
+            },
+        )
+        handle_server_errors(result)
+        return RestoreList(**result.json())
+
+    def get_restore(self, database: str, name: str, **kwargs) -> Restore:
+        """Get one restore of a database.
+
+        Args:
+            database (str): Target database name.
+            name (str): Restore name.
+
+        Returns:
+            Restore: Restore details.
+        """
+        result = self.c.get(
+            url=f"{self.v2api_host}/v2/databases/{database}/restores/{name}/",
+            headers=self.config.get_headers(**kwargs),
+        )
+        handle_server_errors(result)
+        return Restore(**result.json())
+
+    def create_restore(
+        self, body: Restore | dict[str, Any], database: str | None = None, **kwargs
+    ) -> Restore:
+        """Restore logical databases into a live database.
+
+        The target database must be running. The operation is one-shot: it is
+        refused with a 409 while another restore is in flight against the same
+        database, and its record is kept afterwards for audit.
+
+        Args:
+            body (Restore | dict): Restore manifest.
+            database (str, optional): Target database. Defaults to
+                ``body.spec.database``.
+
+        Returns:
+            Restore: Created restore details.
+        """
+        if isinstance(body, dict):
+            body = Restore.model_validate(body)
+
+        database = database or body.spec.database
+        if not database:
+            raise ValueError("target database is not specified")
+
+        result = self.c.post(
+            url=f"{self.v2api_host}/v2/databases/{database}/restores/",
+            headers=self.config.get_headers(**kwargs),
+            json=body.model_dump(by_alias=True),
+        )
+        handle_server_errors(result)
+        return Restore(**result.json())
+
+    def delete_restore(self, database: str, name: str, **kwargs) -> None:
+        """Delete a restore record.
+
+        The restored data is not affected: by the time a restore can be deleted
+        its effect is already part of the live database.
+
+        Args:
+            database (str): Target database name.
+            name (str): Restore name.
+        """
+        result = self.c.delete(
+            url=f"{self.v2api_host}/v2/databases/{database}/restores/{name}/",
             headers=self.config.get_headers(**kwargs),
         )
         handle_server_errors(result)
