@@ -81,7 +81,7 @@ def test_create_restore_success(
     assert "/v2/databases/orders-db/restores/" in mock_post.call_args.kwargs["url"]
 
     sent = mock_post.call_args.kwargs["json"]
-    assert sent["spec"]["source"]["backupName"] == "orders-nightly"
+    assert sent["spec"]["source"]["fileUpload"] == "fileupload-mock1234"
     assert sent["spec"]["options"]["noOwner"] is True
 
 

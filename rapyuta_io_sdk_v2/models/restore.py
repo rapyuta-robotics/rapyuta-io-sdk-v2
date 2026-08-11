@@ -50,6 +50,13 @@ class RestoreSource(BaseModel):
     type: Literal["backup", "dataDirectory"]
 
     # --- type=backup ---
+    # The uploaded archive to restore, by file-upload GUID or filename — the two
+    # columns ``rio device uploads list`` prints. Required for a backup restore:
+    # a backup produces many archives over its life and only the caller knows
+    # which one they mean.
+    file_upload: str | None = Field(default=None, alias="fileUpload")
+
+    # Provenance only; neither is used to resolve the archive.
     backup_name: str | None = Field(default=None, alias="backupName")
     # Defaults to the backup's latest run.
     backup_run_id: str | None = Field(default=None, alias="backupRunID")
