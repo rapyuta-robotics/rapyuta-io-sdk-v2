@@ -8,7 +8,12 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from rapyuta_io_sdk_v2.models.utils import BaseList, BaseMetadata, BaseObject
+from rapyuta_io_sdk_v2.models.utils import (
+    BaseList,
+    BaseMetadata,
+    BaseObject,
+    SecretKeyRef,
+)
 
 
 class DeviceSpec(BaseModel):
@@ -21,10 +26,13 @@ class DeviceSpec(BaseModel):
 
 
 class Credentials(BaseModel):
-    """Database credentials (password is immutable after creation)."""
+    """References to the secret keys holding a Postgres user's username and
+    password. Only ``name``+``key`` are sent on create; the apiserver resolves
+    ``value`` onto the device-facing copy and never persists it. Immutable after
+    creation."""
 
-    username: str
-    password: str | None = Field(default=None)
+    username: SecretKeyRef | None = Field(default=None)
+    password: SecretKeyRef | None = Field(default=None)
 
 
 class PostgresUsers(BaseModel):
@@ -33,8 +41,23 @@ class PostgresUsers(BaseModel):
 
 
 class PostgresParameters(BaseModel):
-    max_connections: str = Field(default="200")
-    shared_buffers: str = Field(default="512MB")
+    """Tunable ``postgresql.conf`` parameters. Omitted fields keep the Postgres
+    defaults."""
+
+    # YAML manifests naturally write `max_connections: 200` unquoted, so coerce
+    # numbers to strings here rather than rejecting them. The wire payload must
+    # carry a string either way — see the field comment below.
+    model_config = ConfigDict(coerce_numbers_to_str=True)
+
+    # Both values are strings on the wire, matching postgresql.conf itself. Sending
+    # max_connections as a JSON number breaks devices that still model parameters
+    # as a string map, so it stays a decimal string here, e.g. "200".
+    max_connections: str | None = Field(default=None, pattern=r"^[1-9][0-9]*$")
+    # A positive integer, optionally suffixed with a unit. A bare number is a
+    # count of 8kB blocks.
+    shared_buffers: str | None = Field(
+        default=None, pattern=r"^[1-9][0-9]*(kB|MB|GB|TB)?$"
+    )
 
 
 class PostgresSpec(BaseModel):

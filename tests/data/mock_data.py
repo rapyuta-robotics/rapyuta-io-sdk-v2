@@ -1400,8 +1400,12 @@ def database_body() -> dict[str, Any]:
                 },
                 "users": {
                     "primary": {
-                        "username": "app",
-                        "password": "secret",
+                        "username": {"name": "orders-db-secret", "key": "PRIMARY_USER"},
+                        "password": {"name": "orders-db-secret", "key": "PRIMARY_PASS"},
+                    },
+                    "backup": {
+                        "username": {"name": "orders-db-secret", "key": "BACKUP_USER"},
+                        "password": {"name": "orders-db-secret", "key": "BACKUP_PASS"},
                     },
                 },
             },
@@ -1435,7 +1439,8 @@ def database_model_mock() -> dict[str, Any]:
                 },
                 "users": {
                     "primary": {
-                        "username": "app",
+                        "username": {"name": "orders-db-secret", "key": "PRIMARY_USER"},
+                        "password": {"name": "orders-db-secret", "key": "PRIMARY_PASS"},
                     },
                 },
             },
