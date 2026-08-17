@@ -97,6 +97,7 @@ class DatabaseSpec(BaseModel):
 class ContainerState(BaseModel):
     """Container state details."""
 
+    status: str | None = Field(default=None, description="running | terminated | waiting")
     started_at: str | None = Field(default=None, alias="startedAt")
     finished_at: str | None = Field(default=None, alias="finishedAt")
     exit_code: int | None = Field(default=None, alias="exitCode")
@@ -104,12 +105,14 @@ class ContainerState(BaseModel):
     message: str | None = Field(default=None)
 
 
-class PrimaryStatus(BaseModel):
-    """Status of the Postgres primary container."""
+class InstanceStatus(BaseModel):
+    """Status of one Postgres instance on one device. Primary and standby
+    instances report the same shape; the aliases below keep the field names at
+    the call sites self-describing."""
 
     device_name: str = Field(alias="deviceName")
     port: int
-    phase: str | None = Field(default=None)
+    phase: str | None = Field(default=None, description="running | stopped | crashloop")
     message: str | None = Field(default=None)
     state: ContainerState | None = Field(default=None)
     last_state: ContainerState | None = Field(default=None, alias="lastState")
@@ -124,24 +127,8 @@ class PrimaryStatus(BaseModel):
         return value
 
 
-class StandbyStatus(BaseModel):
-    """Status of a Postgres standby container, reported per standby device."""
-
-    device_name: str = Field(alias="deviceName")
-    port: int
-    phase: str | None = Field(default=None)
-    message: str | None = Field(default=None)
-    state: ContainerState | None = Field(default=None)
-    last_state: ContainerState | None = Field(default=None, alias="lastState")
-    restart_count: int | None = Field(default=None, alias="restartCount")
-    last_updated: str | None = Field(default=None, alias="lastUpdated")
-
-    @field_validator("state", "last_state", mode="before")
-    @staticmethod
-    def normalize_container_state(value: Any) -> dict[str, Any] | None:
-        if isinstance(value, dict) and not value:
-            return None
-        return value
+PrimaryStatus = InstanceStatus
+StandbyStatus = InstanceStatus
 
 
 class PostgresStatus(BaseModel):

@@ -1,13 +1,24 @@
-# ruff: noqa: F401
-"""Model round-trip tests for the standby topology fields on Database.
+# ruff: noqa: F811, F401
+"""Database CRUD and standby-topology tests.
 
 Standby is a facet of the Database resource (spec.postgres.standby); the
 replication user + standby status come back on read. These assert the SDK model
-parses a server-shaped (camelCase) payload and survives a dump/reload.
+parses a server-shaped (camelCase) payload, survives a dump/reload, and that the
+client sends the right routes and bodies.
 """
 
-from rapyuta_io_sdk_v2.models import Database
+import httpx
+import pytest
+from pytest_mock import MockFixture
+
+from rapyuta_io_sdk_v2.models import Database, DatabaseList
 from rapyuta_io_sdk_v2.models.database import StandbySpec, StandbyStatus
+from tests.data import (
+    database_body,
+    database_model_mock,
+    databaselist_model_mock,
+)
+from tests.utils.fixtures import client
 
 
 def _database_with_standby() -> dict:
@@ -109,3 +120,140 @@ def test_standby_omitted_when_absent():
     del payload["spec"]["postgres"]["standby"]
     db = Database.model_validate(payload)
     assert db.spec.postgres.standby is None
+
+
+def test_list_databases_success(client, databaselist_model_mock, mocker: MockFixture):
+    mock_get = mocker.patch("httpx.Client.get")
+    mock_get.return_value = httpx.Response(
+        status_code=200,
+        json=databaselist_model_mock,
+    )
+
+    response = client.list_databases(names=["orders-db"])
+
+    assert isinstance(response, DatabaseList)
+    assert response.metadata.continue_ == 1
+    assert mock_get.call_args.kwargs["url"].endswith("/v2/databases/")
+    assert mock_get.call_args.kwargs["params"]["names"] == ["orders-db"]
+
+    db = response.items[0]
+    assert db.metadata.name == "orders-db"
+    assert db.spec.postgres.standby.primary_host == "10.1.2.3"
+    assert len(db.status.postgres.standby) == 2
+
+
+def test_get_database_success(client, database_model_mock, mocker: MockFixture):
+    mock_get = mocker.patch("httpx.Client.get")
+    mock_get.return_value = httpx.Response(
+        status_code=200,
+        json=database_model_mock,
+    )
+
+    response = client.get_database(name="orders-db")
+
+    assert isinstance(response, Database)
+    assert mock_get.call_args.kwargs["url"].endswith("/v2/databases/orders-db/")
+    assert response.spec.postgres.primary.device_name == "edge-node-01"
+
+    # Each standby reports its own entry; a degraded one does not mask the other.
+    healthy, degraded = response.status.postgres.standby
+    assert (healthy.device_name, healthy.phase) == ("edge-node-02", "running")
+    assert (degraded.device_name, degraded.phase) == ("edge-node-03", "crashloop")
+    assert degraded.state.status == "waiting"
+    assert degraded.restart_count == 3
+
+
+def test_get_database_not_found(client, mocker: MockFixture):
+    mock_get = mocker.patch("httpx.Client.get")
+    mock_get.return_value = httpx.Response(
+        status_code=404,
+        json={"error": "database not found"},
+    )
+
+    with pytest.raises(Exception) as exc:
+        client.get_database(name="notfound")
+
+    assert str(exc.value) == "database not found"
+
+
+def test_create_database_success(
+    client, database_body, database_model_mock, mocker: MockFixture
+):
+    mock_post = mocker.patch("httpx.Client.post")
+    mock_post.return_value = httpx.Response(
+        status_code=202,
+        json=database_model_mock,
+    )
+
+    response = client.create_database(body=database_body)
+
+    assert isinstance(response, Database)
+    assert response.metadata.name == "orders-db"
+
+    # The topology has to reach the wire camelCased, while postgresql.conf
+    # parameters stay snake_case — the apiserver reads them verbatim.
+    sent = mock_post.call_args.kwargs["json"]["spec"]["postgres"]
+    assert sent["standby"]["primaryInterface"] == "eth0"
+    assert sent["standby"]["devices"][0]["deviceName"] == "edge-node-02"
+    assert sent["standby"]["devices"][0]["dataDirectory"] == (
+        "/opt/rapyuta/volumes/orders-db"
+    )
+    assert sent["parameters"] == {"max_connections": "200", "shared_buffers": "512MB"}
+
+
+def test_create_database_unauthorized(client, database_body, mocker: MockFixture):
+    mock_post = mocker.patch("httpx.Client.post")
+    mock_post.return_value = httpx.Response(
+        status_code=401,
+        json={"error": "unauthorized"},
+    )
+
+    with pytest.raises(Exception) as exc:
+        client.create_database(body=database_body)
+
+    assert str(exc.value) == "unauthorized"
+
+
+def test_update_database_success(
+    client, database_body, database_model_mock, mocker: MockFixture
+):
+    mock_put = mocker.patch("httpx.Client.put")
+    mock_put.return_value = httpx.Response(
+        status_code=202,
+        json=database_model_mock,
+    )
+
+    response = client.update_database(name="orders-db", body=database_body)
+
+    assert isinstance(response, Database)
+    assert mock_put.call_args.kwargs["url"].endswith("/v2/databases/orders-db/")
+
+
+def test_update_with_empty_devices_removes_every_standby(
+    client, database_body, database_model_mock, mocker: MockFixture
+):
+    # nil vs empty is load-bearing on the server: an absent standby block keeps
+    # the stored topology, a stated-but-empty one removes every standby. The
+    # empty list must therefore survive serialization instead of being dropped.
+    database_body["spec"]["postgres"]["standby"]["devices"] = []
+
+    mock_put = mocker.patch("httpx.Client.put")
+    mock_put.return_value = httpx.Response(status_code=202, json=database_model_mock)
+
+    client.update_database(name="orders-db", body=database_body)
+
+    sent = mock_put.call_args.kwargs["json"]["spec"]["postgres"]
+    assert sent["standby"]["devices"] == []
+
+
+def test_delete_database_success(client, mocker: MockFixture):
+    mock_delete = mocker.patch("httpx.Client.delete")
+    mock_delete.return_value = httpx.Response(
+        status_code=202,
+        json={"success": True},
+    )
+
+    response = client.delete_database(name="orders-db")
+
+    assert response is None
+    assert mock_delete.call_args.kwargs["url"].endswith("/v2/databases/orders-db/")
