@@ -51,6 +51,10 @@ class StandbySpec(BaseModel):
     # Server-managed: resolved from the primary device record; consumed by
     # standby devices as the replication host.
     primary_host: str | None = Field(alias="primaryHost", default=None)
+    # Network the primary trusts for replication in its pg_hba.conf. Defaults
+    # server-side to 10.0.0.0/8 (the postgres image's own default) when omitted;
+    # set it when the fleet sits on a different network.
+    cidr: str | None = Field(default=None)
     devices: list[DeviceSpec] | None = Field(default=None)
 
 
