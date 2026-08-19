@@ -112,7 +112,11 @@ class RestoreSpec(BaseModel):
 class RestoreStatus(BaseModel):
     """Status of a Restore resource."""
 
-    phase: Literal["Pending", "Running", "Completed", "Failed"] | None = Field(
+    # Stopped is terminal and is set by the apiserver when the target database is
+    # deleted under a restore that is still running — the only way to end one
+    # early, since a restore has no delete of its own. Omitting it here makes
+    # every client crash on reading a stopped restore rather than displaying it.
+    phase: Literal["Pending", "Running", "Completed", "Failed", "Stopped"] | None = Field(
         default=None
     )
     message: str | None = Field(default=None)
