@@ -120,6 +120,10 @@ class RestoreStatus(BaseModel):
         default=None
     )
     message: str | None = Field(default=None)
+    # Which stage the device is on (downloading, recovering, dumping, loading).
+    # A restore holds one phase for minutes, so the phase alone cannot tell
+    # progress from a stall — that is what this field is for.
+    step: str | None = Field(default=None)
     started_at: str | None = Field(default=None, alias="startedAt")
     completed_at: str | None = Field(default=None, alias="completedAt")
     # The logical databases the device actually loaded. A partial run reports
