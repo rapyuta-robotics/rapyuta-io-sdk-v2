@@ -1216,22 +1216,6 @@ class Client:
         handle_server_errors(result)
         return Restore(**result.json())
 
-    def delete_restore(self, database: str, name: str, **kwargs) -> None:
-        """Delete a restore record.
-
-        The restored data is not affected: by the time a restore can be deleted
-        its effect is already part of the live database.
-
-        Args:
-            database (str): Target database name.
-            name (str): Restore name.
-        """
-        result = self.c.delete(
-            url=f"{self.v2api_host}/v2/databases/{database}/restores/{name}/",
-            headers=self.config.get_headers(**kwargs),
-        )
-        handle_server_errors(result)
-
     # -------------------Device--------------------------
 
     def get_device_daemons(self, device_guid: str):

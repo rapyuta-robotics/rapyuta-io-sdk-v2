@@ -111,15 +111,16 @@ async def test_create_restore_requires_target_database(async_client, mocker: Moc
 
 
 @pytest.mark.asyncio
-async def test_delete_restore_success(async_client, mocker: MockFixture):
-    mock_delete = mocker.patch("httpx.AsyncClient.delete")
-    mock_delete.return_value = httpx.Response(
-        status_code=204,
-        json={"success": True},
+async def test_create_restore_conflict(async_client, restore_body, mocker: MockFixture):
+    mock_post = mocker.patch("httpx.AsyncClient.post")
+    mock_post.return_value = httpx.Response(
+        status_code=409,
+        json={"error": "a restore is already in progress for this database"},
     )
 
-    response = await async_client.delete_restore(
-        database="orders-db", name="orders-db-restore"
-    )
+    # Two concurrent pg_restores into one live cluster is data loss, so the
+    # apiserver refuses the second.
+    with pytest.raises(Exception) as exc:
+        await async_client.create_restore(body=restore_body)
 
-    assert response is None
+    assert "already in progress" in str(exc.value)

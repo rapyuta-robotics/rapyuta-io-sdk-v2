@@ -131,19 +131,3 @@ def test_create_restore_conflict(client, restore_body, mocker: MockFixture):
         client.create_restore(body=restore_body)
 
     assert "already in progress" in str(exc.value)
-
-
-def test_delete_restore_success(client, mocker: MockFixture):
-    mock_delete = mocker.patch("httpx.Client.delete")
-    mock_delete.return_value = httpx.Response(
-        status_code=204,
-        json={"success": True},
-    )
-
-    response = client.delete_restore(database="orders-db", name="orders-db-restore")
-
-    assert response is None
-    assert (
-        "/v2/databases/orders-db/restores/orders-db-restore/"
-        in mock_delete.call_args.kwargs["url"]
-    )
