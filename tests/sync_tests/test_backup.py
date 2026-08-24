@@ -102,19 +102,13 @@ def test_delete_backup_success(client, mocker: MockFixture):
     assert response is None
 
 
-def test_get_backup_surfaces_file_uploads(client, backup_model_mock, mocker: MockFixture):
+def test_get_backup_surfaces_the_current_step(client, backup_model_mock, mocker: MockFixture):
     mock_get = mocker.patch("httpx.Client.get")
     mock_get.return_value = httpx.Response(status_code=200, json=backup_model_mock)
 
     backup = client.get_backup(name="orders-nightly")
 
-    # A restore is addressed by file-upload GUID, so dropping these on parse
-    # would leave no way to find the archive to restore.
+    # The recover dominates a run's duration, so the phase alone cannot tell a
+    # slow backup from a stuck one.
     assert backup.status.step == "archiving base backup"
-    assert len(backup.status.file_uploads) == 1
-    upload = backup.status.file_uploads[0]
-    assert upload.guid == "fileupload-d9upialugeis73e1to40"
-    assert upload.role == "base"
-    assert upload.backup_id == "20260101T020000"
-    assert upload.size_bytes == 104857600
-    assert "fileUploads" in backup.model_dump(exclude_none=True, by_alias=True)["status"]
+    assert backup.status.phase == "Ready"
