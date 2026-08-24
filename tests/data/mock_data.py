@@ -1581,15 +1581,6 @@ def backup_model_mock() -> dict[str, Any]:
             "phase": "Ready",
             "postgresVersion": "17",
             "step": "archiving base backup",
-            "fileUploads": [
-                {
-                    "guid": "fileupload-d9upialugeis73e1to40",
-                    "role": "base",
-                    "backupID": "20260101T020000",
-                    "status": "COMPLETED",
-                    "sizeBytes": 104857600,
-                }
-            ],
             "latestRun": {
                 "backupID": "20260101T020000",
                 "beginWAL": "000000010000000000000003",

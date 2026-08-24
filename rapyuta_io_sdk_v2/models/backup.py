@@ -45,22 +45,6 @@ class BackupRun(BaseModel):
     completed_at: str | None = Field(default=None, alias="completedAt")
 
 
-class BackupFileUpload(BaseModel):
-    """One archive this backup uploaded to object storage.
-
-    A restore resolves what to download from this list, so the ``guid`` here is
-    what ``rio restore create --file-upload`` takes.
-    """
-
-    guid: str | None = Field(default=None)
-    role: Literal["base", "wal"] | None = Field(default=None)
-    backup_id: str | None = Field(default=None, alias="backupID")
-    # Resolved from the file-upload service. Left a free string rather than a
-    # Literal: it is that service's vocabulary, not this API's.
-    status: str | None = Field(default=None)
-    size_bytes: int | None = Field(default=None, alias="sizeBytes")
-
-
 class BackupStatus(BaseModel):
     """Status of a Backup resource."""
 
@@ -70,9 +54,6 @@ class BackupStatus(BaseModel):
     # so the phase alone cannot tell a slow backup from a stuck one.
     step: str | None = Field(default=None)
     latest_run: BackupRun | None = Field(default=None, alias="latestRun")
-    # Accumulates across runs: the device's per-backup result pointer is
-    # overwritten every run while the archives it produced live on.
-    file_uploads: list[BackupFileUpload] | None = Field(default=None, alias="fileUploads")
 
 
 class Backup(BaseObject):
