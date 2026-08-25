@@ -13,6 +13,8 @@ from rapyuta_io_sdk_v2.models.database import (
 # Backup models
 from rapyuta_io_sdk_v2.models.backup import (
     Backup as Backup,
+    BackupArchive as BackupArchive,
+    BackupArchiveList as BackupArchiveList,
     BackupList as BackupList,
 )
 

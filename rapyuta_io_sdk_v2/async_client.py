@@ -64,6 +64,7 @@ from rapyuta_io_sdk_v2.models import (
     Database,
     DatabaseList,
     Backup,
+    BackupArchiveList,
     BackupList,
     Restore,
     RestoreList,
@@ -1108,6 +1109,34 @@ class AsyncClient:
         )
         handle_server_errors(result)
         return BackupList(**result.json())
+
+    async def list_database_uploads(
+        self,
+        database: str,
+        cont: int = 0,
+        limit: int = 50,
+        **kwargs,
+    ) -> BackupArchiveList:
+        """List the uploaded backup archives of a database.
+
+        Scoped to the database rather than a device, so archives remain listable
+        after the uploading device or the Backup record is gone.
+
+        Args:
+            database (str): Name of the database.
+            cont (int, optional): Start index. Defaults to 0.
+            limit (int, optional): Number of results. Defaults to 50.
+
+        Returns:
+            BackupArchiveList: Paginated list of archives.
+        """
+        result = await self.c.get(
+            url=f"{self.v2api_host}/v2/databases/{database}/uploads/",
+            headers=self.config.get_headers(**kwargs),
+            params={"continue": cont, "limit": limit},
+        )
+        handle_server_errors(result)
+        return BackupArchiveList(**result.json())
 
     async def get_backup(self, name: str, **kwargs) -> Backup:
         """Get a backup by its name.
