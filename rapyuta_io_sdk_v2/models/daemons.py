@@ -15,7 +15,9 @@ from rapyuta_io_sdk_v2.models.utils import BaseMetadata
 
 
 # --- Daemon Status Types ---
-DaemonStatusType = Literal["error", "running", "pending", "terminating", "terminated"]
+DaemonStatusType = Literal[
+    "error", "running", "pending", "terminating", "terminated", "unknown"
+]
 
 
 # --- Configuration Models ---

@@ -115,7 +115,10 @@ class PackageDepends(BaseModel):
         validation_alias=AliasChoices("nameOrGUID", "nameOrGuid"),
         serialization_alias="nameOrGUID",
     )
-    version: str
+    # Must name a concrete version: an empty version cannot identify the
+    # Package this dependency refers to. Templated manifests render an empty
+    # string when the value is not supplied, which would otherwise validate.
+    version: str = Field(min_length=1)
 
 
 class SecretDepends(BaseModel):
