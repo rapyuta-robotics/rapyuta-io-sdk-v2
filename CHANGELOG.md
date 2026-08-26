@@ -1,3 +1,11 @@
+## [0.8.3](https://github.com/rapyuta-robotics/rapyuta-io-sdk-v2/compare/v0.8.2...v0.8.3) (2026-08-26)
+
+
+### Bug Fixes
+
+* **models:** allow "unknown" as a valid DaemonStatusType ([59d72fe](https://github.com/rapyuta-robotics/rapyuta-io-sdk-v2/commit/59d72fe5e3b33d1f456c16e9a9e955b20a976788)), closes [rapyuta_io#2148](https://github.com/rapyuta_io/issues/2148)
+* **package:** require a non-empty version on Package models ([a0dcaf9](https://github.com/rapyuta-robotics/rapyuta-io-sdk-v2/commit/a0dcaf9a344d8878b7577ea77d93bfabf2b463b9))
+
 ## [0.8.2](https://github.com/rapyuta-robotics/rapyuta-io-sdk-v2/compare/v0.8.1...v0.8.2) (2026-07-08)
 
 
