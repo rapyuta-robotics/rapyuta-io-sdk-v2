@@ -1138,6 +1138,22 @@ class AsyncClient:
         handle_server_errors(result)
         return BackupArchiveList(**result.json())
 
+    async def delete_database_upload(self, database: str, guid: str, **kwargs) -> None:
+        """Delete one uploaded backup archive of a database.
+
+        Archives outlive their backup and their database, so this is the only
+        thing that removes one.
+
+        Args:
+            database (str): Name or GUID of the database.
+            guid (str): File-upload GUID of the archive.
+        """
+        result = await self.c.delete(
+            url=f"{self.v2api_host}/v2/databases/{database}/uploads/{guid}/",
+            headers=self.config.get_headers(**kwargs),
+        )
+        handle_server_errors(result)
+
     async def get_backup(self, name: str, **kwargs) -> Backup:
         """Get a backup by its name.
 
