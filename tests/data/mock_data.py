@@ -1512,7 +1512,7 @@ def database_model_mock() -> dict[str, Any]:
                     {
                         "deviceName": "edge-node-03",
                         "port": 5432,
-                        "phase": "crashloop",
+                        "phase": "failed",
                         "message": "replication stream interrupted",
                         "state": {"status": "waiting"},
                         "restartCount": 3,

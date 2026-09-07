@@ -158,7 +158,7 @@ def test_get_database_success(client, database_model_mock, mocker: MockFixture):
     # Each standby reports its own entry; a degraded one does not mask the other.
     healthy, degraded = response.status.postgres.standby
     assert (healthy.device_name, healthy.phase) == ("edge-node-02", "running")
-    assert (degraded.device_name, degraded.phase) == ("edge-node-03", "crashloop")
+    assert (degraded.device_name, degraded.phase) == ("edge-node-03", "failed")
     assert degraded.state.status == "waiting"
     assert degraded.restart_count == 3
 

@@ -103,10 +103,6 @@ class ContainerState(BaseModel):
 
     status: str | None = Field(default=None, description="running | terminated | waiting")
     started_at: str | None = Field(default=None, alias="startedAt")
-    finished_at: str | None = Field(default=None, alias="finishedAt")
-    exit_code: int | None = Field(default=None, alias="exitCode")
-    reason: str | None = Field(default=None)
-    message: str | None = Field(default=None)
 
 
 class InstanceStatus(BaseModel):
@@ -116,7 +112,10 @@ class InstanceStatus(BaseModel):
 
     device_name: str = Field(alias="deviceName")
     port: int
-    phase: str | None = Field(default=None, description="running | stopped | crashloop")
+    phase: str | None = Field(
+        default=None,
+        description="provisioning | starting | running | stopped | failed",
+    )
     message: str | None = Field(default=None)
     state: ContainerState | None = Field(default=None)
     last_state: ContainerState | None = Field(default=None, alias="lastState")
