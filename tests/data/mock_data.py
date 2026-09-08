@@ -1396,15 +1396,26 @@ def database_body() -> dict[str, Any]:
                     "dataDirectory": "/opt/rapyuta/volumes/orders-db",
                     "port": 5432,
                 },
+                # primaryHost is server-resolved; a caller never sets it.
+                "standby": {
+                    "primaryInterface": "eth0",
+                    "devices": [
+                        {
+                            "deviceName": "edge-node-02",
+                            "dataDirectory": "/opt/rapyuta/volumes/orders-db",
+                            "port": 5432,
+                        },
+                    ],
+                },
                 "users": {
                     "primary": {
                         "username": {"name": "orders-db-secret", "key": "PRIMARY_USER"},
                         "password": {"name": "orders-db-secret", "key": "PRIMARY_PASS"},
                     },
-                    "backup": {
-                        "username": {"name": "orders-db-secret", "key": "BACKUP_USER"},
-                        "password": {"name": "orders-db-secret", "key": "BACKUP_PASS"},
-                    },
+                },
+                "parameters": {
+                    "max_connections": "200",
+                    "shared_buffers": "512MB",
                 },
             },
         },
@@ -1432,14 +1443,47 @@ def database_model_mock() -> dict[str, Any]:
                 "version": "17",
                 "primary": {
                     "deviceName": "edge-node-01",
+                    "deviceGuid": "device-primary000000000000",
                     "dataDirectory": "/opt/rapyuta/volumes/orders-db",
                     "port": 5432,
+                },
+                "standby": {
+                    "primaryInterface": "eth0",
+                    "primaryHost": "10.1.2.3",
+                    "devices": [
+                        {
+                            "deviceName": "edge-node-02",
+                            "deviceGuid": "device-standby100000000000",
+                            "dataDirectory": "/opt/rapyuta/volumes/orders-db",
+                            "port": 5432,
+                        },
+                        {
+                            "deviceName": "edge-node-03",
+                            "deviceGuid": "device-standby200000000000",
+                            "dataDirectory": "/opt/rapyuta/volumes/orders-db",
+                            "port": 5432,
+                        },
+                    ],
                 },
                 "users": {
                     "primary": {
                         "username": {"name": "orders-db-secret", "key": "PRIMARY_USER"},
                         "password": {"name": "orders-db-secret", "key": "PRIMARY_PASS"},
                     },
+                    "replication": {
+                        "username": {
+                            "name": "orders-db-db-credentials",
+                            "key": "replication_username",
+                        },
+                        "password": {
+                            "name": "orders-db-db-credentials",
+                            "key": "replication_password",
+                        },
+                    },
+                },
+                "parameters": {
+                    "max_connections": "200",
+                    "shared_buffers": "512MB",
                 },
             },
         },
@@ -1450,7 +1494,30 @@ def database_model_mock() -> dict[str, Any]:
                     "deviceName": "edge-node-01",
                     "port": 5432,
                     "phase": "running",
+                    "state": {"status": "running", "startedAt": "2025-01-01T00:05:00Z"},
+                    "restartCount": 0,
                 },
+                # One entry per standby device, upserted independently by each.
+                "standby": [
+                    {
+                        "deviceName": "edge-node-02",
+                        "port": 5432,
+                        "phase": "running",
+                        "state": {
+                            "status": "running",
+                            "startedAt": "2025-01-01T00:06:00Z",
+                        },
+                        "restartCount": 0,
+                    },
+                    {
+                        "deviceName": "edge-node-03",
+                        "port": 5432,
+                        "phase": "failed",
+                        "message": "replication stream interrupted",
+                        "state": {"status": "waiting"},
+                        "restartCount": 3,
+                    },
+                ],
             },
         },
     }
