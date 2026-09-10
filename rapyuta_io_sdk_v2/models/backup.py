@@ -84,6 +84,9 @@ class BackupArchive(BaseModel):
 
     guid: str = Field(description="File-upload GUID to restore from")
     filename: str | None = Field(default=None)
+    # The handle a project-wide listing leaves you with: the database row itself
+    # may be long deleted.
+    database_guid: str | None = Field(default=None, alias="databaseGuid")
     backup_name: str | None = Field(default=None, alias="backupName")
     backup_run_id: str | None = Field(default=None, alias="backupRunID")
     # Provenance only; an archive restores onto any device.
