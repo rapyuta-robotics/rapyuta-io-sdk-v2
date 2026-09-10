@@ -50,6 +50,9 @@ class BackupStatus(BaseModel):
 
     phase: Literal["Pending", "Running", "Ready", "Failed"] | None = Field(default=None)
     message: str | None = Field(default=None)
+    # Which stage the current run is on. The recover dominates a run's duration,
+    # so the phase alone cannot tell a slow backup from a stuck one.
+    step: str | None = Field(default=None)
     latest_run: BackupRun | None = Field(default=None, alias="latestRun")
 
 
@@ -66,5 +69,34 @@ class Backup(BaseObject):
 
 class BackupList(BaseList[Backup]):
     """Paginated list of Backup resources."""
+
+    pass
+
+
+class BackupArchive(BaseModel):
+    """One uploaded archive of a database.
+
+    A projection of the file upload, not the record itself: `guid` is what
+    ``rio database restore create --file-upload`` takes.
+    """
+
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
+    guid: str = Field(description="File-upload GUID to restore from")
+    filename: str | None = Field(default=None)
+    # The handle a project-wide listing leaves you with: the database row itself
+    # may be long deleted.
+    database_guid: str | None = Field(default=None, alias="databaseGuid")
+    backup_name: str | None = Field(default=None, alias="backupName")
+    backup_run_id: str | None = Field(default=None, alias="backupRunID")
+    # Provenance only; an archive restores onto any device.
+    device_guid: str | None = Field(default=None, alias="deviceGUID")
+    status: str | None = Field(default=None)
+    total_size: int | None = Field(default=None, alias="totalSize")
+    created_at: str | None = Field(default=None, alias="createdAt")
+
+
+class BackupArchiveList(BaseList[BackupArchive]):
+    """Paginated list of a database's uploaded archives."""
 
     pass

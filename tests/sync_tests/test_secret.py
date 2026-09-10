@@ -182,9 +182,7 @@ def test_get_docker_secret_with_type_and_keys(
     assert response.spec.secret_keys == ["username", "password", "email", "registry"]
 
 
-def test_get_opaque_secret_success(
-    client, opaque_secret_model_mock, mocker: MockFixture
-):
+def test_get_opaque_secret_success(client, opaque_secret_model_mock, mocker: MockFixture):
     """Server returns an Opaque secret with data and secretKeys."""
     mock_get = mocker.patch("httpx.Client.get")
     mock_get.return_value = httpx.Response(
@@ -197,7 +195,10 @@ def test_get_opaque_secret_success(
     assert isinstance(response, Secret)
     assert response.metadata.guid == "secret-cccccccccccccccccccc"
     assert response.spec.type == "Opaque"
-    assert response.spec.data == {"API_KEY": "my-api-key-value", "DB_PASSWORD": "my-db-password"}
+    assert response.spec.data == {
+        "API_KEY": "my-api-key-value",
+        "DB_PASSWORD": "my-db-password",
+    }
     assert set(response.spec.secret_keys) == {"API_KEY", "DB_PASSWORD"}
 
 
@@ -295,5 +296,3 @@ def test_secret_create_model_opaque_valid():
     )
     assert secret.spec.type == "Opaque"
     assert secret.spec.data == {"MY_KEY": "my-value"}
-
-

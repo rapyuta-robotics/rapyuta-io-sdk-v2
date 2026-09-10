@@ -1578,6 +1578,7 @@ def backup_model_mock() -> dict[str, Any]:
         "status": {
             "phase": "Ready",
             "postgresVersion": "17",
+            "step": "archiving base backup",
             "latestRun": {
                 "backupID": "20260101T020000",
                 "beginWAL": "000000010000000000000003",
@@ -1600,4 +1601,100 @@ def backuplist_model_mock(backup_model_mock) -> dict[str, Any]:
             "continue": 1,
         },
         "items": [backup_model_mock],
+    }
+
+
+# -------------------- RESTORE --------------------
+
+
+@pytest.fixture
+def restore_body() -> dict[str, Any]:
+    return {
+        "apiVersion": "api.rapyuta.io/v2",
+        "kind": "Restore",
+        "metadata": {
+            "name": "orders-db-restore",
+            "labels": {"app": "orders"},
+        },
+        "spec": {
+            "database": "orders-db",
+            "source": {
+                "type": "backup",
+                "fileUpload": "fileupload-mock1234",
+                "backupName": "orders-nightly",
+            },
+            "databases": ["orders"],
+            "options": {"clean": True, "noOwner": True, "ifExists": True},
+        },
+    }
+
+
+@pytest.fixture
+def restore_migration_body() -> dict[str, Any]:
+    return {
+        "apiVersion": "api.rapyuta.io/v2",
+        "kind": "Restore",
+        "metadata": {"name": "orders-db-migrate"},
+        "spec": {
+            "database": "orders-db-v18",
+            "source": {
+                "type": "dataDirectory",
+                "oldDataDirectory": "/opt/rapyuta/volumes/orders-db",
+                "sourceVersion": "17",
+            },
+        },
+    }
+
+
+@pytest.fixture
+def restore_model_mock() -> dict[str, Any]:
+    return {
+        "kind": "Restore",
+        "apiVersion": "api.rapyuta.io/v2",
+        "metadata": {
+            "name": "orders-db-restore",
+            "guid": "restore-mockrestore1234567890",
+            "projectGUID": "project-aaaaaaaaaaaaaaaaaaaa",
+            "organizationGUID": "org-mock-789",
+            "creatorGUID": "mock-user-guid-000",
+            "createdAt": "2026-01-01T00:00:00Z",
+            "updatedAt": "2026-01-01T01:00:00Z",
+            "deletedAt": None,
+        },
+        "spec": {
+            "database": "orders-db",
+            "source": {
+                "type": "backup",
+                "fileUpload": "fileupload-mock1234",
+                "backupName": "orders-nightly",
+                "backupRunID": "20260101T020000",
+                # Signed links are blanked on every user-facing read.
+                "archives": [{"guid": "fileupload-mock1234", "role": "base"}],
+            },
+            "databases": ["orders"],
+            "options": {"clean": True, "noOwner": True},
+            "deviceGuid": "device-mockdevice12345678901",
+            "databaseGuid": "database-mockdatabase12345678",
+            "postgresVersion": "17",
+            "restoreImage": "quay.io/rapyuta/databases/restore:17-latest",
+            "targetPort": 5432,
+            "dataDirectory": "/opt/rapyuta/volumes/orders-db",
+        },
+        "status": {
+            "phase": "Completed",
+            "message": "restore completed",
+            "startedAt": "2026-01-01T02:00:00Z",
+            "completedAt": "2026-01-01T02:03:11Z",
+            "restoredDatabases": ["orders"],
+        },
+    }
+
+
+@pytest.fixture
+def restorelist_model_mock(restore_model_mock) -> dict[str, Any]:
+    return {
+        "metadata": {
+            "continue": 1,
+        },
+        "items": [restore_model_mock],
     }

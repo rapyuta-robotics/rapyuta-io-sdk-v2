@@ -100,3 +100,15 @@ def test_delete_backup_success(client, mocker: MockFixture):
     response = client.delete_backup(name="backup-mockbackup12345678901")
 
     assert response is None
+
+
+def test_get_backup_surfaces_the_current_step(client, backup_model_mock, mocker: MockFixture):
+    mock_get = mocker.patch("httpx.Client.get")
+    mock_get.return_value = httpx.Response(status_code=200, json=backup_model_mock)
+
+    backup = client.get_backup(name="orders-nightly")
+
+    # The recover dominates a run's duration, so the phase alone cannot tell a
+    # slow backup from a stuck one.
+    assert backup.status.step == "archiving base backup"
+    assert backup.status.phase == "Ready"
