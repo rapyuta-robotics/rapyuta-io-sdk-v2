@@ -1112,45 +1112,51 @@ class AsyncClient:
 
     async def list_database_uploads(
         self,
-        database: str,
         cont: int = 0,
         limit: int = 50,
+        database: str | None = None,
         **kwargs,
     ) -> BackupArchiveList:
-        """List the uploaded backup archives of a database.
+        """List uploaded backup archives.
 
-        Scoped to the database rather than a device, so archives remain listable
-        after the uploading device or the Backup record is gone.
+        Never scoped to a device, and the database is optional: an archive
+        outlives the uploading device, its Backup record and its database, and a
+        deleted database can no longer be named.
 
         Args:
-            database (str): Name of the database.
             cont (int, optional): Start index. Defaults to 0.
             limit (int, optional): Number of results. Defaults to 50.
+            database (str, optional): Name or GUID of the source database.
+                Omit to list every archive in the project.
 
         Returns:
             BackupArchiveList: Paginated list of archives.
         """
         result = await self.c.get(
-            url=f"{self.v2api_host}/v2/databases/{database}/uploads/",
+            url=f"{self.v2api_host}/v2/databases/uploads/",
             headers=self.config.get_headers(**kwargs),
-            params={"continue": cont, "limit": limit},
+            params={"continue": cont, "limit": limit, "database": database},
         )
         handle_server_errors(result)
         return BackupArchiveList(**result.json())
 
-    async def delete_database_upload(self, database: str, guid: str, **kwargs) -> None:
-        """Delete one uploaded backup archive of a database.
+    async def delete_database_upload(
+        self, guid: str, database: str | None = None, **kwargs
+    ) -> None:
+        """Delete one uploaded backup archive.
 
         Archives outlive their backup and their database, so this is the only
         thing that removes one.
 
         Args:
-            database (str): Name or GUID of the database.
             guid (str): File-upload GUID of the archive.
+            database (str, optional): Name or GUID of the database the archive
+                must belong to. Omit to delete it by GUID alone.
         """
         result = await self.c.delete(
-            url=f"{self.v2api_host}/v2/databases/{database}/uploads/{guid}/",
+            url=f"{self.v2api_host}/v2/databases/uploads/{guid}/",
             headers=self.config.get_headers(**kwargs),
+            params={"database": database},
         )
         handle_server_errors(result)
 
