@@ -89,6 +89,9 @@ class BackupArchive(BaseModel):
     database_guid: str | None = Field(default=None, alias="databaseGuid")
     backup_name: str | None = Field(default=None, alias="backupName")
     backup_run_id: str | None = Field(default=None, alias="backupRunID")
+    # The major version of the cluster the archive holds; it picks the restore
+    # image, and archives outlive the backup row that would otherwise carry it.
+    pg_version: str | None = Field(default=None, alias="pgVersion")
     # Provenance only; an archive restores onto any device.
     device_guid: str | None = Field(default=None, alias="deviceGUID")
     status: str | None = Field(default=None)
