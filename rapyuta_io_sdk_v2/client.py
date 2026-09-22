@@ -1235,6 +1235,22 @@ class Client:
         handle_server_errors(result)
         return Restore(**result.json())
 
+    def stop_restore(self, database: str, name: str, **kwargs) -> None:
+        """Stop a running restore.
+
+        The request is recorded and the device tears the restore down; the
+        restore reaches the Stopped phase once it has confirmed.
+
+        Args:
+            database (str): Target database name.
+            name (str): Restore name.
+        """
+        result = self.c.post(
+            url=f"{self.v2api_host}/v2/databases/{database}/restores/{name}/stop/",
+            headers=self.config.get_headers(**kwargs),
+        )
+        handle_server_errors(result)
+
     def create_restore(
         self, body: Restore | dict[str, Any], database: str | None = None, **kwargs
     ) -> Restore:
