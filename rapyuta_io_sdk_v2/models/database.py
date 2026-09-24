@@ -38,6 +38,24 @@ class Credentials(BaseModel):
 class PostgresUsers(BaseModel):
     primary: Credentials | None = Field(default=None)
     backup: Credentials | None = Field(default=None)
+    # Streaming-replication user consumed by standbys. Server-generated into the
+    # managed secret on create; read-only, with ``value`` blanked on read.
+    replication: Credentials | None = Field(default=None)
+
+
+class StandbySpec(BaseModel):
+    """Optional hot-standby topology. Each standby sits on a device distinct from
+    the primary and from every other standby."""
+
+    primary_interface: str | None = Field(alias="primaryInterface", default=None)
+    # Server-managed: resolved from the primary device record; consumed by
+    # standby devices as the replication host.
+    primary_host: str | None = Field(alias="primaryHost", default=None)
+    # Network the primary trusts for replication in its pg_hba.conf. Defaults
+    # server-side to 10.0.0.0/8 (the postgres image's own default) when omitted;
+    # set it when the fleet sits on a different network.
+    cidr: str | None = Field(default=None)
+    devices: list[DeviceSpec] | None = Field(default=None)
 
 
 class PostgresParameters(BaseModel):
@@ -67,6 +85,7 @@ class PostgresSpec(BaseModel):
     postgres_image: str | None = Field(alias="postgresImage", default=None)
 
     primary: DeviceSpec
+    standby: StandbySpec | None = Field(default=None)
     users: PostgresUsers | None = Field(default=None)
     multiple_database: list[str] | None = Field(default=None, alias="multipleDatabase")
     parameters: PostgresParameters | None = Field(default=None)
@@ -82,19 +101,21 @@ class DatabaseSpec(BaseModel):
 class ContainerState(BaseModel):
     """Container state details."""
 
+    status: str | None = Field(default=None, description="running | terminated | waiting")
     started_at: str | None = Field(default=None, alias="startedAt")
-    finished_at: str | None = Field(default=None, alias="finishedAt")
-    exit_code: int | None = Field(default=None, alias="exitCode")
-    reason: str | None = Field(default=None)
-    message: str | None = Field(default=None)
 
 
-class PrimaryStatus(BaseModel):
-    """Status of the Postgres primary container."""
+class InstanceStatus(BaseModel):
+    """Status of one Postgres instance on one device. Primary and standby
+    instances report the same shape; the aliases below keep the field names at
+    the call sites self-describing."""
 
     device_name: str = Field(alias="deviceName")
     port: int
-    phase: str | None = Field(default=None)
+    phase: str | None = Field(
+        default=None,
+        description="provisioning | starting | running | stopped | failed",
+    )
     message: str | None = Field(default=None)
     state: ContainerState | None = Field(default=None)
     last_state: ContainerState | None = Field(default=None, alias="lastState")
@@ -109,10 +130,15 @@ class PrimaryStatus(BaseModel):
         return value
 
 
+PrimaryStatus = InstanceStatus
+StandbyStatus = InstanceStatus
+
+
 class PostgresStatus(BaseModel):
     """Status of the Postgres instance."""
 
     primary: PrimaryStatus | None = Field(default=None)
+    standby: list[StandbyStatus] | None = Field(default=None)
 
 
 class DatabaseStatus(BaseModel):
