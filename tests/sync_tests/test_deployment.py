@@ -68,6 +68,10 @@ def test_get_cloud_deployment_success(
     assert isinstance(response, Deployment)
     assert response.spec.runtime == "cloud"
     assert response.metadata.guid == "dep-cloud-001"
+    assert (
+        response.status.executables_status["cloud_exec"].image
+        == "docker.io/rr/talker:v1.2.3"
+    )
 
 
 def test_get_device_deployment_success(
@@ -82,6 +86,10 @@ def test_get_device_deployment_success(
     assert isinstance(response, Deployment)
     assert response.spec.runtime == "device"
     assert response.metadata.guid == "dep-device-001"
+    assert (
+        response.status.executables_status["device_exec"].image
+        == "reg.example.com:5000/rr/listener@sha256:abc123"
+    )
 
 
 def test_get_deployment_not_found(client, mocker: MockFixture):
