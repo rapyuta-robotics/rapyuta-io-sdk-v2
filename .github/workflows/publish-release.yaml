@@ -20,8 +20,26 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+      
+      - name: Create GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: Iv23liFjNsuBdosbyBzO
+          private-key: ${{ secrets.BAYMAX_RR_PRIVATE_KEY}}
+          owner: ${{ github.repository_owner }}
+          repositories: rapyuta-io-actions
+
+      - name: Checkout private actions
+        uses: actions/checkout@v6
+        with:
+          repository: rapyuta-robotics/rapyuta-io-actions
+          ref: main
+          token: ${{ steps.app-token.outputs.token }}
+          path: .github/rapyuta-io-actions
+          persist-credentials: false         
 
       - name: Publish release
-        uses: rapyuta-robotics/rapyuta-io-actions/publish-release@main
+        uses: ./.github/rapyuta-io-actions/publish-release
         with:
           app_private_key: ${{ secrets.BAYMAX_RR_PRIVATE_KEY }}
