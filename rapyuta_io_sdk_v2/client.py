@@ -1112,26 +1112,6 @@ class Client:
         handle_server_errors(result)
         return BackupArchiveList(**result.json())
 
-    def delete_database_upload(
-        self, guid: str, database: str | None = None, **kwargs
-    ) -> None:
-        """Delete one uploaded backup archive.
-
-        Archives outlive their backup and their database, so this is the only
-        thing that removes one.
-
-        Args:
-            guid (str): File-upload GUID of the archive.
-            database (str, optional): Name or GUID of the database the archive
-                must belong to. Omit to delete it by GUID alone.
-        """
-        result = self.c.delete(
-            url=f"{self.v2api_host}/v2/databases/uploads/{guid}/",
-            headers=self.config.get_headers(**kwargs),
-            params={"database": database},
-        )
-        handle_server_errors(result)
-
     def get_backup(self, name: str, **kwargs) -> Backup:
         """Get a backup by its name.
 
