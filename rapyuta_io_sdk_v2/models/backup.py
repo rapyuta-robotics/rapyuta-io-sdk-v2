@@ -50,9 +50,8 @@ class BackupStatus(BaseModel):
 
     phase: Literal["Pending", "Running", "Ready", "Failed"] | None = Field(default=None)
     message: str | None = Field(default=None)
-    # Which stage the current run is on. The recover dominates a run's duration,
-    # so the phase alone cannot tell a slow backup from a stuck one.
-    step: str | None = Field(default=None)
+    # Which stage the current run is on; the per-run detail is in message.
+    step: Literal["Verifying", "Recovering", "Uploading"] | None = Field(default=None)
     latest_run: BackupRun | None = Field(default=None, alias="latestRun")
 
 

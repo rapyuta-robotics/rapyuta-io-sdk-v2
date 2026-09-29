@@ -110,5 +110,5 @@ def test_get_backup_surfaces_the_current_step(client, backup_model_mock, mocker:
 
     # The recover dominates a run's duration, so the phase alone cannot tell a
     # slow backup from a stuck one.
-    assert backup.status.step == "archiving base backup"
+    assert backup.status.step == "Uploading"
     assert backup.status.phase == "Ready"
