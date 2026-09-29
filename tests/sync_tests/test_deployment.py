@@ -289,5 +289,3 @@ def test_env_args_spec_plain_and_valuefrom_coexist():
     )
     assert arg.value == "fallback"
     assert arg.valueFrom.secret_key_ref.value == "injected"
-
-
