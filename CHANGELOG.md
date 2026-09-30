@@ -5,6 +5,17 @@ using [git-cliff](https://git-cliff.org/).
 
 <!-- git-cliff: end of header -->
 
+## [0.9.0] - 2026-09-24
+
+### ✨ Features
+
+- *(models)* Add image to ExecutableStatus (#72)
+
+### 🐛 Bug Fixes
+
+- *(models)* Remove TelegrafConfig from DaemonSpec
+
+
 ## [0.8.3](https://github.com/rapyuta-robotics/rapyuta-io-sdk-v2/compare/v0.8.2...v0.8.3) (2026-08-26)
 
 
