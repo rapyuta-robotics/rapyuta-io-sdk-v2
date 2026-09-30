@@ -215,6 +215,8 @@ class DeploymentSpec(BaseModel):
 
 class ExecutableStatus(BaseModel):
     name: str | None = None
+    # Container image, including tag, that this executable runs.
+    image: str | None = None
     status: ExecutableStatusType | None = None
     error_code: str | None = None
     reason: str | None = None

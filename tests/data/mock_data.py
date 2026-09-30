@@ -374,6 +374,7 @@ def cloud_deployment_model_mock() -> dict[str, Any]:
             "executables_status": {
                 "cloud_exec": {
                     "name": "cloud_exec",
+                    "image": "docker.io/rr/talker:v1.2.3",
                     "status": "running",
                     "reason": "CloudRunning",
                 }
@@ -431,6 +432,7 @@ def device_deployment_model_mock() -> dict[str, Any]:
             "executables_status": {
                 "device_exec": {
                     "name": "device_exec",
+                    "image": "reg.example.com:5000/rr/listener@sha256:abc123",
                     "status": "running",
                     "reason": "DeviceRunning",
                 }
