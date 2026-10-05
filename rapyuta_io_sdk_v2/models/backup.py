@@ -48,7 +48,10 @@ class BackupRun(BaseModel):
 class BackupStatus(BaseModel):
     """Status of a Backup resource."""
 
-    phase: Literal["Pending", "Running", "Ready", "Failed"] | None = Field(default=None)
+    # An on-demand backup ends in Succeeded or Failed; Ready is scheduled-only.
+    phase: Literal["Pending", "Running", "Ready", "Succeeded", "Failed"] | None = Field(
+        default=None
+    )
     message: str | None = Field(default=None)
     # Which stage the current run is on; the per-run detail is in message.
     step: Literal["Verifying", "Recovering", "Uploading"] | None = Field(default=None)

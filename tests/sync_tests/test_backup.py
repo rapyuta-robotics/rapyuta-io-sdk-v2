@@ -3,6 +3,8 @@ import pytest
 from pytest_mock import MockFixture
 
 # ruff: noqa: F811, F401
+import copy
+
 from rapyuta_io_sdk_v2.models import Backup, BackupList
 from tests.data import (
     backup_body,
@@ -102,7 +104,9 @@ def test_delete_backup_success(client, mocker: MockFixture):
     assert response is None
 
 
-def test_get_backup_surfaces_the_current_step(client, backup_model_mock, mocker: MockFixture):
+def test_get_backup_surfaces_the_current_step(
+    client, backup_model_mock, mocker: MockFixture
+):
     mock_get = mocker.patch("httpx.Client.get")
     mock_get.return_value = httpx.Response(status_code=200, json=backup_model_mock)
 
@@ -112,3 +116,18 @@ def test_get_backup_surfaces_the_current_step(client, backup_model_mock, mocker:
     # slow backup from a stuck one.
     assert backup.status.step == "Uploading"
     assert backup.status.phase == "Ready"
+
+
+def test_get_ondemand_backup_succeeded(client, backup_model_mock, mocker: MockFixture):
+    body = copy.deepcopy(backup_model_mock)
+    body["spec"]["type"] = "onDemand"
+    body["spec"].pop("schedule", None)
+    body["status"]["phase"] = "Succeeded"
+
+    mock_get = mocker.patch("httpx.Client.get")
+    mock_get.return_value = httpx.Response(status_code=200, json=body)
+
+    response = client.get_backup(name="backup-mockbackup12345678901")
+
+    assert response.spec.type == "onDemand"
+    assert response.status.phase == "Succeeded"
