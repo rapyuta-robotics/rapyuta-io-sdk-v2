@@ -6,6 +6,8 @@ from rapyuta_io_sdk_v2.models import (
     DatabaseList as DatabaseList,
     Backup as Backup,
     BackupList as BackupList,
+    Restore as Restore,
+    RestoreList as RestoreList,
     Deployment as Deployment,
     DeploymentList as DeploymentList,
     Disk as Disk,
