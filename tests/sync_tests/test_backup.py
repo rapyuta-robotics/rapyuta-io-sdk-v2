@@ -131,3 +131,22 @@ def test_get_ondemand_backup_succeeded(client, backup_model_mock, mocker: MockFi
 
     assert response.spec.type == "onDemand"
     assert response.status.phase == "Succeeded"
+
+
+def test_get_backup_keeps_recover_and_database_guid(
+    client, backup_model_mock, mocker: MockFixture
+):
+    body = copy.deepcopy(backup_model_mock)
+    body["spec"]["databaseGuid"] = "database-mock"
+    body["status"]["latestRun"]["verification"]["recover"] = "Failed"
+
+    mock_get = mocker.patch("httpx.Client.get")
+    mock_get.return_value = httpx.Response(status_code=200, json=body)
+
+    response = client.get_backup(name="backup-mockbackup12345678901")
+    dumped = response.model_dump(by_alias=True, exclude_none=True)
+
+    assert response.spec.database_guid == "database-mock"
+    assert response.status.latest_run.verification.recover == "Failed"
+    assert dumped["status"]["latestRun"]["verification"]["recover"] == "Failed"
+    assert dumped["spec"]["databaseGuid"] == "database-mock"
