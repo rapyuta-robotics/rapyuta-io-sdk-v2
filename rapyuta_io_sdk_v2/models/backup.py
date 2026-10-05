@@ -19,6 +19,7 @@ class BackupSpec(BaseModel):
     # Server-resolved at creation time.
     barman_image: str | None = Field(default=None, alias="barmanImage")
     device_guid: str | None = Field(default=None, alias="deviceGuid")
+    database_guid: str | None = Field(default=None, alias="databaseGuid")
     schedule: str | None = Field(
         default=None, description="Cron schedule (required when type=scheduled)"
     )
@@ -33,6 +34,8 @@ class BackupVerification(BaseModel):
     verify_backup: Literal["Passed", "Failed", "Skipped"] | None = Field(
         default=None, alias="verifyBackup"
     )
+    # Recovering into a temporary cluster: the only leg that proves it restores.
+    recover: Literal["Passed", "Failed", "Skipped"] | None = Field(default=None)
 
 
 class BackupRun(BaseModel):
