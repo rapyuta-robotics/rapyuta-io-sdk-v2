@@ -6,14 +6,21 @@ import io
 import tarfile
 from pathlib import Path, PurePosixPath, PureWindowsPath
 from tempfile import TemporaryDirectory
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from urllib.parse import quote, urljoin
 
 import httpx
 from pydantic import BaseModel, ConfigDict, Field
 
 from rapyuta_io_sdk_v2.apply import Applier, AsyncApplier
+from rapyuta_io_sdk_v2.config import Configuration
 from rapyuta_io_sdk_v2.features import require_dependency
+
+if TYPE_CHECKING:
+    from rapyuta_io_sdk_v2.async_client import AsyncClient
+    from rapyuta_io_sdk_v2.client import Client
+    from rapyuta_io_sdk_v2.models.resource import ResourceModel
+    from rapyuta_io_sdk_v2.resource_operations import ApplyPlan, ApplyReport
 
 DEFAULT_REPOSITORY = (
     "https://rapyuta-robotics.github.io/rapyuta-charts/incubator/index.yaml"
@@ -132,11 +139,10 @@ def _extract(content: bytes, destination: Path, name: str) -> Path:
 class _Repository:
     def __init__(
         self,
-        configuration: Any,
+        configuration: Configuration,
         url: str | None = None,
         *,
         branch: str | None = None,
-        transport: Any = None,
         timeout: float = 30,
     ):
         configuration.features.require("charts")
@@ -149,9 +155,7 @@ class _Repository:
         self.url = url or (
             branch_repository_url(branch) if branch is not None else DEFAULT_REPOSITORY
         )
-        self.transport = transport
         self.timeout = timeout
-        self._owned = transport is None
 
     def _check(self):
         self.configuration.features.require("charts")
@@ -161,10 +165,22 @@ class _Repository:
 class ChartRepository(_Repository):
     """Repository with bounded downloads; caller-owned HTTP clients stay open."""
 
-    def __init__(self, configuration: Any, url: str | None = None, **kwargs):
-        super().__init__(configuration, url, **kwargs)
-        if self.transport is None:
-            self.transport = httpx.Client(timeout=self.timeout, follow_redirects=True)
+    def __init__(
+        self,
+        configuration: Configuration,
+        url: str | None = None,
+        *,
+        branch: str | None = None,
+        transport: httpx.Client | None = None,
+        timeout: float = 30,
+    ):
+        super().__init__(configuration, url, branch=branch, timeout=timeout)
+        self._owned = transport is None
+        self.transport = (
+            transport
+            if transport is not None
+            else httpx.Client(timeout=timeout, follow_redirects=True)
+        )
 
     def _fetch(self, url: str, limit: int) -> bytes:
         self._check()
@@ -199,12 +215,22 @@ class ChartRepository(_Repository):
 
 
 class AsyncChartRepository(_Repository):
-    def __init__(self, configuration: Any, url: str | None = None, **kwargs):
-        super().__init__(configuration, url, **kwargs)
-        if self.transport is None:
-            self.transport = httpx.AsyncClient(
-                timeout=self.timeout, follow_redirects=True
-            )
+    def __init__(
+        self,
+        configuration: Configuration,
+        url: str | None = None,
+        *,
+        branch: str | None = None,
+        transport: httpx.AsyncClient | None = None,
+        timeout: float = 30,
+    ):
+        super().__init__(configuration, url, branch=branch, timeout=timeout)
+        self._owned = transport is None
+        self.transport = (
+            transport
+            if transport is not None
+            else httpx.AsyncClient(timeout=timeout, follow_redirects=True)
+        )
 
     async def _fetch(self, url: str, limit: int) -> bytes:
         self._check()
@@ -238,8 +264,8 @@ class AsyncChartRepository(_Repository):
         await self.aclose()
 
 
-class _Chart:
-    def __init__(self, metadata: ChartMetadata, repository: _Repository):
+class _Chart[RepositoryT: _Repository]:
+    def __init__(self, metadata: ChartMetadata, repository: RepositoryT):
         self.metadata = metadata
         self.repository = repository
         self._temporary: TemporaryDirectory | None = None
@@ -277,7 +303,7 @@ class _Chart:
         self.path = None
 
 
-class Chart(_Chart):
+class Chart(_Chart[ChartRepository]):
     def download(self) -> Path:
         self.repository._check()
         if self.path is None:
@@ -285,20 +311,26 @@ class Chart(_Chart):
             return self._unpack(self.repository._fetch(url, MAX_ARCHIVE_BYTES))
         return self.path
 
-    def _applier(self, client: Any, options: dict) -> Applier:
+    def _applier(self, client: Client, options: dict) -> Applier:
         path = self.download()
         return Applier(client, path / "templates", **self._options(options))
 
-    def render(self, client: Any, **options):
+    def render(self, client: Client, **options: Any) -> list[ResourceModel]:
         return self._applier(client, options).render()
 
-    def plan(self, client: Any, *, operation: str = "apply", **options):
+    def plan(
+        self, client: Client, *, operation: str = "apply", **options: Any
+    ) -> ApplyPlan:
         return self._applier(client, options).plan(operation=operation)
 
-    def apply(self, client: Any, *, dry_run: bool = False, **options):
+    def apply(
+        self, client: Client, *, dry_run: bool = False, **options: Any
+    ) -> ApplyReport:
         return self._applier(client, options).apply(dry_run=dry_run)
 
-    def delete(self, client: Any, *, dry_run: bool = False, **options):
+    def delete(
+        self, client: Client, *, dry_run: bool = False, **options: Any
+    ) -> ApplyReport:
         return self._applier(client, options).delete(dry_run=dry_run)
 
     def __enter__(self):
@@ -308,7 +340,7 @@ class Chart(_Chart):
         self.close()
 
 
-class AsyncChart(_Chart):
+class AsyncChart(_Chart[AsyncChartRepository]):
     async def download(self) -> Path:
         self.repository._check()
         if self.path is None:
@@ -316,20 +348,26 @@ class AsyncChart(_Chart):
             return self._unpack(await self.repository._fetch(url, MAX_ARCHIVE_BYTES))
         return self.path
 
-    async def _applier(self, client: Any, options: dict) -> AsyncApplier:
+    async def _applier(self, client: AsyncClient, options: dict) -> AsyncApplier:
         path = await self.download()
         return AsyncApplier(client, path / "templates", **self._options(options))
 
-    async def render(self, client: Any, **options):
+    async def render(self, client: AsyncClient, **options: Any) -> list[ResourceModel]:
         return (await self._applier(client, options)).render()
 
-    async def plan(self, client: Any, *, operation: str = "apply", **options):
+    async def plan(
+        self, client: AsyncClient, *, operation: str = "apply", **options: Any
+    ) -> ApplyPlan:
         return (await self._applier(client, options)).plan(operation=operation)
 
-    async def apply(self, client: Any, *, dry_run: bool = False, **options):
+    async def apply(
+        self, client: AsyncClient, *, dry_run: bool = False, **options: Any
+    ) -> ApplyReport:
         return await (await self._applier(client, options)).apply(dry_run=dry_run)
 
-    async def delete(self, client: Any, *, dry_run: bool = False, **options):
+    async def delete(
+        self, client: AsyncClient, *, dry_run: bool = False, **options: Any
+    ) -> ApplyReport:
         return await (await self._applier(client, options)).delete(dry_run=dry_run)
 
     async def aclose(self):
