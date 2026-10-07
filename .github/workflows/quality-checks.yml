@@ -35,18 +35,26 @@ jobs:
           "
           uv run --python ${{ matrix.python-version }} pytest tests/ --cov
 
-      - name: Verify core-only imports
+      - name: Verify core-only imports and resource operations
         env:
           UV_PROJECT_ENVIRONMENT: ${{ runner.temp }}/sdk-core
         run: |
           uv sync --python ${{ matrix.python-version }} --no-dev
           uv run --python ${{ matrix.python-version }} --no-dev python -c "
           import importlib.util
-          from rapyuta_io_sdk_v2 import Client, AsyncClient, Configuration
+          import httpx
+          from rapyuta_io_sdk_v2 import Client, AsyncClient, Configuration, Role, Outcome
           from rapyuta_io_sdk_v2.apply import Applier
           from rapyuta_io_sdk_v2.charts import ChartRepository
           from rapyuta_io_sdk_v2.pydantic_source import ConfigTreeSource
           assert importlib.util.find_spec('yaml') is None
           assert importlib.util.find_spec('jinja2') is None
-          print('core-only imports OK')
+          config = Configuration(load_cli_config=False, features={'apply': True})
+          role = Role(metadata={'name': 'reader'}, spec={})
+          def respond(request):
+              return httpx.Response(200, json=role.model_dump(by_alias=True))
+          with httpx.Client(transport=httpx.MockTransport(respond)) as transport:
+              with Client(config, transport=transport) as client:
+                  assert role.apply(client).outcome == Outcome.CREATED
+          print('core-only imports and resource operations OK')
           "

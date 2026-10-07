@@ -127,9 +127,30 @@ class ServiceSettings(BaseSettings):
 
 The source loads when invoked, decodes base64 values and JSON, and nests slash-separated paths. It supports settings aliases, injected clients, and local JSON/YAML exports via `local_file=`. Local exports are wrapped under the file stem: use `key_prefix="service"` with `service.yaml`. Owned clients close after loading; injected clients stay open.
 
+## Resource operations
+
+Resource models inherit from `ResourceModel`, which provides `apply()`, `delete()`, `apply_async()`, and `delete_async()`. Enable `features.apply` to invoke these methods. Already validated resources need only the core SDK dependencies.
+
+```python
+from rapyuta_io_sdk_v2 import Role
+
+operation_config = Configuration(features={"apply": True})
+role = Role(metadata={"name": "reader"}, spec={})
+with Client(operation_config) as client:
+    result = role.apply(client)
+    deletion = role.delete(client)
+
+
+async def apply_role(config):
+    async with AsyncClient(config) as client:
+        return await role.apply_async(client)
+```
+
+Individual operations return a `ResourceResult` containing the outcome, response resource, and error details. Clients are explicit arguments and remain owned by the caller. Operations use a copy of the input model, preserving its data. Resource-specific workflows implement lookup, create/update decisions, deletion, and readiness; sync and async methods execute the same workflow.
+
 ## Apply
 
-Enable `features.apply` and install `[apply]` to use the CLI-derived operations layer:
+Enable `features.apply` and install `[apply]` to render manifests and coordinate multiple resource operations:
 
 ```python
 from rapyuta_io_sdk_v2.apply import Applier
@@ -147,7 +168,7 @@ Inputs can be typed resources, mappings, YAML/JSON files, directories, or globs.
 
 Supported kinds: Organization, Project, Package, Deployment, Disk, Network, StaticRoute, Secret, UserGroup, Role, RoleBinding, and ServiceAccount. Package identity includes its version. Apply orders dependencies first; deletion reverses that order and respects `rapyuta.io/deletionPolicy=retain`. Dependencies outside the submitted manifests refer to existing resources. Deployment dependencies marked `wait` receive readiness checks.
 
-Execution uses at most six workers by default. Failure stops new work after the current batch settles, and the report includes failed and skipped resources. `ResourceHandler` supports custom resource workflows without adding network behavior to data models. SOPS execution, Ansible filters, and legacy v1 Device operations remain outside the SDK.
+Execution uses at most six workers by default. Failure stops new work after the current batch settles, and the report includes failed and skipped resources. After rendering and validation, `Applier` invokes the resource models' operations. Custom resources subclass `ResourceModel`, define their workflow, and register through `resource_models={"MyKind": MyResource}`. SOPS execution, Ansible filters, and legacy v1 Device operations remain outside the SDK.
 
 `AsyncApplier` provides awaited `apply()` and `delete()`; local `render()` and `plan()` remain synchronous.
 

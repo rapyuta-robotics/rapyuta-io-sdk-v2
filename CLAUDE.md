@@ -36,11 +36,12 @@ This is a Python SDK for the rapyuta.io platform v2 API (Python 3.13+, managed w
 `rapyuta_io_sdk_v2/models/` — Pydantic models following Kubernetes conventions with `kind`, `metadata`, `spec`, `status` fields. Key base classes:
 
 - `SDKModel` — accepts snake_case Python fields and explicit API aliases
+- `ResourceModel` — shared sync/async operations, feature checks, identity, dependencies and resource workflow execution
 - `BaseObject` — adds `api_version` (wire alias `apiVersion`)
 - `BaseMetadata` — adds `name`, `guid`, `labels`, timestamps, creator, organization/project refs
 - `BaseList[T]` — generic paginated list with `metadata.continue_` cursor token
 
-Resource models inherit from these bases. Field aliases handle snake_case Python ↔ camelCase API translation.
+Resource models inherit from these bases. Field aliases handle snake_case Python ↔ camelCase API translation. Resource-specific workflows live on the models; clients are passed to operations explicitly and are never model fields. Direct operations require the Apply feature flag and use core dependencies.
 
 ### Configuration
 
@@ -52,7 +53,8 @@ Resource models inherit from these bases. Field aliases handle snake_case Python
 - `pagination.py` — `Paginator`/`AsyncPaginator` collect all items or stream typed items/pages
 - `pydantic_source/` — optional, lazy ConfigTree settings source
 - `features.py` — validated runtime flags for ConfigTree source, Apply, and Charts; dependencies are package extras
-- `apply/` — typed resource handlers, rendering, dependency planning, sync/async execution and structured reports
+- `resource_operations.py` — operation steps, results, reports and errors using core dependencies, shared by resource models and Apply
+- `apply/` — rendering, resource model registration, dependency planning, concurrent model operation execution and structured reports
 - `charts/` — chart repositories, bounded downloads, safe archives and Apply integration
 
 ### Tests
