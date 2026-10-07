@@ -11,12 +11,13 @@ from __future__ import annotations
 import re
 from typing import Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import Field, field_validator
 
 from .utils import BaseList, BaseMetadata, BaseObject
+from rapyuta_io_sdk_v2.models.utils import SDKModel
 
 
-class StaticRouteSpec(BaseModel):
+class StaticRouteSpec(SDKModel):
     """Specification for StaticRoute resource."""
 
     url: str | None = Field(default=None, description="URL for the static route")
@@ -42,7 +43,7 @@ class StaticRouteSpec(BaseModel):
         return v
 
 
-class StaticRouteStatus(BaseModel):
+class StaticRouteStatus(SDKModel):
     """Status for StaticRoute resource."""
 
     status: Literal["Available", "Unavailable"] | None = Field(

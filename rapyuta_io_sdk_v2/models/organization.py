@@ -2,17 +2,18 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import Field
 
 from .utils import BaseMetadata, BaseObject, Subject
+from rapyuta_io_sdk_v2.models.utils import SDKModel
 
 
-class OrganizationMember(BaseModel):
+class OrganizationMember(SDKModel):
     subject: Subject
-    roleNames: list[str]
+    role_names: list[str] = Field(alias="roleNames")
 
 
-class OrganizationSpec(BaseModel):
+class OrganizationSpec(SDKModel):
     members: list[OrganizationMember]
 
 

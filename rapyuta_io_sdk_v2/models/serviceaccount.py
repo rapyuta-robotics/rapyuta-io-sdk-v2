@@ -10,10 +10,12 @@ from __future__ import annotations
 from typing import Literal
 from datetime import datetime
 
-from pydantic import BaseModel, Field
+from pydantic import Field
 from pydantic import field_validator
 
 from rapyuta_io_sdk_v2.models.utils import (
+    resource_key,
+    SDKModel,
     BaseList,
     BaseMetadata,
     BaseObject,
@@ -21,12 +23,12 @@ from rapyuta_io_sdk_v2.models.utils import (
 )
 
 
-class ServiceAccountBinding(BaseModel):
+class ServiceAccountBinding(SDKModel):
     domain: Domain
     role_names: list[str] = Field(default_factory=list, alias="roleNames")
 
 
-class ServiceAccountSpec(BaseModel):
+class ServiceAccountSpec(SDKModel):
     description: str | None = None
     roles: list[ServiceAccountBinding] | None = None
 
@@ -49,15 +51,15 @@ class ServiceAccount(BaseObject):
                     role_binding.domain.kind is not None
                     and role_binding.domain.name is not None
                 ):
-                    domain = (
-                        f"{role_binding.domain.kind.lower()}:{role_binding.domain.name}"
+                    domain = resource_key(
+                        role_binding.domain.kind.lower(), role_binding.domain.name
                     )
                     dependencies.append(domain)
 
                 # Add role dependencies
                 if role_binding.role_names is not None:
                     for role in role_binding.role_names:
-                        dependencies.append(f"role:{role}")
+                        dependencies.append(resource_key("role", role))
 
         return dependencies
 
@@ -68,7 +70,7 @@ class ServiceAccountList(BaseList[ServiceAccount]):
     pass
 
 
-class ServiceAccountToken(BaseModel):
+class ServiceAccountToken(SDKModel):
     owner: str | None = None
     expiry_at: datetime | None = Field(default=None, alias="expiry_at")
 
@@ -80,7 +82,7 @@ class ServiceAccountToken(BaseModel):
         return v
 
 
-class ServiceAccountTokenInfo(BaseModel):
+class ServiceAccountTokenInfo(SDKModel):
     id: int | None = None
     token: str | None = None
     expiry_at: datetime | None = Field(default=None, alias="expiry_at")

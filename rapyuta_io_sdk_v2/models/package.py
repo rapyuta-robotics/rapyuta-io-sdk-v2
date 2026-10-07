@@ -8,11 +8,13 @@ incorrect fields.
 
 from __future__ import annotations
 
-from typing import Dict, Literal
+from typing import Literal
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import Field, field_validator, model_validator
 
 from rapyuta_io_sdk_v2.models.utils import (
+    resource_key,
+    SDKModel,
     Architecture,
     BaseList,
     BaseMetadata,
@@ -35,11 +37,11 @@ EndpointProto = Literal[
 ]
 
 
-class StringMap(Dict[str, str]):
+class StringMap(dict[str, str]):
     pass
 
 
-class PullSecret(BaseModel):
+class PullSecret(SDKModel):
     depends: SecretDepends | None = None
 
     @field_validator("depends", mode="before")
@@ -50,42 +52,45 @@ class PullSecret(BaseModel):
         return value
 
 
-class HttpHeader(BaseModel):
+class HttpHeader(SDKModel):
     name: str
     value: str
 
 
-class HttpGet(BaseModel):
+class HttpGet(SDKModel):
     path: str
     port: int
     host: str | None = Field(default=None)
     scheme: str | None = Field(default="HTTP")
-    httpHeaders: list[HttpHeader] | None = Field(default=None)
+    http_headers: list[HttpHeader] | None = Field(default=None, alias="httpHeaders")
 
 
-class LivenessProbe(BaseModel):
-    httpGet: HttpGet | None = None
+class LivenessProbe(SDKModel):
+    http_get: HttpGet | None = Field(default=None, alias="httpGet")
     exec: dict | None = None
-    tcpSocket: dict | None = None
-    initialDelaySeconds: int | None = Field(default=None, ge=1)
-    timeoutSeconds: int | None = Field(default=None, ge=10)
-    periodSeconds: int | None = Field(default=None, ge=1)
-    successThreshold: int | None = Field(default=None, ge=1)
-    failureThreshold: int | None = Field(default=None, ge=1)
+    tcp_socket: dict | None = Field(default=None, alias="tcpSocket")
+    initial_delay_seconds: int | None = Field(
+        default=None, ge=1, alias="initialDelaySeconds"
+    )
+    timeout_seconds: int | None = Field(default=None, ge=10, alias="timeoutSeconds")
+    period_seconds: int | None = Field(default=None, ge=1, alias="periodSeconds")
+    success_threshold: int | None = Field(default=None, ge=1, alias="successThreshold")
+    failure_threshold: int | None = Field(default=None, ge=1, alias="failureThreshold")
 
 
-class EnvironmentSpec(BaseModel):
+class EnvironmentSpec(SDKModel):
     name: str
     description: str | None = None
     default: str | None = None
-    valueFrom: ValueFrom | None = Field(
+    value_from: ValueFrom | None = Field(
         default=None,
         description="Populate the env var's value from a Secret key reference",
+        alias="valueFrom",
     )
     exposed: bool | None = Field(default=None)
-    exposedName: str | None = None
+    exposed_name: str | None = Field(default=None, alias="exposedName")
 
-    @field_validator("exposedName")
+    @field_validator("exposed_name")
     @classmethod
     def validate_exposed_name(cls, v, info):
         if info.data.get("exposed") and not v:
@@ -93,18 +98,18 @@ class EnvironmentSpec(BaseModel):
         return v
 
 
-class Limits(BaseModel):
+class Limits(SDKModel):
     cpu: float | None = Field(default=None, ge=0, le=256)
     memory: float | int | None = Field(default=None, ge=0)
 
 
-class DockerSpec(BaseModel):
+class DockerSpec(SDKModel):
     image: str
-    imagePullPolicy: str | None = Field(default="IfNotPresent")
+    image_pull_policy: str | None = Field(default="IfNotPresent", alias="imagePullPolicy")
     pull_secret: PullSecret | None = Field(default=None, alias="pullSecret")
 
 
-class Executable(BaseModel):
+class Executable(SDKModel):
     name: str | None = None
     type: Literal["docker", "preInstalled"] = Field(default="docker")
     docker: DockerSpec | None = None
@@ -112,7 +117,7 @@ class Executable(BaseModel):
     run_as_bash: bool = Field(default=False, alias="runAsBash")
     args: list[str] | None = None
     limits: Limits | None = None
-    livenessProbe: LivenessProbe | None = None
+    liveness_probe: LivenessProbe | None = Field(default=None, alias="livenessProbe")
     uid: int | None = None
     gid: int | None = None
 
@@ -136,24 +141,24 @@ class Executable(BaseModel):
         return self
 
 
-class EndpointSpec(BaseModel):
+class EndpointSpec(SDKModel):
     name: str
     type: EndpointProto | None = None
     port: int | None = None
-    targetPort: int | None = None
-    portRange: str | None = None
+    target_port: int | None = Field(default=None, alias="targetPort")
+    port_range: str | None = Field(default=None, alias="portRange")
 
 
-class DeviceComponentInfoSpec(BaseModel):
+class DeviceComponentInfoSpec(SDKModel):
     arch: Architecture | None = Field(default="amd64")
     restart: RestartPolicy | None = Field(default="always")
 
 
-class CloudComponentInfoSpec(BaseModel):
+class CloudComponentInfoSpec(SDKModel):
     replicas: int | None = Field(default=1)
 
 
-class RosEndpointSpec(BaseModel):
+class RosEndpointSpec(SDKModel):
     type: str
     name: str
     compression: bool | None = Field(default=None)
@@ -163,21 +168,25 @@ class RosEndpointSpec(BaseModel):
     timeout: int | float | None = None
 
 
-class RosComponentSpec(BaseModel):
+class RosComponentSpec(SDKModel):
     enabled: bool | None = Field(default=False)
     version: Literal["kinetic", "melodic", "noetic", "foxy"] | None = None
-    rosEndpoints: list[RosEndpointSpec] | None = None
+    ros_endpoints: list[RosEndpointSpec] | None = Field(
+        default=None, alias="rosEndpoints"
+    )
 
 
-class PackageSpec(BaseModel):
+class PackageSpec(SDKModel):
     runtime: Runtime | None = None
     executables: list[Executable] | None = None
-    environmentVars: list[EnvironmentSpec] | None = None
+    environment_vars: list[EnvironmentSpec] | None = Field(
+        default=None, alias="environmentVars"
+    )
     ros: RosComponentSpec | None = None
     endpoints: list[EndpointSpec] | None = None
     device: DeviceComponentInfoSpec | None = None
     cloud: CloudComponentInfoSpec | None = None
-    hostPID: bool | None = None
+    host_pid: bool | None = Field(default=None, alias="hostPID")
 
     @model_validator(mode="after")
     @staticmethod
@@ -206,10 +215,10 @@ class PackageMetadata(BaseMetadata):
     description: str | None = Field(default=None)
 
 
-class Package(BaseModel):
+class Package(SDKModel):
     """Package model."""
 
-    apiVersion: str | None = Field(default="api.rapyuta.io/v2")
+    api_version: str | None = Field(default="api.rapyuta.io/v2", alias="apiVersion")
     kind: Literal["Package"] = Field(default="Package")
     metadata: PackageMetadata
     spec: PackageSpec
@@ -224,7 +233,7 @@ class Package(BaseModel):
                         exec.docker.pull_secret.depends, "name_or_guid", None
                     )
                     if secret is not None:
-                        dependencies.append(f"secret:{secret}")
+                        dependencies.append(resource_key("secret", secret))
 
         if dependencies == []:
             return None

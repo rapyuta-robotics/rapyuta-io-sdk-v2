@@ -8,28 +8,34 @@ incorrect fields.
 
 from __future__ import annotations
 
-from typing import Literal
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from typing import Any, Literal
+from pydantic import ConfigDict, Field, RootModel, model_validator
 
-from rapyuta_io_sdk_v2.models.utils import BaseList, BaseMetadata, BaseObject, Subject
+from rapyuta_io_sdk_v2.models.utils import (
+    SDKModel,
+    BaseList,
+    BaseMetadata,
+    BaseObject,
+    Subject,
+)
 
 
-class ProjectMember(BaseModel):
+class ProjectMember(SDKModel):
     subject: Subject
     role_names: list[str] | None = Field(default=None, alias="roleNames")
     implicit_role_names: list[str] | None = Field(default=None, alias="implicitRoleNames")
 
 
-class FeaturesVPN(BaseModel):
+class FeaturesVPN(SDKModel):
     enabled: bool = Field(default=False)
     subnets: list[str] | None = None
 
 
-class FeaturesTracing(BaseModel):
+class FeaturesTracing(SDKModel):
     enabled: bool = Field(default=False)
 
 
-class FeaturesDockerCache(BaseModel):
+class FeaturesDockerCache(SDKModel):
     enabled: bool = Field(default=False)
     proxy_device: str | None = Field(default=None, alias="proxyDevice")
     proxy_interface: str | None = Field(default=None, alias="proxyInterface")
@@ -65,7 +71,7 @@ class FeaturesDockerCache(BaseModel):
         return self
 
 
-class Features(BaseModel):
+class Features(SDKModel):
     vpn: FeaturesVPN = Field(default_factory=FeaturesVPN)
     tracing: FeaturesTracing = Field(default_factory=FeaturesTracing)
     docker_cache: FeaturesDockerCache = Field(
@@ -73,12 +79,12 @@ class Features(BaseModel):
     )
 
 
-class ProjectSpec(BaseModel):
+class ProjectSpec(SDKModel):
     members: list[ProjectMember] | None = None
     features: Features = Field(default_factory=Features)
 
 
-class ProjectStatus(BaseModel):
+class ProjectStatus(SDKModel):
     status: Literal["Pending", "Error", "Success", "Deleting", "Unknown"]
     error: str | None = None
     vpn: Literal["Success", "Error", "Disabled", "Pending"] | None = None
@@ -100,3 +106,7 @@ class ProjectList(BaseList[Project]):
     """List of Project resources."""
 
     pass
+
+
+class ProjectOwnership(RootModel[dict[str, Any]]):
+    """Project owner endpoint payload, retained without assuming its wire shape."""

@@ -10,9 +10,11 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import Field, model_validator
 
 from rapyuta_io_sdk_v2.models.utils import (
+    resource_key,
+    SDKModel,
     BaseList,
     BaseMetadata,
     BaseObject,
@@ -21,7 +23,7 @@ from rapyuta_io_sdk_v2.models.utils import (
 )
 
 
-class DockerSpec(BaseModel):
+class DockerSpec(SDKModel):
     registry: str = Field(
         default="https://index.docker.io/v1/", description="Docker registry URL"
     )
@@ -36,7 +38,7 @@ class DockerSpecCreate(DockerSpec):
 SecretType = Literal["Docker", "Opaque"]
 
 
-class SecretSpec(BaseModel):
+class SecretSpec(SDKModel):
     """Specification for Secret resource."""
 
     type: SecretType = Field(
@@ -59,7 +61,7 @@ class SecretSpec(BaseModel):
     depends: DeviceDepends | None = None
 
 
-class SecretSpecCreate(BaseModel):
+class SecretSpecCreate(SDKModel):
     type: SecretType = Field(
         description="Type of the secret: Docker or Opaque",
     )
@@ -93,9 +95,7 @@ class SecretCreate(Secret):
                 )
         elif spec.type == "Opaque":
             if not spec.data:
-                raise ValueError(
-                    "'spec.data' is required when creating an Opaque secret"
-                )
+                raise ValueError("'spec.data' is required when creating an Opaque secret")
         return self
 
     def list_dependencies(self) -> list[str] | None:
@@ -106,7 +106,7 @@ class SecretCreate(Secret):
 
         if self.spec.depends is not None:
             device_name = self.spec.depends.name_or_guid
-            return [f"device:{device_name}"]
+            return [resource_key("device", device_name)]
 
         return None
 

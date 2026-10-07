@@ -10,14 +10,14 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import ConfigDict, Field
 
-from rapyuta_io_sdk_v2.models.utils import BaseList, BaseMetadata, BaseObject
+from rapyuta_io_sdk_v2.models.utils import SDKModel, BaseList, BaseMetadata, BaseObject
 
 DEFAULT_LOG_UPLOAD_BANDWIDTH = 1 * 1024 * 1024
 
 
-class FileUploadSpec(BaseModel):
+class FileUploadSpec(SDKModel):
     """Specification for FileUpload resource."""
 
     model_config = ConfigDict(populate_by_name=True)
@@ -71,7 +71,7 @@ class FileUploadSpec(BaseModel):
     )
 
 
-class FileUploadStatus(BaseModel):
+class FileUploadStatus(SDKModel):
     """Status for FileUpload resource."""
 
     model_config = ConfigDict(populate_by_name=True)
@@ -104,7 +104,7 @@ class FileUploadStatus(BaseModel):
     )
 
 
-class SharedURLSpec(BaseModel):
+class SharedURLSpec(SDKModel):
     """Specification for SharedURL resource."""
 
     model_config = ConfigDict(populate_by_name=True)
@@ -162,3 +162,8 @@ class FileUploadList(BaseList[FileUpload]):
     """List of file uploads using BaseList."""
 
     pass
+
+
+class FileDownloadMetadata(SDKModel):
+    model_config = ConfigDict(extra="allow")
+    url: str

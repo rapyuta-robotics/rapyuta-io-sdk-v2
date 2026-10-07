@@ -10,12 +10,18 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import ConfigDict, Field, field_validator
 
-from rapyuta_io_sdk_v2.models.utils import BaseList, BaseMetadata, BaseObject, Runtime
+from rapyuta_io_sdk_v2.models.utils import (
+    SDKModel,
+    BaseList,
+    BaseMetadata,
+    BaseObject,
+    Runtime,
+)
 
 
-class DiskSpec(BaseModel):
+class DiskSpec(SDKModel):
     """Specification for Disk resource."""
 
     runtime: Runtime = Field(
@@ -24,12 +30,12 @@ class DiskSpec(BaseModel):
     capacity: int = Field(multiple_of=2, ge=4, le=512)
 
 
-class DiskBound(BaseModel):
+class DiskBound(SDKModel):
     deployment_guid: str | None
     deployment_name: str | None
 
 
-class DiskStatus(BaseModel):
+class DiskStatus(SDKModel):
     status: Literal["Available", "Bound", "Released", "Failed", "Pending"]
     capacity_used: float | None = Field(
         default=None,

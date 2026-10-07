@@ -2,18 +2,16 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel
-
-from rapyuta_io_sdk_v2.models.utils import BaseList, BaseMetadata, BaseObject
+from rapyuta_io_sdk_v2.models.utils import SDKModel, BaseList, BaseMetadata, BaseObject
 
 
-class Rule(BaseModel):
+class Rule(SDKModel):
     resource: str
     instances: list[str] | None = None
     actions: list[str] | None = None
 
 
-class RoleSpec(BaseModel):
+class RoleSpec(SDKModel):
     description: str | None = None
     rules: list[Rule] | None = None
 

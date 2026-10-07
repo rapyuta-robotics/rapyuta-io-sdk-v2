@@ -10,9 +10,11 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, AliasChoices
+from pydantic import ConfigDict, Field, field_validator, AliasChoices
 
 from rapyuta_io_sdk_v2.models.utils import (
+    resource_key,
+    SDKModel,
     Architecture,
     BaseList,
     BaseMetadata,
@@ -21,17 +23,17 @@ from rapyuta_io_sdk_v2.models.utils import (
 )
 
 
-class RabbitMQCreds(BaseModel):
-    defaultUser: str
-    defaultPassword: str
+class RabbitMQCreds(SDKModel):
+    default_user: str = Field(alias="defaultUser")
+    default_password: str = Field(alias="defaultPassword")
 
 
-class ResourceLimits(BaseModel):
+class ResourceLimits(SDKModel):
     cpu: float = Field(..., multiple_of=0.025)
     memory: int = Field(..., multiple_of=128)
 
 
-class Depends(BaseModel):
+class Depends(SDKModel):
     kind: Literal["Device"] | None = Field(default="Device")
     name_or_guid: str = Field(
         validation_alias=AliasChoices("nameOrGUID", "nameOrGuid"),
@@ -39,22 +41,24 @@ class Depends(BaseModel):
     )
 
 
-class DiscoveryServerData(BaseModel):
-    serverID: int | None = None
-    serverPort: int | None = None
+class DiscoveryServerData(SDKModel):
+    server_id: int | None = Field(default=None, alias="serverID")
+    server_port: int | None = Field(default=None, alias="serverPort")
 
 
-class NetworkSpec(BaseModel):
+class NetworkSpec(SDKModel):
     type: Literal["routed", "native"]
-    rosDistro: Literal["melodic", "kinetic", "noetic", "foxy"]
+    ros_distro: Literal["melodic", "kinetic", "noetic", "foxy"] = Field(alias="rosDistro")
     runtime: Runtime
-    discoveryServer: DiscoveryServerData | None = None
-    resourceLimits: ResourceLimits | None = None
+    discovery_server: DiscoveryServerData | None = Field(
+        default=None, alias="discoveryServer"
+    )
+    resource_limits: ResourceLimits | None = Field(default=None, alias="resourceLimits")
     depends: Depends | None = Field(default=None)
-    networkInterface: str | None = None
-    restartPolicy: RestartPolicy | None = None
+    network_interface: str | None = Field(default=None, alias="networkInterface")
+    restart_policy: RestartPolicy | None = Field(default=None, alias="restartPolicy")
     architecture: Architecture | None = None
-    rabbitMQCreds: RabbitMQCreds | None = None
+    rabbit_mq_creds: RabbitMQCreds | None = Field(default=None, alias="rabbitMQCreds")
 
     # Needed as sometimes in result json depends comes as empty JSON
     # For e.g., depends: {}
@@ -66,18 +70,18 @@ class NetworkSpec(BaseModel):
         return v
 
 
-class NetworkStatus(BaseModel):
+class NetworkStatus(SDKModel):
     phase: str
     status: str
-    errorCodes: list[str] | None = None
+    error_codes: list[str] | None = Field(default=None, alias="errorCodes")
 
 
-class Network(BaseModel):
+class Network(SDKModel):
     """Network model."""
 
     model_config = ConfigDict(extra="forbid")
 
-    apiVersion: str | None = None
+    api_version: str | None = Field(default=None, alias="apiVersion")
     kind: str | None = None
     metadata: BaseMetadata | None = None
     spec: NetworkSpec | None = None
@@ -86,8 +90,8 @@ class Network(BaseModel):
     def list_dependencies(self) -> list[str]:
         dependencies: list[str] = []
 
-        if self.spec.runtime == "device":
-            dependencies.append(f"device:{self.spec.depends.name_or_guid}")
+        if self.spec and self.spec.runtime == "device" and self.spec.depends:
+            dependencies.append(resource_key("device", self.spec.depends.name_or_guid))
 
         if dependencies == []:
             return None
