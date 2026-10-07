@@ -1,7 +1,7 @@
 [project]
 name = "rapyuta-io-sdk-v2"
 dynamic = ["version"]
-description = "Python SDK for rapyuta.io v2 APIs"
+description = "Python SDK for rapyuta.io APIs"
 dependencies = [
     "httpx>=0.27.2",
     "pydantic>=2.11",
@@ -12,6 +12,7 @@ license = { file = "LICENSE" }
 requires-python = ">=3.13"
 
 [project.optional-dependencies]
+parameters = ["pyyaml>=6.0.2"]
 configtree = ["pyyaml>=6.0.2"]
 apply = ["pyyaml>=6.0.2", "jinja2>=3.1"]
 charts = ["pyyaml>=6.0.2", "jinja2>=3.1"]

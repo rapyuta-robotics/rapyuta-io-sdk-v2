@@ -76,6 +76,7 @@ class Configuration(BaseSettings):
     organization_short_id: str | None = None
     environment: str = "ga"
     v2_api_host: str | None = None
+    core_api_host: str | None = None
     rip_host: str | None = None
     features: FeatureFlags = Field(default_factory=FeatureFlags)
     config_file: Path | None = Field(default=None, exclude=True)
@@ -118,7 +119,7 @@ class Configuration(BaseSettings):
             raise ValueError("invalid environment")
         return value
 
-    @field_validator("v2_api_host", "rip_host", mode="before")
+    @field_validator("v2_api_host", "core_api_host", "rip_host", mode="before")
     @classmethod
     def normalize_host(cls, value):
         if isinstance(value, str):
@@ -134,6 +135,17 @@ class Configuration(BaseSettings):
         if self.environment == "ga":
             return "https://api.rapyuta.io"
         return f"https://{self.environment}api.{STAGING_ENVIRONMENT_SUBDOMAIN}"
+
+    @property
+    def resolved_core_api_host(self) -> str:
+        """Server for the legacy Parameter and Device Management APIs."""
+        if self.core_api_host:
+            return self.core_api_host
+        if self.environment == "local":
+            return os.getenv("LOCAL_CORE_API_HOST") or "http://apiserver"
+        if self.environment == "ga":
+            return "https://gaapiserver.apps.okd4v2.prod.rapyuta.io"
+        return f"https://{self.environment}apiserver.{STAGING_ENVIRONMENT_SUBDOMAIN}"
 
     @property
     def resolved_rip_host(self) -> str:

@@ -147,3 +147,28 @@ from .rolebinding import BulkRoleBindingResponse as BulkRoleBindingResponse
 from .fileupload import FileDownloadMetadata as FileDownloadMetadata
 
 from .resource import ResourceModel as ResourceModel
+
+from .parameter import (
+    ParameterNode as ParameterNode,
+    ParameterBlob as ParameterBlob,
+    ParameterBlobList as ParameterBlobList,
+)
+
+from .device import (
+    Device as Device,
+    DeviceCreate as DeviceCreate,
+    DeviceCreateResponse as DeviceCreateResponse,
+    DeviceArch as DeviceArch,
+    DeviceConfigVariable as DeviceConfigVariable,
+    DeviceConfigVariableCreate as DeviceConfigVariableCreate,
+    DeviceConfigVariableUpdate as DeviceConfigVariableUpdate,
+    DeviceLabel as DeviceLabel,
+    DeviceLabelCreate as DeviceLabelCreate,
+    DeviceLabelUpdate as DeviceLabelUpdate,
+    DeviceCommand as DeviceCommand,
+    DeviceCommandResponse as DeviceCommandResponse,
+    DeviceDaemonPatch as DeviceDaemonPatch,
+    DeviceActionResponse as DeviceActionResponse,
+    DeviceApplyParameters as DeviceApplyParameters,
+    DeviceSelectionQuery as DeviceSelectionQuery,
+)

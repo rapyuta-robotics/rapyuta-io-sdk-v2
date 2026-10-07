@@ -513,6 +513,9 @@ charts = [
 configtree = [
     { name = "pyyaml" },
 ]
+parameters = [
+    { name = "pyyaml" },
+]
 
 [package.dev-dependencies]
 dev = [
@@ -535,8 +538,9 @@ requires-dist = [
     { name = "pyyaml", marker = "extra == 'apply'", specifier = ">=6.0.2" },
     { name = "pyyaml", marker = "extra == 'charts'", specifier = ">=6.0.2" },
     { name = "pyyaml", marker = "extra == 'configtree'", specifier = ">=6.0.2" },
+    { name = "pyyaml", marker = "extra == 'parameters'", specifier = ">=6.0.2" },
 ]
-provides-extras = ["apply", "charts", "configtree"]
+provides-extras = ["apply", "charts", "configtree", "parameters"]
 
 [package.metadata.requires-dev]
 dev = [
