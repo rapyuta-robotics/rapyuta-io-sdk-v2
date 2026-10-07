@@ -9,9 +9,9 @@ incorrect fields.
 from __future__ import annotations
 
 from typing import Literal
-from pydantic import BaseModel, Field
+from pydantic import Field
 
-from rapyuta_io_sdk_v2.models.utils import BaseMetadata
+from rapyuta_io_sdk_v2.models.utils import SDKModel, BaseMetadata
 
 
 # --- Daemon Status Types ---
@@ -21,7 +21,7 @@ DaemonStatusType = Literal[
 
 
 # --- Configuration Models ---
-class TracingConfig(BaseModel):
+class TracingConfig(SDKModel):
     """Tracing configuration for daemons."""
 
     enable: bool = Field(description="Enable tracing")
@@ -30,7 +30,7 @@ class TracingConfig(BaseModel):
     )
 
 
-class AuthConfig(BaseModel):
+class AuthConfig(SDKModel):
     """Authentication configuration for pull secrets."""
 
     # This is a simplified AuthConfig for daemon pull secrets
@@ -40,7 +40,7 @@ class AuthConfig(BaseModel):
     registry: str | None = Field(default=None, description="Registry URL")
 
 
-class VPNConfig(BaseModel):
+class VPNConfig(SDKModel):
     """VPN configuration for daemons."""
 
     enable: bool = Field(description="Enable VPN")
@@ -52,7 +52,7 @@ class VPNConfig(BaseModel):
     advertise_routes: str | None = Field(default=None, description="Routes to advertise")
 
 
-class DockerProxyConfig(BaseModel):
+class DockerProxyConfig(SDKModel):
     """Docker proxy configuration."""
 
     registry: str | None = Field(default=None, description="Registry URL")
@@ -62,16 +62,18 @@ class DockerProxyConfig(BaseModel):
     password: str | None = Field(
         default=None, description="Password for proxy authentication"
     )
-    dataDirectory: str | None = Field(default=None, description="Data directory path")
+    data_directory: str | None = Field(
+        default=None, description="Data directory path", alias="dataDirectory"
+    )
 
 
-class DockerMirrorConfig(BaseModel):
+class DockerMirrorConfig(SDKModel):
     """Docker mirror configuration."""
 
     url: str | None = Field(default=None, description="Mirror URL")
 
 
-class DockerCacheConfig(BaseModel):
+class DockerCacheConfig(SDKModel):
     """Docker cache configuration for daemons."""
 
     enable: bool = Field(description="Enable Docker cache")
@@ -84,7 +86,7 @@ class DockerCacheConfig(BaseModel):
 
 
 # --- Daemon Specification ---
-class DaemonSpec(BaseModel):
+class DaemonSpec(SDKModel):
     """Specification for Daemon resource."""
 
     tracing_config: TracingConfig | None = Field(
@@ -100,7 +102,7 @@ class DaemonSpec(BaseModel):
 
 
 # --- Daemon Status ---
-class DaemonStatus(BaseModel):
+class DaemonStatus(SDKModel):
     """Status information for a daemon."""
 
     enable: bool = Field(description="Whether daemon is enabled or not")
@@ -123,13 +125,14 @@ class DaemonStatus(BaseModel):
 
 
 # --- Main Daemon Model ---
-class Daemon(BaseModel):
+class Daemon(SDKModel):
     """Daemon model."""
 
     # TypeMeta fields (inline)
-    apiVersion: str | None = Field(
+    api_version: str | None = Field(
         default="api.rapyuta.io/v2",
         description="APIVersion defines the versioned schema of this representation of an object",
+        alias="apiVersion",
     )
     kind: str = Field(
         default="Daemon",

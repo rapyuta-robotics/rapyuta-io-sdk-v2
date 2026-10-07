@@ -1,21 +1,37 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Generic, Literal, TypeVar
+from typing import Any, Literal
 
-from pydantic import AliasChoices, BaseModel, Field, field_validator, model_validator
+from pydantic import (
+    AliasChoices,
+    ConfigDict,
+    Field,
+    field_validator,
+    model_validator,
+)
 
-# Type variable for generic list items
-T = TypeVar("T")
+from .base import SDKModel as SDKModel
+from .resource import ResourceModel
 
 
-class BaseObject(BaseModel):
+def resource_key(kind: str, name: str, version: str | None = None) -> str:
+    """Canonical resource and dependency identity, including Package version."""
+    normalized_kind = kind.lower()
+    if normalized_kind == "package":
+        if not version:
+            raise ValueError("Package identity requires a version")
+        return f"{normalized_kind}:{name}:{version}"
+    return f"{normalized_kind}:{name}"
+
+
+class BaseObject(ResourceModel):
     api_version: Literal["api.rapyuta.io/v2", "apiextensions.rapyuta.io/v1"] = Field(
         default="api.rapyuta.io/v2", alias="apiVersion"
     )
 
 
-class BaseMetadata(BaseModel):
+class BaseMetadata(SDKModel):
     """Base metadata class containing common fields across all resource types.
 
     Based on server ObjectMeta struct that holds all the meta information
@@ -29,14 +45,22 @@ class BaseMetadata(BaseModel):
     guid: str | None = Field(default=None, description="GUID of the resource")
 
     # Project and Organization information
-    projectGUID: str | None = Field(default=None, description="Project GUID")
-    organizationGUID: str | None = Field(default=None, description="Organization GUID")
-    organizationCreatorGUID: str | None = Field(
-        default=None, description="Organization creator GUID"
+    project_guid: str | None = Field(
+        default=None, description="Project GUID", alias="projectGUID"
+    )
+    organization_guid: str | None = Field(
+        default=None, description="Organization GUID", alias="organizationGUID"
+    )
+    organization_creator_guid: str | None = Field(
+        default=None,
+        description="Organization creator GUID",
+        alias="organizationCreatorGUID",
     )
 
     # Creator information
-    creatorGUID: str | None = Field(default=None, description="Creator GUID")
+    creator_guid: str | None = Field(
+        default=None, description="Creator GUID", alias="creatorGUID"
+    )
 
     # Labels are key-value pairs associated with the resource
     labels: dict[str, str] | None = Field(
@@ -47,11 +71,17 @@ class BaseMetadata(BaseModel):
     region: str | None = Field(default=None, description="Region")
 
     # Timestamps
-    createdAt: str | None = Field(default=None, description="Time of resource creation")
-    updatedAt: str | None = Field(default=None, description="Time of resource update")
-    deletedAt: str | None = Field(default=None, description="Time of resource deletion")
+    created_at: str | None = Field(
+        default=None, description="Time of resource creation", alias="createdAt"
+    )
+    updated_at: str | None = Field(
+        default=None, description="Time of resource update", alias="updatedAt"
+    )
+    deleted_at: str | None = Field(
+        default=None, description="Time of resource deletion", alias="deletedAt"
+    )
 
-    @field_validator("createdAt", "updatedAt", "deletedAt", mode="before")
+    @field_validator("created_at", "updated_at", "deleted_at", mode="before")
     @classmethod
     def coerce_datetime_to_str(cls, v):
         if isinstance(v, datetime):
@@ -59,22 +89,28 @@ class BaseMetadata(BaseModel):
         return v
 
     # Human-readable names
-    organizationName: str | None = Field(default=None, description="Organization name")
-    shortGUID: str | None = Field(default=None, description="Short GUID")
-    projectName: str | None = Field(default=None, description="Project name")
-
-
-class ListMeta(BaseModel):
-    """Metadata for list responses based on Kubernetes ListMeta."""
-
-    continue_: int | None = Field(
-        default=None,
-        alias="continue",
-        description="Continue token for pagination (int64)",
+    organization_name: str | None = Field(
+        default=None, description="Organization name", alias="organizationName"
+    )
+    short_guid: str | None = Field(
+        default=None, description="Short GUID", alias="shortGUID"
+    )
+    project_name: str | None = Field(
+        default=None, description="Project name", alias="projectName"
     )
 
 
-class BaseList(BaseModel, Generic[T]):
+class ListMeta(SDKModel):
+    """Metadata for list responses based on Kubernetes ListMeta."""
+
+    continue_: int | str | None = Field(
+        default=None,
+        alias="continue",
+        description="Continuation token for pagination",
+    )
+
+
+class BaseList[T](SDKModel):
     """Base list class for validating list method results.
 
     Corresponds to Go struct:
@@ -90,26 +126,32 @@ class BaseList(BaseModel, Generic[T]):
         default=None,
         description="Kind is a string value representing the REST resource this object represents",
     )
-    apiVersion: str | None = Field(
+    api_version: str | None = Field(
         default="api.rapyuta.io/v2",
         description="APIVersion defines the versioned schema of this representation of an object",
+        alias="apiVersion",
     )
 
     # ListMeta
     metadata: ListMeta | None = Field(default=None, description="List metadata")
 
     # Items
-    items: list[T] | None = Field(default=[], description="List of resource items")
+    items: list[T] = Field(default_factory=list, description="List of resource items")
+
+    @field_validator("items", mode="before")
+    @classmethod
+    def normalize_null_items(cls, value):
+        return [] if value is None else value
 
 
-class Depends(BaseModel):
+class Depends(SDKModel):
     name_or_guid: str = Field(
         validation_alias=AliasChoices("nameOrGUID", "nameOrGuid"),
         serialization_alias="nameOrGUID",
     )
 
 
-class PackageDepends(BaseModel):
+class PackageDepends(SDKModel):
     kind: Literal["Package", "package"] = "Package"
     name_or_guid: str = Field(
         validation_alias=AliasChoices("nameOrGUID", "nameOrGuid"),
@@ -121,7 +163,7 @@ class PackageDepends(BaseModel):
     version: str = Field(min_length=1)
 
 
-class SecretDepends(BaseModel):
+class SecretDepends(SDKModel):
     kind: Literal["Secret", "secret"] = "Secret"
     name_or_guid: str | None = Field(
         validation_alias=AliasChoices("nameOrGUID", "nameOrGuid"),
@@ -176,7 +218,7 @@ DeploymentPhase = Literal[
 Architecture = Literal["amd64", "arm32v7", "arm64v8"]
 
 
-class Subject(BaseModel):
+class Subject(SDKModel):
     kind: Literal["User", "UserGroup", "ServiceAccount"] | None = None
     name: str | None = None
     guid: str | None = None
@@ -189,7 +231,7 @@ class Subject(BaseModel):
         return self
 
 
-class Domain(BaseModel):
+class Domain(SDKModel):
     kind: Literal["UserGroup", "Project", "Organization"] | None = None
     name: str | None = None
     guid: str | None = None
@@ -202,7 +244,7 @@ class Domain(BaseModel):
         return self
 
 
-class SecretKeyRef(BaseModel):
+class SecretKeyRef(SDKModel):
     name: str | None = Field(default=None, description="Name of the Secret resource")
     key: str | None = Field(default=None, description="Key within the Secret")
     value: str | None = Field(
@@ -210,10 +252,16 @@ class SecretKeyRef(BaseModel):
     )
 
 
-class ValueFrom(BaseModel):
+class ValueFrom(SDKModel):
     secret_key_ref: SecretKeyRef | None = Field(
         default=None,
         alias="secretKeyRef",
         description="Selects a key of a Secret in the same namespace",
     )
 
+
+class AuthSubject(SDKModel):
+    """Authentication service response; unversioned attributes remain opaque."""
+
+    model_config = ConfigDict(extra="allow")
+    data: dict[str, Any] | None = None

@@ -13,81 +13,99 @@
 # limitations under the License.
 
 
-class AuthenticationError(Exception):
-    """Exception raised for errors in the authentication process."""
+from typing import Any
 
-    def __init__(self, message="Authentication failed"):
+import httpx
+
+
+class SDKError(Exception):
+    """An SDK error retaining the HTTP response and parsed error details."""
+
+    def __init__(
+        self,
+        message: str = "SDK error",
+        *,
+        status_code: int | None = None,
+        response: httpx.Response | None = None,
+        details: Any = None,
+    ):
         self.message = message
-        super().__init__(self.message)
+        self.status_code = status_code
+        self.response = response
+        self.details = details
+        super().__init__(message)
 
 
-class LoggedOutError(Exception):
-    def __init__(self, message="Not Authenticated"):
-        self.message = message
-        super().__init__(self.message)
+class AuthenticationError(SDKError):
+    def __init__(self, message: str = "Authentication failed", **kwargs):
+        super().__init__(message, **kwargs)
 
 
-class HttpNotFoundError(Exception):
-    def __init__(self, message="resource not found"):
-        self.message = message
-        super().__init__(self.message)
+class LoggedOutError(SDKError):
+    def __init__(self, message: str = "Not Authenticated", **kwargs):
+        super().__init__(message, **kwargs)
 
 
-class HttpAlreadyExistsError(Exception):
-    def __init__(self, message="resource already exists"):
-        self.message = message
-        super().__init__(self.message)
+class HttpNotFoundError(SDKError):
+    def __init__(self, message: str = "resource not found", **kwargs):
+        super().__init__(message, **kwargs)
 
 
-class ValidationError(Exception):
-    def __init__(self, message=None):
-        self.message = message
-        super().__init__(self.message)
+class HttpAlreadyExistsError(SDKError):
+    def __init__(self, message: str = "resource already exists", **kwargs):
+        super().__init__(message, **kwargs)
 
 
-class MethodNotAllowedError(Exception):
-    def __init__(self, message="method not allowed"):
-        self.message = message
-        super().__init__(self.message)
+class ValidationError(SDKError):
+    def __init__(self, message: str = "validation failed", **kwargs):
+        super().__init__(message, **kwargs)
 
 
-class InternalServerError(Exception):
-    def __init__(self, message="internal server error"):
-        self.message = message
-        super().__init__(self.message)
+class MethodNotAllowedError(SDKError):
+    def __init__(self, message: str = "method not allowed", **kwargs):
+        super().__init__(message, **kwargs)
 
 
-class NotImplementedError(Exception):
-    def __init__(self, message="not implemented"):
-        self.message = message
-        super().__init__(self.message)
+class InternalServerError(SDKError):
+    def __init__(self, message: str = "internal server error", **kwargs):
+        super().__init__(message, **kwargs)
 
 
-class BadGatewayError(Exception):
-    def __init__(self, message="bad gateway"):
-        self.message = message
-        super().__init__(self.message)
+class NotImplementedError(SDKError):
+    def __init__(self, message: str = "not implemented", **kwargs):
+        super().__init__(message, **kwargs)
 
 
-class UnauthorizedAccessError(Exception):
-    def __init__(self, message="unauthorized permission access"):
-        self.message = message
-        super().__init__(self.message)
+class BadGatewayError(SDKError):
+    def __init__(self, message: str = "bad gateway", **kwargs):
+        super().__init__(message, **kwargs)
 
 
-class GatewayTimeoutError(Exception):
-    def __init__(self, message="gateway timeout"):
-        self.message = message
-        super().__init__(self.message)
+class UnauthorizedAccessError(SDKError):
+    def __init__(self, message: str = "unauthorized access", **kwargs):
+        super().__init__(message, **kwargs)
 
 
-class ServiceUnavailableError(Exception):
-    def __init__(self, message="service unavailable"):
-        self.message = message
-        super().__init__(self.message)
+class GatewayTimeoutError(SDKError):
+    def __init__(self, message: str = "gateway timeout", **kwargs):
+        super().__init__(message, **kwargs)
 
 
-class UnknownError(Exception):
-    def __init__(self, message="unknown error"):
-        self.message = message
-        super().__init__(self.message)
+class ServiceUnavailableError(SDKError):
+    def __init__(self, message: str = "service unavailable", **kwargs):
+        super().__init__(message, **kwargs)
+
+
+class UnknownError(SDKError):
+    def __init__(self, message: str = "unknown error", **kwargs):
+        super().__init__(message, **kwargs)
+
+
+class BadRequestError(SDKError):
+    def __init__(self, message: str = "bad request", **kwargs):
+        super().__init__(message, **kwargs)
+
+
+class PermissionDeniedError(SDKError):
+    def __init__(self, message: str = "permission denied", **kwargs):
+        super().__init__(message, **kwargs)

@@ -1,3 +1,4 @@
+from rapyuta_io_sdk_v2.models import Disk
 import httpx
 import pytest
 from pytest_mock import MockFixture
@@ -62,7 +63,7 @@ async def test_create_disk_unauthorized(async_client, disk_body, mocker: MockFix
     )
 
     with pytest.raises(Exception) as exc:
-        await async_client.create_disk(body=disk_body)
+        await async_client.create_disk(body=Disk.model_validate(disk_body))
 
     assert str(exc.value) == "unauthorized"
 

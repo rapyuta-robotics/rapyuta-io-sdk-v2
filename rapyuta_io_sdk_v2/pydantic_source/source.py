@@ -1,168 +1,239 @@
+"""Optional Pydantic Settings source for ConfigTrees and local exports."""
+
 from __future__ import annotations
 
-from typing import Any
-from collections.abc import Iterable
-from benedict import benedict
-from pathlib import Path
-
-from pydantic_settings import BaseSettings, PydanticBaseSettingsSource
-from pydantic.fields import FieldInfo
-
-from rapyuta_io_sdk_v2 import Client, Configuration
 import base64
-
 import json
+from pathlib import Path
+from typing import TYPE_CHECKING, Any
+
+from pydantic import AliasChoices, AliasPath
+from pydantic.fields import FieldInfo
+from pydantic_core import PydanticUndefined
+from pydantic_settings import BaseSettings, PydanticBaseSettingsSource
+
+from rapyuta_io_sdk_v2.config import Configuration
+from rapyuta_io_sdk_v2.features import require_dependency
+
+if TYPE_CHECKING:
+    from rapyuta_io_sdk_v2.client import Client
+
+
+def _unwrap_export_records(value: Any) -> Any:
+    """Unwrap CLI records while preserving each record's application value."""
+    if not isinstance(value, dict):
+        return value
+    if set(value) == {"value", "metadata"} and isinstance(value["metadata"], dict):
+        return value["value"]
+    return {key: _unwrap_export_records(item) for key, item in value.items()}
+
+
+def _flatten(value: Any, prefix: str = "") -> dict[str, Any]:
+    if not isinstance(value, dict) or not value:
+        return {prefix: value}
+    result: dict[str, Any] = {}
+    for key, item in value.items():
+        path = f"{prefix}/{key}" if prefix else str(key)
+        result.update(_flatten(item, path))
+    return result
+
+
+def _nest(values: dict[str, Any]) -> dict[str, Any]:
+    result: dict[str, Any] = {}
+    leaves: set[str] = set()
+    for path, value in values.items():
+        parts = path.split("/")
+        target = result
+        for index, part in enumerate(parts[:-1]):
+            if "/".join(parts[: index + 1]) in leaves:
+                raise ValueError(f"conflicting ConfigTree paths at {path}")
+            existing = target.setdefault(part, {})
+            if not isinstance(existing, dict):
+                raise ValueError(f"conflicting ConfigTree paths at {path}")
+            target = existing
+        if parts[-1] in target and isinstance(target[parts[-1]], dict):
+            raise ValueError(f"conflicting ConfigTree paths at {path}")
+        target[parts[-1]] = value
+        leaves.add(path)
+    return result
 
 
 class ConfigTreeSource(PydanticBaseSettingsSource):
+    """Load a ConfigTree when Pydantic invokes the source, never during import.
+
+    An injected client remains owned by the caller. Local JSON/YAML exports
+    are wrapped under the file stem, matching the ConfigTree export convention.
+    Select local_export=True to unwrap CLI value/metadata records explicitly.
+    """
+
     def __init__(
         self,
         settings_cls: type[BaseSettings],
-        config: Configuration,
+        config: Configuration | None = None,
         tree_name: str = "default",
         key_prefix: str = "",
         with_project: bool = True,
-        local_file: str = None,
+        local_file: str | Path | None = None,
+        *,
+        client: Client | None = None,
+        local_export: bool = False,
     ):
         super().__init__(settings_cls)
-        self._client = Client(config=config)
+        self.config = config or (client.config if client is not None else Configuration())
+        self._client = client
         self._tree_name = tree_name
-        self._local_file = local_file
-        self._top_prefix = key_prefix
+        self._local_file = Path(local_file) if local_file is not None else None
+        self._local_export = local_export
+        self._top_prefix = key_prefix.strip("/")
         self._with_project = with_project
+        self._configtree_data: dict[str, Any] | None = None
 
-        self._configtree_data = benedict(self._load_config_tree()).unflatten(
-            separator="/"
-        )
-
-    # * Methods to fetch Configtree
-    def _fetch_from_api(self):
-        """
-        Load the configuration tree from an external API.
-        """
-        response = self._client.get_configtree(
-            name=self._tree_name,
-            include_data=True,
-            content_types=["kv"],
-            key_prefixes=[self._top_prefix],
-            with_project=self._with_project,
-        )
-        if "keys" not in response:
-            raise KeyError(
-                f"'keys' not found in response for config tree '{self._tree_name}' "
-                f"with prefix '{self._top_prefix}'"
-            )
-
-        return self._extract_data_api(input_data=response["keys"])
-
-    def _load_from_local_file(self):
-        """
-        Load the configuration tree from a local JSON or YAML file.
-        """
-        data = {}
-        file_prefix = Path(self._local_file).stem
-        file_suffix = Path(self._local_file).suffix[1:]
-
-        if file_suffix not in ["json", "yaml", "yml"]:
-            raise ValueError("Unsupported file format. Use .json or .yaml/.yml.")
-
-        data[file_prefix] = benedict(self._local_file, format=file_suffix)
-        content = self._split_metadata(data)
-        return benedict(content).flatten(separator="/")
-
-    def _load_config_tree(self):
-        if self._local_file:
-            self.config_tree = self._load_from_local_file()
-
-        else:
-            self.config_tree = self._fetch_from_api()
-
-        processed_data = self._process_config_tree(raw_data=self.config_tree)
-
-        if processed_data is None:
-            raise ValueError("processed_data cannot be None")
-        return processed_data
-
-    # * Methods to process the tree
-    def _extract_data_api(self, input_data: dict[str, Any]) -> dict[str, Any]:
-        return {
-            key: self._decode_value(value.get("data"))
-            for key, value in input_data.items()
-            if "data" in value
-        }
-
-    def _decode_value(self, encoded_data: str) -> Any:
-        decoded_data = base64.b64decode(encoded_data).decode("utf-8")
-
-        try:
-            # Safely evaluate the decoded string to Python data structures (e.g., lists, dicts)
-            return json.loads(decoded_data)
-        except (ValueError, SyntaxError):
-            return decoded_data
-
-    def _split_metadata(self, data: Iterable) -> Iterable:
-        """Helper function to split data and metadata from the input data."""
-        if not isinstance(data, dict):
-            return data
-
-        content = {}
-
-        for key, value in data.items():
+    def _load_data(self) -> dict[str, Any]:
+        self.config.features.require("configtree_source")
+        if self._local_file is not None:
+            suffix = self._local_file.suffix.lower()
+            content = self._local_file.read_text(encoding="utf-8")
+            if suffix == ".json":
+                value = json.loads(content)
+            elif suffix in (".yaml", ".yml"):
+                value = require_dependency("yaml", "configtree").safe_load(content)
+            else:
+                raise ValueError("unsupported local file format; use JSON or YAML")
             if not isinstance(value, dict):
-                content[key] = value
-                continue
+                raise ValueError("local ConfigTree data must be a mapping")
+            if self._local_export:
+                value = _unwrap_export_records(value)
+            flat = _flatten({self._local_file.stem: value})
+        else:
+            from rapyuta_io_sdk_v2.client import Client
+            from rapyuta_io_sdk_v2.context import RequestContext
 
-            potential_content = value.get("value")
-            potential_meta = value.get("metadata")
-            keys_present = "value" in value and "metadata" in value
+            owned = self._client is None
+            client = (
+                self._client if self._client is not None else Client(config=self.config)
+            )
+            try:
+                tree = client.get_configtree(
+                    name=self._tree_name,
+                    include_data=True,
+                    content_types=["kv"],
+                    key_prefixes=[self._top_prefix] if self._top_prefix else None,
+                    context=RequestContext(with_project=self._with_project),
+                )
+                flat = {
+                    key: self._decode_value(item.data)
+                    for key, item in (tree.keys or {}).items()
+                    if item.data is not None
+                }
+            finally:
+                if owned:
+                    client.close()
+        if self._top_prefix:
+            prefix = self._top_prefix + "/"
+            flat = {
+                key[len(prefix) :]: value
+                for key, value in flat.items()
+                if key.startswith(prefix)
+            }
+        return _nest(flat)
 
-            if (
-                keys_present
-                and len(value) == 2
-                and potential_meta is not None
-                and isinstance(potential_meta, dict)
-            ):
-                content[key] = potential_content
-                continue
-
-            content[key] = self._split_metadata(value)
-
-        return content
-
-    # * This method is extracting the data from the raw data and removing the top level prefix
-    def _process_config_tree(self, raw_data: dict[str, Any]) -> dict[str, Any]:
-        d: dict[str, Any] = {}
-        prefix_length = len(self._top_prefix)
-
-        if prefix_length == 0:
-            return raw_data
-
-        for key in raw_data:
-            processed_key = key[prefix_length + 1 :]
-            d[processed_key] = raw_data[key]
-
-        return d
+    @staticmethod
+    def _decode_value(encoded_data: str) -> Any:
+        decoded = base64.b64decode(encoded_data, validate=True).decode("utf-8")
+        try:
+            return json.loads(decoded)
+        except ValueError:
+            return decoded
 
     def __call__(self) -> dict[str, Any]:
+        self._configtree_data = self._load_data()
         if self.settings_cls.model_config.get("extra") == "allow":
-            return self._configtree_data
-        d: dict[str, Any] = {}
-
+            result = dict(self._configtree_data)
+        else:
+            result = {}
         for field_name, field in self.settings_cls.model_fields.items():
-            field_value, field_key, value_is_complex = self.get_field_value(
-                field=field, field_name=field_name
-            )
-
-            if field_value is not None:
-                d[field_key] = field_value
-        return d
+            value, key, _ = self.get_field_value(field, field_name)
+            # Explicit JSON null is a value, not a missing field.
+            if (
+                key in self._configtree_data
+                or field_name in self._configtree_data
+                or value is not None
+            ):
+                if key != field_name:
+                    result.pop(field_name, None)
+                if isinstance(value, (dict, list)) and isinstance(
+                    result.get(key), type(value)
+                ):
+                    result[key] = self._merge_alias_values(result[key], value)
+                else:
+                    result[key] = value
+        return self._clean_alias_values(result)
 
     def get_field_value(self, field: FieldInfo, field_name: str) -> tuple[Any, str, bool]:
-        value = self._configtree_data.get(field_name)
-        if value is None:
-            return None, field_name, False
+        if self._configtree_data is None:
+            self._configtree_data = self._load_data()
+        alias = field.validation_alias or field.alias
+        aliases = alias.choices if isinstance(alias, AliasChoices) else [alias]
+        for candidate in [*aliases, field_name]:
+            if isinstance(candidate, str) and candidate in self._configtree_data:
+                value = self._configtree_data[candidate]
+                # A settings model with an alias may not accept field names.
+                output_key = candidate
+                if candidate == field_name:
+                    target = aliases[0] if aliases else None
+                    if isinstance(target, str):
+                        output_key = target
+                    elif isinstance(target, AliasPath):
+                        nested = value
+                        for component in reversed(target.path[1:]):
+                            if isinstance(component, str):
+                                nested = {component: nested}
+                            else:
+                                wrapped = [PydanticUndefined] * max(
+                                    component + 1, -component
+                                )
+                                wrapped[component] = nested
+                                nested = wrapped
+                        return nested, target.path[0], True
+                return value, output_key, isinstance(value, (dict, list))
+            if isinstance(candidate, AliasPath):
+                value = candidate.search_dict_for_path(self._configtree_data)
+                if value is not PydanticUndefined:
+                    # Preserve the alias path input shape for model validation.
+                    first = candidate.path[0]
+                    return self._configtree_data[first], first, True
+        return None, field_name, False
 
-        if isinstance(value, list) or isinstance(value, dict):
-            return value, field_name, True
+    @staticmethod
+    def _merge_alias_values(existing: Any, incoming: Any) -> Any:
+        if incoming is PydanticUndefined:
+            return existing
+        if isinstance(existing, dict) and isinstance(incoming, dict):
+            result = dict(existing)
+            for key, value in incoming.items():
+                result[key] = ConfigTreeSource._merge_alias_values(
+                    result.get(key, PydanticUndefined), value
+                )
+            return result
+        if isinstance(existing, list) and isinstance(incoming, list):
+            return [
+                ConfigTreeSource._merge_alias_values(
+                    existing[index] if index < len(existing) else PydanticUndefined,
+                    incoming[index] if index < len(incoming) else PydanticUndefined,
+                )
+                for index in range(max(len(existing), len(incoming)))
+            ]
+        return incoming
 
-        return value, field_name, False
+    @staticmethod
+    def _clean_alias_values(value: Any) -> Any:
+        if value is PydanticUndefined:
+            return None
+        if isinstance(value, list):
+            return [ConfigTreeSource._clean_alias_values(item) for item in value]
+        if isinstance(value, dict):
+            return {
+                key: ConfigTreeSource._clean_alias_values(item)
+                for key, item in value.items()
+            }
+        return value

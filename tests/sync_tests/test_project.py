@@ -1,3 +1,4 @@
+from rapyuta_io_sdk_v2.models import Project
 import httpx
 import pytest
 from pytest_mock import MockFixture
@@ -118,7 +119,7 @@ def test_create_project_success(
     )
 
     # Call the create_project method
-    response = client.create_project(body=project_body)
+    response = client.create_project(body=Project.model_validate(project_body))
 
     # Validate the response
     assert isinstance(response, Project)
@@ -138,7 +139,7 @@ def test_create_project_unauthorized(client, project_body, mocker: MockFixture):
 
     # Call the create_project method
     with pytest.raises(Exception) as exc:
-        client.create_project(body=project_body)
+        client.create_project(body=Project.model_validate(project_body))
 
     # Validate the exception message
     assert str(exc.value) == "unauthorized permission access"
@@ -157,7 +158,9 @@ def test_update_project_success(
     )
 
     # Call the update_project method
-    response = client.update_project(project_guid="mock_project_guid", body=project_body)
+    response = client.update_project(
+        project_guid="mock_project_guid", body=Project.model_validate(project_body)
+    )
 
     # Validate the response
     assert isinstance(response, Project)

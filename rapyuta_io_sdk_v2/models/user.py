@@ -14,18 +14,18 @@
 
 from __future__ import annotations
 
-from typing import Dict, List, Literal
+from typing import Literal
 
-from pydantic import AliasChoices, BaseModel, Field, model_validator
+from pydantic import AliasChoices, Field, model_validator
 
-from rapyuta_io_sdk_v2.models.utils import BaseList, BaseMetadata, BaseObject
+from rapyuta_io_sdk_v2.models.utils import SDKModel, BaseList, BaseMetadata, BaseObject
 
 # Type aliases for permissions
-ActionMap = Dict[str, List[str]]
-ResourceMap = Dict[str, ActionMap]
+ActionMap = dict[str, list[str]]
+ResourceMap = dict[str, ActionMap]
 
 
-class UserPermissions(BaseModel):
+class UserPermissions(SDKModel):
     """User permissions model."""
 
     organization: ResourceMap | None = Field(default=None)
@@ -33,7 +33,7 @@ class UserPermissions(BaseModel):
     groups: dict[str, ResourceMap] | None = Field(default=None)
 
 
-class UserOrganization(BaseModel):
+class UserOrganization(SDKModel):
     """User organization model."""
 
     guid: str | None = None
@@ -50,7 +50,7 @@ class UserOrganization(BaseModel):
         return self
 
 
-class UserProject(BaseModel):
+class UserProject(SDKModel):
     """User project model."""
 
     guid: str | None = None
@@ -70,7 +70,7 @@ class UserProject(BaseModel):
         return self
 
 
-class UserUserGroup(BaseModel):
+class UserUserGroup(SDKModel):
     """User group model."""
 
     guid: str | None = None
@@ -90,7 +90,7 @@ class UserUserGroup(BaseModel):
         return self
 
 
-class UserSpec(BaseModel):
+class UserSpec(SDKModel):
     """User specification model."""
 
     first_name: str | None = Field(default=None, alias="firstName")

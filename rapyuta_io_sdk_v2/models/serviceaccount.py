@@ -7,26 +7,33 @@ This module mirrors the Go `ServiceAccount` and related types from the
 
 from __future__ import annotations
 
-from typing import Literal
 from datetime import datetime
+from typing import TYPE_CHECKING, ClassVar, Literal
 
-from pydantic import BaseModel, Field
-from pydantic import field_validator
+from pydantic import Field, field_validator
 
 from rapyuta_io_sdk_v2.models.utils import (
     BaseList,
     BaseMetadata,
     BaseObject,
     Domain,
+    SDKModel,
+    resource_key,
 )
 
 
-class ServiceAccountBinding(BaseModel):
+if TYPE_CHECKING:
+    from rapyuta_io_sdk_v2.client import Client
+    from rapyuta_io_sdk_v2.async_client import AsyncClient
+    from rapyuta_io_sdk_v2.context import RequestContext
+
+
+class ServiceAccountBinding(SDKModel):
     domain: Domain
     role_names: list[str] = Field(default_factory=list, alias="roleNames")
 
 
-class ServiceAccountSpec(BaseModel):
+class ServiceAccountSpec(SDKModel):
     description: str | None = None
     roles: list[ServiceAccountBinding] | None = None
 
@@ -38,7 +45,7 @@ class ServiceAccount(BaseObject):
     metadata: BaseMetadata
     spec: ServiceAccountSpec | None = None
 
-    def list_dependencies(self) -> list[str] | None:
+    def dependencies(self) -> list[str]:
         dependencies: list[str] = []
 
         # Process service account roles and their domains
@@ -49,17 +56,47 @@ class ServiceAccount(BaseObject):
                     role_binding.domain.kind is not None
                     and role_binding.domain.name is not None
                 ):
-                    domain = (
-                        f"{role_binding.domain.kind.lower()}:{role_binding.domain.name}"
+                    domain = resource_key(
+                        role_binding.domain.kind.lower(), role_binding.domain.name
                     )
                     dependencies.append(domain)
 
                 # Add role dependencies
                 if role_binding.role_names is not None:
                     for role in role_binding.role_names:
-                        dependencies.append(f"role:{role}")
+                        dependencies.append(resource_key("role", role))
 
-        return dependencies
+        return list(dict.fromkeys(dependencies))
+
+    resource_kind: ClassVar[str] = "ServiceAccount"
+
+    mutable: ClassVar[bool] = True
+
+    def create(self, client: Client, *, context: RequestContext | None = None):
+        return client.create_service_account(self, context=context)
+
+    def update(self, client: Client, *, context: RequestContext | None = None):
+        return client.update_service_account(self, self.metadata.name, context=context)
+
+    async def create_async(
+        self, client: AsyncClient, *, context: RequestContext | None = None
+    ):
+        return await client.create_service_account(self, context=context)
+
+    async def update_async(
+        self, client: AsyncClient, *, context: RequestContext | None = None
+    ):
+        return await client.update_service_account(
+            self, self.metadata.name, context=context
+        )
+
+    def _delete(self, client: Client, *, context: RequestContext | None = None) -> None:
+        client.delete_service_account(self.metadata.name, context=context)
+
+    async def _delete_async(
+        self, client: AsyncClient, *, context: RequestContext | None = None
+    ) -> None:
+        await client.delete_service_account(self.metadata.name, context=context)
 
 
 class ServiceAccountList(BaseList[ServiceAccount]):
@@ -68,7 +105,7 @@ class ServiceAccountList(BaseList[ServiceAccount]):
     pass
 
 
-class ServiceAccountToken(BaseModel):
+class ServiceAccountToken(SDKModel):
     owner: str | None = None
     expiry_at: datetime | None = Field(default=None, alias="expiry_at")
 
@@ -80,7 +117,7 @@ class ServiceAccountToken(BaseModel):
         return v
 
 
-class ServiceAccountTokenInfo(BaseModel):
+class ServiceAccountTokenInfo(SDKModel):
     id: int | None = None
     token: str | None = None
     expiry_at: datetime | None = Field(default=None, alias="expiry_at")

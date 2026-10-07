@@ -4,32 +4,37 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import Field, field_validator
 
-from rapyuta_io_sdk_v2.models.utils import BaseList, BaseMetadata, ListMeta
+from rapyuta_io_sdk_v2.models.utils import SDKModel, BaseList, BaseMetadata, ListMeta
 
 # --- ManagedServiceProvider Models ---
 
 
-class ManagedServiceProvider(BaseModel):
+class ManagedServiceProvider(SDKModel):
     """Managed service provider model."""
 
     name: str = Field(description="Name of the provider")
 
 
-class ManagedServiceProviderList(BaseModel):
+class ManagedServiceProviderList(SDKModel):
     """List of managed service providers."""
 
     metadata: ListMeta | None = Field(default=None, description="List metadata")
-    items: list[ManagedServiceProvider] | None = Field(
-        default=[], description="List of providers"
+    items: list[ManagedServiceProvider] = Field(
+        default_factory=list, description="List of providers"
     )
+
+    @field_validator("items", mode="before")
+    @classmethod
+    def normalize_null_items(cls, value):
+        return [] if value is None else value
 
 
 # --- ManagedServiceInstance Models ---
 
 
-class ManagedServiceInstanceSpec(BaseModel):
+class ManagedServiceInstanceSpec(SDKModel):
     """Specification for ManagedServiceInstance resource."""
 
     provider: str = Field(description="The provider for the managed service")
@@ -38,7 +43,7 @@ class ManagedServiceInstanceSpec(BaseModel):
     )
 
 
-class ManagedServiceInstanceStatus(BaseModel):
+class ManagedServiceInstanceStatus(SDKModel):
     """Status for ManagedServiceInstance resource."""
 
     status: Literal["Pending", "Error", "Success", "Deleting", "Unknown"] | None = Field(
@@ -52,10 +57,12 @@ class ManagedServiceInstanceStatus(BaseModel):
     )
 
 
-class ManagedServiceInstance(BaseModel):
+class ManagedServiceInstance(SDKModel):
     """Managed service instance model."""
 
-    apiVersion: str | None = Field(default=None, description="API version")
+    api_version: str | None = Field(
+        default=None, description="API version", alias="apiVersion"
+    )
     kind: str | None = Field(default=None, description="Resource kind")
     metadata: BaseMetadata = Field(description="Resource metadata")
     spec: ManagedServiceInstanceSpec | None = Field(
@@ -81,7 +88,7 @@ class ManagedServiceInstanceList(BaseList[ManagedServiceInstance]):
 # --- ManagedServiceBinding Models ---
 
 
-class ManagedServiceBindingSpec(BaseModel):
+class ManagedServiceBindingSpec(SDKModel):
     """Specification for ManagedServiceBinding resource."""
 
     provider: str | None = Field(
@@ -99,17 +106,19 @@ class ManagedServiceBindingSpec(BaseModel):
     )
 
 
-class ManagedServiceBindingStatus(BaseModel):
+class ManagedServiceBindingStatus(SDKModel):
     """Status for ManagedServiceBinding resource."""
 
     # TODO: Update fields as needed
     pass
 
 
-class ManagedServiceBinding(BaseModel):
+class ManagedServiceBinding(SDKModel):
     """Managed service binding model."""
 
-    apiVersion: str | None = Field(default=None, description="API version")
+    api_version: str | None = Field(
+        default=None, description="API version", alias="apiVersion"
+    )
     kind: str | None = Field(default=None, description="Resource kind")
     metadata: BaseMetadata = Field(description="Resource metadata")
     spec: ManagedServiceBindingSpec = Field(description="Binding specification")
@@ -118,7 +127,7 @@ class ManagedServiceBinding(BaseModel):
     )
 
 
-class ManagedServiceBindingListOption(BaseModel):
+class ManagedServiceBindingListOption(SDKModel):
     """List options for ManagedServiceBinding."""
 
     # Add specific options as needed

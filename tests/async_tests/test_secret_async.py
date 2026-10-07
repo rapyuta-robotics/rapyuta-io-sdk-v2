@@ -1,3 +1,4 @@
+from rapyuta_io_sdk_v2.models import SecretCreate
 import httpx
 import pytest
 from pytest_mock import MockFixture
@@ -72,7 +73,7 @@ async def test_create_secret_unauthorized(async_client, secret_body, mocker: Moc
     )
 
     with pytest.raises(Exception) as exc:
-        await async_client.create_secret(body=secret_body)
+        await async_client.create_secret(body=SecretCreate.model_validate(secret_body))
 
     assert str(exc.value) == "unauthorized"
 
@@ -87,7 +88,9 @@ async def test_update_secret_success(
         json=secret_model_mock,
     )
 
-    response = await async_client.update_secret(name="test_secret", body=secret_body)
+    response = await async_client.update_secret(
+        name="test_secret", body=SecretCreate.model_validate(secret_body)
+    )
 
     assert isinstance(response, Secret)
     assert response.metadata.name == "test_secret"
@@ -143,7 +146,10 @@ async def test_get_opaque_secret_success(
 
     assert isinstance(response, Secret)
     assert response.spec.type == "Opaque"
-    assert response.spec.data == {"API_KEY": "my-api-key-value", "DB_PASSWORD": "my-db-password"}
+    assert response.spec.data == {
+        "API_KEY": "my-api-key-value",
+        "DB_PASSWORD": "my-db-password",
+    }
     assert set(response.spec.secret_keys) == {"API_KEY", "DB_PASSWORD"}
 
 
@@ -158,7 +164,9 @@ async def test_create_opaque_secret_success(
         json=opaque_secret_model_mock,
     )
 
-    response = await async_client.create_secret(body=opaque_secret_body)
+    response = await async_client.create_secret(
+        body=SecretCreate.model_validate(opaque_secret_body)
+    )
 
     assert isinstance(response, Secret)
     assert response.spec.type == "Opaque"
@@ -199,5 +207,3 @@ def test_secret_create_model_opaque_requires_data():
                 "spec": {"type": "Opaque"},
             }
         )
-
-

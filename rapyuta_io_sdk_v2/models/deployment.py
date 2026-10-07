@@ -8,12 +8,15 @@ incorrect fields.
 
 from __future__ import annotations
 
+import asyncio
+import time
+
 from os import path
+from typing import TYPE_CHECKING, Any, ClassVar, Literal
 
-from typing import Literal
+from pydantic import ConfigDict, Field, RootModel, field_validator, model_validator
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator, field_validator
-
+from rapyuta_io_sdk_v2.exceptions import HttpNotFoundError
 from rapyuta_io_sdk_v2.models.utils import (
     BaseList,
     BaseMetadata,
@@ -28,9 +31,18 @@ from rapyuta_io_sdk_v2.models.utils import (
     PackageDepends,
     RestartPolicy,
     Runtime,
+    SDKModel,
     StaticRouteDepends,
     ValueFrom,
+    resource_key,
 )
+from rapyuta_io_sdk_v2.resource_operations import ReadinessError
+
+
+if TYPE_CHECKING:
+    from rapyuta_io_sdk_v2.client import Client
+    from rapyuta_io_sdk_v2.async_client import AsyncClient
+    from rapyuta_io_sdk_v2.context import RequestContext
 
 
 class DeploymentMetadata(BaseMetadata):
@@ -40,12 +52,13 @@ class DeploymentMetadata(BaseMetadata):
     generation: int | None = None
 
 
-class EnvArgsSpec(BaseModel):
+class EnvArgsSpec(SDKModel):
     name: str
     value: str | None = None
-    valueFrom: ValueFrom | None = Field(
+    value_from: ValueFrom | None = Field(
         default=None,
         description="Populate the env var's value from a Secret key reference",
+        alias="valueFrom",
     )
     exposed: bool | None = None
     exposed_name: str | None = Field(default=None, alias="exposedName")
@@ -60,7 +73,7 @@ class EnvArgsSpec(BaseModel):
         return v
 
 
-class DeploymentVolume(BaseModel):
+class DeploymentVolume(SDKModel):
     """Unified volume spec matching Go DeploymentVolume struct."""
 
     exec_name: str | None = Field(default=None, alias="execName")
@@ -90,7 +103,7 @@ class DeploymentVolume(BaseModel):
         return v
 
 
-class DeploymentStaticRoute(BaseModel):
+class DeploymentStaticRoute(SDKModel):
     """Static route configuration matching Go DeploymentStaticRoute struct."""
 
     name: str | None = None
@@ -109,11 +122,13 @@ class DeploymentStaticRoute(BaseModel):
         return data
 
 
-class DeploymentROSNetwork(BaseModel):
+class DeploymentROSNetwork(SDKModel):
     """ROS Network configuration matching Go DeploymentROSNetwork struct."""
 
     depends: NetworkDepends
-    domainID: int | None | None = Field(default=None, description="ROS Domain ID")
+    domain_id: int | None | None = Field(
+        default=None, description="ROS Domain ID", alias="domainID"
+    )
     interface: str | None = Field(default=None, description="Network interface")
 
     @model_validator(mode="before")
@@ -128,28 +143,28 @@ class DeploymentROSNetwork(BaseModel):
         return data
 
 
-class DeploymentParamConfig(BaseModel):
+class DeploymentParamConfig(SDKModel):
     """Param configuration matching Go DeploymentParamConfig struct."""
 
     enabled: bool | None = None
     trees: list[str] | None = None
-    blockUntilSynced: bool | None = Field(default=False)
+    block_until_synced: bool | None = Field(default=False, alias="blockUntilSynced")
 
 
-class DeploymentVPNConfig(BaseModel):
+class DeploymentVPNConfig(SDKModel):
     """VPN configuration matching Go DeploymentVPNConfig struct."""
 
     enabled: bool | None = Field(default=False)
 
 
-class DeploymentFeatures(BaseModel):
+class DeploymentFeatures(SDKModel):
     """Features configuration matching Go DeploymentFeatures struct."""
 
     params: DeploymentParamConfig | None = None
     vpn: DeploymentVPNConfig | None = None
 
 
-class DeploymentDevice(BaseModel):
+class DeploymentDevice(SDKModel):
     """Device configuration matching Go DeploymentDevice struct."""
 
     depends: DeviceDepends
@@ -166,39 +181,34 @@ class DeploymentDevice(BaseModel):
         return data
 
 
-class DeploymentSpec(BaseModel):
+class DeploymentSpec(SDKModel):
     runtime: Runtime
     depends: list[DeploymentDepends] | None = None
     device: DeploymentDevice | None = None
     restart: RestartPolicy | None = None
-    envArgs: list[EnvArgsSpec] | None = None
+    env_args: list[EnvArgsSpec] | None = Field(default=None, alias="envArgs")
     volumes: list[DeploymentVolume] | None = None
-    rosNetworks: list[DeploymentROSNetwork] | None = None
+    ros_networks: list[DeploymentROSNetwork] | None = Field(
+        default=None, alias="rosNetworks"
+    )
     features: DeploymentFeatures | None = None
-    staticRoutes: list[DeploymentStaticRoute] | None = None
-    serviceAccount: str | None = None
-    networkInterface: str | None = Field(
+    static_routes: list[DeploymentStaticRoute] | None = Field(
+        default=None, alias="staticRoutes"
+    )
+    service_account: str | None = Field(default=None, alias="serviceAccount")
+    network_interface: str | None = Field(
         default=None,
         description=(
             "Network interface to use for ROS networks. "
             "Takes precedence over any interface specified in rosNetworks entries."
         ),
+        alias="networkInterface",
     )
 
     @model_validator(mode="after")
     def validate_runtime_and_volumes(self):
         """Validate that runtime and volume configurations are compatible."""
-        if self.runtime == "device" and self.volumes:
-            # For device runtime, volumes should not have cloud-specific depends
-            for volume in self.volumes:
-                if volume.depends and hasattr(volume.depends, "kind"):
-                    # Device volumes should depend on disks, not cloud resources
-                    if volume.depends.kind in ["managedService", "cloudService"]:
-                        raise ValueError(
-                            f"Device runtime cannot use cloud volume dependency: {volume.depends.kind}"
-                        )
-        elif self.runtime == "cloud" and self.volumes:
-            # For cloud runtime, volumes should not have device-specific fields
+        if self.runtime == "cloud" and self.volumes:
             for volume in self.volumes:
                 if any(
                     [
@@ -213,7 +223,7 @@ class DeploymentSpec(BaseModel):
         return self
 
 
-class ExecutableStatus(BaseModel):
+class ExecutableStatus(SDKModel):
     name: str | None = None
     # Container image, including tag, that this executable runs.
     image: str | None = None
@@ -224,7 +234,7 @@ class ExecutableStatus(BaseModel):
     exit_code: int | None = None
 
 
-class DependentDeploymentStatus(BaseModel):
+class DependentDeploymentStatus(SDKModel):
     name: str | None = None
     guid: str | None = None
     status: DeploymentStatusType | None = None
@@ -232,7 +242,7 @@ class DependentDeploymentStatus(BaseModel):
     error_codes: list[str] | None = None
 
 
-class DependentNetworkStatus(BaseModel):
+class DependentNetworkStatus(SDKModel):
     name: str | None = None
     guid: str | None = None
     status: DeploymentStatusType | None = None
@@ -240,20 +250,20 @@ class DependentNetworkStatus(BaseModel):
     error_codes: list[str] | None = None
 
 
-class DependentDiskStatus(BaseModel):
+class DependentDiskStatus(SDKModel):
     name: str | None = None
     guid: str | None = None
     status: str | None = None
     error_codes: str | None = None
 
 
-class Dependencies(BaseModel):
+class Dependencies(SDKModel):
     deployments: list[DependentDeploymentStatus] | None = None
     networks: list[DependentNetworkStatus] | None = None
     disks: list[DependentDiskStatus] | None = Field(default=None, alias="disk")
 
 
-class DeploymentStatus(BaseModel):
+class DeploymentStatus(SDKModel):
     phase: DeploymentPhase | None = None
     status: DeploymentStatusType | None = None
     error_codes: list[str] | None = None
@@ -271,12 +281,16 @@ class Deployment(BaseObject):
     spec: DeploymentSpec
     status: DeploymentStatus | None = None
 
-    def list_dependencies(self) -> list[str] | None:
+    def dependencies(self) -> list[str]:
         dependencies: list[str] = []
 
         # Package Dependency
         if self.metadata.depends is not None:
-            key = f"package:{self.metadata.depends.name_or_guid}"
+            key = resource_key(
+                "Package",
+                self.metadata.depends.name_or_guid,
+                self.metadata.depends.version,
+            )
             dependencies.append(key)
 
         if self.spec.runtime == "cloud":
@@ -284,39 +298,144 @@ class Deployment(BaseObject):
             if self.spec.volumes:
                 for volume in self.spec.volumes:
                     if volume.depends is not None:
-                        key = f"disk:{volume.depends.name_or_guid}"
+                        key = resource_key("disk", volume.depends.name_or_guid)
                         dependencies.append(key)
 
             # Static Route Dependency
-            if self.spec.staticRoutes:
-                for route in self.spec.staticRoutes:
+            if self.spec.static_routes:
+                for route in self.spec.static_routes:
                     if route.depends is not None:
-                        key = f"staticroute:{route.depends.name_or_guid}"
+                        key = resource_key("staticroute", route.depends.name_or_guid)
                         dependencies.append(key)
 
         # Device Dependency
         if self.spec.runtime == "device" and self.spec.device is not None:
             if self.spec.device.depends:
-                key = f"device:{self.spec.device.depends.name_or_guid}"
+                key = resource_key("device", self.spec.device.depends.name_or_guid)
                 dependencies.append(key)
 
         # Deployment Dependency
         if self.spec.depends:
             for dep in self.spec.depends:
-                key = f"deployment:{dep.name_or_guid}"
+                key = resource_key("deployment", dep.name_or_guid)
                 dependencies.append(key)
 
         # Network Dependency
-        if self.spec.rosNetworks:
-            for network in self.spec.rosNetworks:
+        if self.spec.ros_networks:
+            for network in self.spec.ros_networks:
                 if network.depends is not None:
-                    key = f"network:{network.depends.name_or_guid}"
+                    key = resource_key("network", network.depends.name_or_guid)
                     dependencies.append(key)
 
-        return dependencies
+        for variable in self.spec.env_args or []:
+            if variable.value_from is not None:
+                reference = variable.value_from.secret_key_ref
+                if reference is not None and reference.name:
+                    dependencies.append(resource_key("Secret", reference.name))
+        if self.spec.service_account:
+            dependencies.append(resource_key("ServiceAccount", self.spec.service_account))
+        return list(dict.fromkeys(dependencies))
+
+    resource_kind: ClassVar[str] = "Deployment"
+
+    def create(self, client: Client, *, context: RequestContext | None = None):
+        return client.create_deployment(self, context=context)
+
+    async def create_async(
+        self, client: AsyncClient, *, context: RequestContext | None = None
+    ):
+        return await client.create_deployment(self, context=context)
+
+    def _delete(self, client: Client, *, context: RequestContext | None = None) -> None:
+        client.delete_deployment(self.metadata.name, context=context)
+
+    async def _delete_async(
+        self, client: AsyncClient, *, context: RequestContext | None = None
+    ) -> None:
+        await client.delete_deployment(self.metadata.name, context=context)
+
+    def prerequisites(
+        self,
+        client: Client,
+        attempts: int,
+        interval: float,
+        *,
+        context: RequestContext | None = None,
+    ) -> None:
+        required = {
+            dependency.name_or_guid
+            for dependency in (self.spec.depends or [])
+            if dependency.wait
+        }
+        if not required:
+            return
+        for attempt in range(attempts):
+            ready = True
+            for name in sorted(required):
+                try:
+                    deployment = client.get_deployment(name, context=context)
+                except HttpNotFoundError:
+                    ready = False
+                    continue
+                state = (
+                    deployment.status.status if deployment.status is not None else None
+                )
+                phase = deployment.status.phase if deployment.status is not None else None
+                if state in ("Error", "Stopped") or phase in ("FailedToStart", "Stopped"):
+                    raise ReadinessError(f"Dependency deployment:{name} failed")
+                ready &= state == "Running"
+            if ready:
+                return
+            if attempt + 1 < attempts:
+                time.sleep(interval)
+        raise ReadinessError(f"Dependencies did not become ready: {sorted(required)}")
+
+    async def prerequisites_async(
+        self,
+        client: AsyncClient,
+        attempts: int,
+        interval: float,
+        *,
+        context: RequestContext | None = None,
+    ) -> None:
+        required = {
+            dependency.name_or_guid
+            for dependency in (self.spec.depends or [])
+            if dependency.wait
+        }
+        if not required:
+            return
+        for attempt in range(attempts):
+            ready = True
+            for name in sorted(required):
+                try:
+                    deployment = await client.get_deployment(name, context=context)
+                except HttpNotFoundError:
+                    ready = False
+                    continue
+                state = (
+                    deployment.status.status if deployment.status is not None else None
+                )
+                phase = deployment.status.phase if deployment.status is not None else None
+                if state in ("Error", "Stopped") or phase in ("FailedToStart", "Stopped"):
+                    raise ReadinessError(f"Dependency deployment:{name} failed")
+                ready &= state == "Running"
+            if ready:
+                return
+            if attempt + 1 < attempts:
+                await asyncio.sleep(interval)
+        raise ReadinessError(f"Dependencies did not become ready: {sorted(required)}")
 
 
 class DeploymentList(BaseList[Deployment]):
     """List of deployments using BaseList."""
 
     pass
+
+
+class DeploymentHistory(RootModel[dict[str, Any] | list[Any]]):
+    """Deployment history response, retaining server-defined event structures."""
+
+
+class DeploymentGraph(RootModel[dict[str, Any]]):
+    """Experimental graph response, preserving its opaque graph schema."""

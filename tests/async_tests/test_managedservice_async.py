@@ -1,3 +1,4 @@
+from rapyuta_io_sdk_v2.models import ManagedServiceBinding, ManagedServiceInstance
 import httpx
 import pytest
 from asyncmock import AsyncMock
@@ -110,12 +111,14 @@ async def test_create_instance_success(
 
     # Call the create_instance method
     response = await async_client.create_instance(
-        body={
-            "apiVersion": "api.rapyuta.io/v2",
-            "metadata": {
-                "name": "test-instance",
-            },
-        }
+        body=ManagedServiceInstance.model_validate(
+            {
+                "apiVersion": "api.rapyuta.io/v2",
+                "metadata": {
+                    "name": "test-instance",
+                },
+            }
+        )
     )
 
     # Validate the response
@@ -213,16 +216,18 @@ async def test_create_instance_binding_success(
 
     # Call the create_instance_binding method
     response = await async_client.create_instance_binding(
-        body={
-            "metadata": {
-                "name": "test-instance-binding",
-                "labels": {},
-            },
-            "spec": {
-                "instance": "vpn_instance_value",
-                "provider": "headscalevpn",
-            },
-        },
+        body=ManagedServiceBinding.model_validate(
+            {
+                "metadata": {
+                    "name": "test-instance-binding",
+                    "labels": {},
+                },
+                "spec": {
+                    "instance": "vpn_instance_value",
+                    "provider": "headscalevpn",
+                },
+            }
+        ),
         instance_name="mock_instance_name",
     )
 

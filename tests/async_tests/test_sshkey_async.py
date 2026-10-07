@@ -1,3 +1,4 @@
+from rapyuta_io_sdk_v2.models import SSHKeySignRequest
 import httpx
 import pytest
 from pytest_mock import MockFixture
@@ -22,7 +23,7 @@ async def test_sign_ssh_public_key_success(
     )
 
     response = await async_client.sign_ssh_public_key(
-        body=ssh_key_sign_request_body,
+        body=SSHKeySignRequest.model_validate(ssh_key_sign_request_body),
     )
 
     assert isinstance(response, SSHKeySignResponse)
@@ -43,7 +44,9 @@ async def test_sign_ssh_public_key_with_dict_body(
     )
 
     response = await async_client.sign_ssh_public_key(
-        body={"publicKey": "ssh-rsa AAAAB3... user@example.com"},
+        body=SSHKeySignRequest.model_validate(
+            {"publicKey": "ssh-rsa AAAAB3... user@example.com"}
+        ),
     )
 
     assert isinstance(response, SSHKeySignResponse)
@@ -63,7 +66,7 @@ async def test_sign_ssh_public_key_unauthorized(
 
     with pytest.raises(Exception) as exc:
         await async_client.sign_ssh_public_key(
-            body=ssh_key_sign_request_body,
+            body=SSHKeySignRequest.model_validate(ssh_key_sign_request_body),
         )
 
     assert str(exc.value) == "unauthorized"
@@ -81,7 +84,7 @@ async def test_sign_ssh_public_key_not_found(
 
     with pytest.raises(Exception) as exc:
         await async_client.sign_ssh_public_key(
-            body=ssh_key_sign_request_body,
+            body=SSHKeySignRequest.model_validate(ssh_key_sign_request_body),
         )
 
     assert str(exc.value) == "not found"
@@ -99,7 +102,7 @@ async def test_sign_ssh_public_key_server_error(
 
     with pytest.raises(Exception) as exc:
         await async_client.sign_ssh_public_key(
-            body=ssh_key_sign_request_body,
+            body=SSHKeySignRequest.model_validate(ssh_key_sign_request_body),
         )
 
     assert str(exc.value) == "internal server error"

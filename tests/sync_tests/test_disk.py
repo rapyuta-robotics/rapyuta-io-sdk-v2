@@ -1,3 +1,5 @@
+from rapyuta_io_sdk_v2 import RequestContext
+from rapyuta_io_sdk_v2.models import Disk
 import httpx
 import pytest
 from pytest_mock import MockFixture
@@ -91,7 +93,10 @@ def test_create_disk_success(client, disk_body, disk_model_mock, mocker: MockFix
         json=disk_model_mock,
     )
 
-    response = client.create_disk(body=disk_body, project_guid="mock_project_guid")
+    response = client.create_disk(
+        body=Disk.model_validate(disk_body),
+        context=RequestContext(project_guid="mock_project_guid"),
+    )
 
     assert isinstance(response, Disk)
     assert response.metadata.guid == "disk-mockdisk123456789101"
