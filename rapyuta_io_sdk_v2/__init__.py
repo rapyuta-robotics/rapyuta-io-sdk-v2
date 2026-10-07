@@ -1,6 +1,10 @@
 from rapyuta_io_sdk_v2.async_client import AsyncClient as AsyncClient
 from rapyuta_io_sdk_v2.client import Client as Client
 from rapyuta_io_sdk_v2.config import Configuration as Configuration
+from rapyuta_io_sdk_v2.commands import (
+    wait_for_command_result as wait_for_command_result,
+    async_wait_for_command_result as async_wait_for_command_result,
+)
 from rapyuta_io_sdk_v2.models import (
     Deployment as Deployment,
     DeploymentList as DeploymentList,
@@ -82,6 +86,28 @@ from rapyuta_io_sdk_v2.models.resource import ResourceModel as ResourceModel
 from rapyuta_io_sdk_v2.resource_operations import (
     ResourceResult as ResourceResult,
     Outcome as Outcome,
+)
+
+from rapyuta_io_sdk_v2.models import (
+    Device as Device,
+    DeviceCreate as DeviceCreate,
+    DeviceCreateResponse as DeviceCreateResponse,
+    DeviceArch as DeviceArch,
+    DeviceConfigVariable as DeviceConfigVariable,
+    DeviceConfigVariableCreate as DeviceConfigVariableCreate,
+    DeviceConfigVariableUpdate as DeviceConfigVariableUpdate,
+    DeviceLabel as DeviceLabel,
+    DeviceLabelCreate as DeviceLabelCreate,
+    DeviceLabelUpdate as DeviceLabelUpdate,
+    DeviceCommand as DeviceCommand,
+    DeviceCommandResponse as DeviceCommandResponse,
+    DeviceDaemonPatch as DeviceDaemonPatch,
+    DeviceActionResponse as DeviceActionResponse,
+    DeviceApplyParameters as DeviceApplyParameters,
+    DeviceSelectionQuery as DeviceSelectionQuery,
+    ParameterNode as ParameterNode,
+    ParameterBlob as ParameterBlob,
+    ParameterBlobList as ParameterBlobList,
 )
 
 __version__ = "0.3.0"

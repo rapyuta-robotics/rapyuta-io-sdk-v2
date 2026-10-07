@@ -15,9 +15,13 @@ Typed synchronous and asynchronous clients for rapyuta.io, with optional declara
 pip install rapyuta-io-sdk-v2
 # Optional dependencies:
 pip install 'rapyuta-io-sdk-v2[configtree,apply,charts]'
+# YAML files in Parameter directory uploads:
+pip install 'rapyuta-io-sdk-v2[parameters]'
 ```
 
 Installing an extra supplies dependencies. Enable the corresponding runtime feature in `Configuration.features` before using it. Core API access and pagination need no feature flags.
+
+The `parameters` extra supplies YAML parsing for Parameter uploads and needs no feature flag. JSON and binary Parameter transfers work with the core installation.
 
 ## Configuration
 
@@ -42,7 +46,7 @@ with Client(config) as client:
     projects = client.list_projects()  # One API request, typed page response.
 ```
 
-Optional `v2_api_host` and `rip_host` override environment defaults. `resolved_v2_api_host` and `resolved_rip_host` expose the effective URLs.
+Optional `v2_api_host`, `core_api_host`, and `rip_host` override environment defaults. Their corresponding `resolved_*` properties expose the effective URLs. Parameter and Device Management calls use `core_api_host`, which defaults to the v1 API server for the selected environment. Set `RIO_CORE_API_HOST` or the rio-cli `core_api_host` setting for a custom server; local mode also accepts `LOCAL_CORE_API_HOST`.
 
 ## Typed API calls and request context
 
@@ -92,6 +96,78 @@ async def projects_async(config):
 ```
 
 Authentication calls on `AsyncClient` are awaited as well.
+
+## Parameter directory workflows
+
+Upload and download v1 Parameter trees from directories. Uploads default to `as_folder=True`: the root directories are tree names, nested directories become folders, and files can appear at any depth. Set `as_folder=False` to use v1's alternating attribute/value directory layout.
+
+```python
+with Client(config) as client:
+    client.upload_configurations("./parameters", tree_names=["robot"])
+    client.apply_parameters(["DEVICE_UUID"], tree_names=["robot"])
+    client.download_configurations("./downloaded", tree_names=["robot"])
+```
+
+Both transfers accept `delete_existing_trees=True` to replace selected trees at the destination. JSON and YAML files within the API size limit are stored as text file nodes. Other files and oversized payloads use signed blob uploads. No Parameter label API is exposed. The same methods on `AsyncClient` are awaited.
+
+These filesystem methods delegate to workflows in `parameter_operations`; neither client inherits from a Parameter mixin. Each transfer may make several API calls to process its files and trees.
+
+## Device Management
+
+Device Management uses typed models for device provisioning, commands, configuration variables, and labels. Listing returns `list[Device]`; the v1 endpoint does not use v2 continuation pagination.
+
+```python
+from rapyuta_io_sdk_v2 import (
+    DeviceCommand, DeviceCreate, DeviceLabelCreate, wait_for_command_result,
+)
+
+with Client(config) as client:
+    devices = client.list_devices(online=True)
+    onboarding = client.create_device(
+        DeviceCreate(name="robot", python_version="3", config_variables={"runtime_docker": True})
+    )
+    client.create_device_label("DEVICE_UUID", DeviceLabelCreate(key="fleet", value="warehouse"))
+    command = client.execute_command(
+        ["DEVICE_UUID"], DeviceCommand(cmd="uname -a", run_async=True)
+    )
+    # One request, returning immediately even if the result is pending.
+    result = client.get_command_result(command.jid, ["DEVICE_UUID"])
+    if result.is_pending:
+        # Optional polling, with timing chosen by the caller.
+        result = wait_for_command_result(
+            client, command.jid, ["DEVICE_UUID"], retry_interval=2, timeout=300
+        )
+```
+
+Each Device client method makes one API request. `get_command_result` exposes `is_pending` and `http_status_code`, preserving the service payload. The separate `wait_for_command_result` and `async_wait_for_command_result` utilities poll the corresponding client method until results are available or their timeout expires. They forward `RequestContext` and propagate API errors. The timeout bounds polling; configure HTTP request timeouts on the transport separately. The async utility uses awaited requests and sleeps, and supports cancellation.
+
+```python
+from rapyuta_io_sdk_v2 import AsyncClient, async_wait_for_command_result
+
+async with AsyncClient(config) as client:
+    result = await async_wait_for_command_result(
+        client, "COMMAND_JOB_ID", ["DEVICE_UUID"], retry_interval=2, timeout=300
+    )
+```
+
+Architecture selection uses the separate `select_devices` method. To combine it with listing filters, intersect the returned device IDs explicitly:
+
+```python
+from rapyuta_io_sdk_v2 import DeviceSelectionQuery
+
+with Client(config) as client:
+    selected = client.select_devices(DeviceSelectionQuery(
+        operator="$or",
+        specs={"operator": "$or", "args": [
+            {"operator": "$eq", "args": ["cpuarch", "x86_64"]},
+            {"operator": "$eq", "args": ["cpuarch", "amd64"]},
+        ]},
+    ))
+    selected_ids = {device.uuid for device in selected}
+    devices = [device for device in client.list_devices(online=True) if device.uuid in selected_ids]
+```
+
+Device configuration variable and label methods provide list/create/update/delete operations; device deletion, daemon patching, and Parameter application are also supported. All methods support `RequestContext`, and `AsyncClient` has the same API with awaited requests.
 
 ## ConfigTree settings source
 
@@ -170,7 +246,7 @@ Inputs can be typed resources, mappings, YAML/JSON files, directories, or globs.
 
 Supported kinds: Organization, Project, Package, Deployment, Disk, Network, StaticRoute, Secret, UserGroup, Role, RoleBinding, and ServiceAccount. Package identity includes its version. Apply orders dependencies first; deletion reverses that order and respects `rapyuta.io/deletionPolicy=retain`. Dependencies outside the submitted manifests refer to existing resources. Deployment dependencies marked `wait` receive readiness checks.
 
-Execution uses at most six workers by default. Failure stops new work after the current batch settles, and the report includes failed and skipped resources. After rendering and validation, `Applier` invokes the resource models' operations. Custom resources subclass `ResourceModel`, declare a fixed `resource_kind`, implement their client calls, and register through `resource_models={"MyKind": MyResource}`. Models provide their own identity, dependencies, reference aliases, and operation-specific input schemas. SOPS execution, Ansible filters, and legacy v1 Device operations remain outside the SDK.
+Execution uses at most six workers by default. Failure stops new work after the current batch settles, and the report includes failed and skipped resources. After rendering and validation, `Applier` invokes the resource models' operations. Custom resources subclass `ResourceModel`, declare a fixed `resource_kind`, implement their client calls, and register through `resource_models={"MyKind": MyResource}`. Models provide their own identity, dependencies, reference aliases, and operation-specific input schemas. SOPS execution, Ansible filters, and declarative v1 Device operations remain outside the apply engine.
 
 `AsyncApplier` provides awaited `apply()` and `delete()`; local `render()` and `plan()` remain synchronous.
 

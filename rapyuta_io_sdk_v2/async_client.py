@@ -13,6 +13,31 @@
 # limitations under the License.
 
 from __future__ import annotations
+from rapyuta_io_sdk_v2 import parameter_operations
+from rapyuta_io_sdk_v2._device_helpers import (
+    _command_response,
+    _require_device_ids,
+    _unwrap,
+)
+from rapyuta_io_sdk_v2.models.device import (
+    Device,
+    DeviceActionResponse,
+    DeviceApplyParameters,
+    DeviceCommand,
+    DeviceCommandResponse,
+    DeviceConfigVariable,
+    DeviceConfigVariableCreate,
+    DeviceConfigVariableUpdate,
+    DeviceCreate,
+    DeviceCreateResponse,
+    DeviceDaemonPatch,
+    DeviceLabel,
+    DeviceLabelCreate,
+    DeviceLabelUpdate,
+    DeviceSelectionQuery,
+)
+from urllib.parse import quote
+from pathlib import Path
 from rapyuta_io_sdk_v2.context import RequestContext
 from rapyuta_io_sdk_v2.transport import (
     serialize_model,
@@ -21,7 +46,7 @@ from rapyuta_io_sdk_v2.transport import (
 )
 from rapyuta_io_sdk_v2.pagination import AsyncPaginator
 import platform
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Sequence
 from typing import Any
 import httpx
 from rapyuta_io_sdk_v2.config import Configuration
@@ -129,6 +154,10 @@ class AsyncClient:
     @property
     def v2api_host(self) -> str:
         return self.config.resolved_v2_api_host
+
+    @property
+    def core_api_host(self) -> str:
+        return self.config.resolved_core_api_host
 
     @property
     def rip_host(self) -> str:
@@ -2604,3 +2633,289 @@ class AsyncClient:
         )
         handle_server_errors(result)
         return SSHKeySignResponse(**result.json())
+
+    # Device Management API methods.
+
+    async def list_devices(
+        self,
+        *,
+        name: str | None = None,
+        online: bool | None = None,
+        context: RequestContext | None = None,
+    ) -> list[Device]:
+        """List devices with one request and optional name and online filters."""
+        params = {"name": name} if name is not None else None
+        response = await self.c.get(
+            url=f"{self.core_api_host.rstrip('/')}/api/device-manager/v0/devices/",
+            headers=self.config.get_headers(context=context),
+            params=params,
+        )
+        data = _unwrap(response)
+        devices = [Device.model_validate(raw) for raw in data or []]
+        if online is not None:
+            devices = [
+                device for device in devices if (device.status == "ONLINE") == online
+            ]
+        return devices
+
+    async def select_devices(
+        self,
+        query: DeviceSelectionQuery,
+        *,
+        context: RequestContext | None = None,
+    ) -> list[Device]:
+        """Run one device selection query, such as an architecture filter."""
+        require_model(query, DeviceSelectionQuery)
+        response = await self.c.post(
+            url=f"{self.core_api_host.rstrip('/')}/api/device-manager/v0/selection/query/",
+            headers=self.config.get_headers(context=context),
+            json=serialize_model(query),
+        )
+        data = _unwrap(response)
+        return [Device.model_validate(raw) for raw in data or []]
+
+    async def get_device(
+        self, device_id: str, *, context: RequestContext | None = None
+    ) -> Device:
+        response = await self.c.get(
+            url=f"{self.core_api_host.rstrip('/')}/api/device-manager/v0/devices/{quote(str(device_id), safe='')}",
+            headers=self.config.get_headers(context=context),
+        )
+        data = _unwrap(response)
+        return Device.model_validate(data)
+
+    async def create_device(
+        self, device: DeviceCreate, *, context: RequestContext | None = None
+    ) -> DeviceCreateResponse:
+        require_model(device, DeviceCreate)
+        response = await self.c.post(
+            url=f"{self.core_api_host.rstrip('/')}/api/device-manager/v0/auth-keys/?download_type=script",
+            headers=self.config.get_headers(context=context),
+            json=serialize_model(device, exclude_none=True),
+        )
+        _unwrap(response)
+        payload = response.json()
+        response_data = payload.get("response", payload)
+        return DeviceCreateResponse.model_validate(response_data)
+
+    async def delete_device(
+        self, device_id: str, *, context: RequestContext | None = None
+    ) -> None:
+        response = await self.c.delete(
+            url=f"{self.core_api_host.rstrip('/')}/api/device-manager/v0/devices/{quote(str(device_id), safe='')}",
+            headers=self.config.get_headers(context=context),
+        )
+        _unwrap(response)
+
+    async def patch_device_daemons(
+        self,
+        device_id: str,
+        payload: DeviceDaemonPatch,
+        *,
+        context: RequestContext | None = None,
+    ) -> DeviceActionResponse:
+        require_model(payload, DeviceDaemonPatch)
+        response = await self.c.patch(
+            url=f"{self.core_api_host.rstrip('/')}/api/device-manager/v0/devices/{quote(str(device_id), safe='')}/daemons",
+            headers=self.config.get_headers(context=context),
+            json=serialize_model(payload),
+        )
+        data = _unwrap(response)
+        return DeviceActionResponse.model_validate(data)
+
+    async def apply_parameters(
+        self,
+        device_ids: Sequence[str],
+        tree_names: Sequence[str] | None = None,
+        *,
+        context: RequestContext | None = None,
+    ) -> DeviceActionResponse:
+        request = DeviceApplyParameters(
+            device_list=_require_device_ids(device_ids), tree_names=tree_names or None
+        )
+        require_model(request, DeviceApplyParameters)
+        response = await self.c.post(
+            url=f"{self.core_api_host.rstrip('/')}/api/device-manager/v0/parameters/",
+            headers=self.config.get_headers(context=context),
+            json=serialize_model(request, exclude_none=True),
+        )
+        data = _unwrap(response)
+        return DeviceActionResponse.model_validate(data)
+
+    async def execute_command(
+        self,
+        device_ids: Sequence[str],
+        command: DeviceCommand,
+        *,
+        context: RequestContext | None = None,
+    ) -> DeviceCommandResponse:
+        ids = _require_device_ids(device_ids)
+        require_model(command, DeviceCommand)
+        request = command.model_copy(update={"device_ids": ids})
+        body = {
+            key: value
+            for key, value in serialize_model(request, exclude_none=True).items()
+            if value != ""
+        }
+        response = await self.c.post(
+            url=f"{self.core_api_host.rstrip('/')}/api/device-manager/v0/cmd/",
+            headers=self.config.get_headers(context=context),
+            json=body,
+        )
+        data = _unwrap(response)
+        return _command_response(data, response=response)
+
+    async def get_command_result(
+        self,
+        jid: str,
+        device_ids: Sequence[str],
+        *,
+        context: RequestContext | None = None,
+    ) -> DeviceCommandResponse:
+        """Get a command result once; inspect is_pending or use a polling utility."""
+        ids = _require_device_ids(device_ids)
+        params = [("jid", jid)] + [("device_id", item) for item in ids]
+        response = await self.c.get(
+            url=f"{self.core_api_host.rstrip('/')}/api/device-manager/v0/cmd/{quote(jid, safe='')}",
+            headers=self.config.get_headers(context=context),
+            params=params,
+        )
+        data = _unwrap(response)
+        return _command_response(data, response=response)
+
+    async def list_device_config_variables(
+        self, device_id: str, *, context: RequestContext | None = None
+    ) -> list[DeviceConfigVariable]:
+        response = await self.c.get(
+            url=f"{self.core_api_host.rstrip('/')}/api/device-manager/v0/config_variables/device/{quote(device_id, safe='')}",
+            headers=self.config.get_headers(context=context),
+        )
+        data = _unwrap(response)
+        return [DeviceConfigVariable.model_validate(item) for item in data or []]
+
+    async def create_device_config_variable(
+        self,
+        device_id: str,
+        config_variable: DeviceConfigVariableCreate,
+        *,
+        context: RequestContext | None = None,
+    ) -> DeviceConfigVariable:
+        require_model(config_variable, DeviceConfigVariableCreate)
+        response = await self.c.post(
+            url=f"{self.core_api_host.rstrip('/')}/api/device-manager/v0/config_variables/device/{quote(device_id, safe='')}",
+            headers=self.config.get_headers(context=context),
+            json=serialize_model(config_variable),
+        )
+        data = _unwrap(response)
+        return DeviceConfigVariable.model_validate(data)
+
+    async def update_device_config_variable(
+        self,
+        config_variable: DeviceConfigVariableUpdate,
+        *,
+        context: RequestContext | None = None,
+    ) -> DeviceConfigVariable:
+        require_model(config_variable, DeviceConfigVariableUpdate)
+        response = await self.c.put(
+            url=f"{self.core_api_host.rstrip('/')}/api/device-manager/v0/config_variables/{quote(str(config_variable.id), safe='')}",
+            headers=self.config.get_headers(context=context),
+            json=serialize_model(config_variable, exclude_none=True),
+        )
+        data = _unwrap(response)
+        return DeviceConfigVariable.model_validate(data)
+
+    async def delete_device_config_variable(
+        self, config_variable_id: int | str, *, context: RequestContext | None = None
+    ) -> None:
+        response = await self.c.delete(
+            url=f"{self.core_api_host.rstrip('/')}/api/device-manager/v0/config_variables/{quote(str(config_variable_id), safe='')}",
+            headers=self.config.get_headers(context=context),
+        )
+        _unwrap(response)
+
+    async def list_device_labels(
+        self, device_id: str, *, context: RequestContext | None = None
+    ) -> list[DeviceLabel]:
+        response = await self.c.get(
+            url=f"{self.core_api_host.rstrip('/')}/api/device-manager/v0/labels/{quote(device_id, safe='')}",
+            headers=self.config.get_headers(context=context),
+        )
+        data = _unwrap(response)
+        return [DeviceLabel.model_validate(item) for item in data or []]
+
+    async def create_device_label(
+        self,
+        device_id: str,
+        label: DeviceLabelCreate,
+        *,
+        context: RequestContext | None = None,
+    ) -> DeviceLabel:
+        require_model(label, DeviceLabelCreate)
+        response = await self.c.post(
+            url=f"{self.core_api_host.rstrip('/')}/api/device-manager/v0/labels/{quote(device_id, safe='')}",
+            headers=self.config.get_headers(context=context),
+            json={label.key: label.value},
+        )
+        data = _unwrap(response)
+        if isinstance(data, list):
+            data = data[0] if data else {}
+        return DeviceLabel.model_validate(data)
+
+    async def update_device_label(
+        self, label: DeviceLabelUpdate, *, context: RequestContext | None = None
+    ) -> DeviceLabel:
+        require_model(label, DeviceLabelUpdate)
+        response = await self.c.put(
+            url=f"{self.core_api_host.rstrip('/')}/api/device-manager/v0/labels/{quote(str(label.id), safe='')}",
+            headers=self.config.get_headers(context=context),
+            json=serialize_model(label, exclude_none=True),
+        )
+        _unwrap(response)
+        return DeviceLabel.model_validate(label.model_dump())
+
+    async def delete_device_label(
+        self, label_id: int | str, *, context: RequestContext | None = None
+    ) -> None:
+        response = await self.c.delete(
+            url=f"{self.core_api_host.rstrip('/')}/api/device-manager/v0/labels/{quote(str(label_id), safe='')}",
+            headers=self.config.get_headers(context=context),
+        )
+        _unwrap(response)
+
+    # Parameter filesystem workflows.
+
+    async def upload_configurations(
+        self,
+        rootdir: str | Path,
+        tree_names: list[str] | None = None,
+        delete_existing_trees: bool = False,
+        as_folder: bool = True,
+        *,
+        context: RequestContext | None = None,
+    ) -> None:
+        """Upload local Parameter trees using the filesystem workflow."""
+        await parameter_operations.async_upload_configurations(
+            self,
+            rootdir,
+            tree_names=tree_names,
+            delete_existing_trees=delete_existing_trees,
+            as_folder=as_folder,
+            context=context,
+        )
+
+    async def download_configurations(
+        self,
+        rootdir: str | Path,
+        tree_names: list[str] | None = None,
+        delete_existing_trees: bool = False,
+        *,
+        context: RequestContext | None = None,
+    ) -> None:
+        """Download Parameter trees using the filesystem workflow."""
+        await parameter_operations.async_download_configurations(
+            self,
+            rootdir,
+            tree_names=tree_names,
+            delete_existing_trees=delete_existing_trees,
+            context=context,
+        )
