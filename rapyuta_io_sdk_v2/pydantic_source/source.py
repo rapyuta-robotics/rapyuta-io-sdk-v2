@@ -19,12 +19,13 @@ if TYPE_CHECKING:
     from rapyuta_io_sdk_v2.client import Client
 
 
-def _without_metadata(value: Any) -> Any:
+def _unwrap_export_records(value: Any) -> Any:
+    """Unwrap CLI records while preserving each record's application value."""
     if not isinstance(value, dict):
         return value
     if set(value) == {"value", "metadata"} and isinstance(value["metadata"], dict):
         return value["value"]
-    return {key: _without_metadata(item) for key, item in value.items()}
+    return {key: _unwrap_export_records(item) for key, item in value.items()}
 
 
 def _flatten(value: Any, prefix: str = "") -> dict[str, Any]:
@@ -62,6 +63,7 @@ class ConfigTreeSource(PydanticBaseSettingsSource):
 
     An injected client remains owned by the caller. Local JSON/YAML exports
     are wrapped under the file stem, matching the ConfigTree export convention.
+    Select local_export=True to unwrap CLI value/metadata records explicitly.
     """
 
     def __init__(
@@ -74,12 +76,14 @@ class ConfigTreeSource(PydanticBaseSettingsSource):
         local_file: str | Path | None = None,
         *,
         client: Client | None = None,
+        local_export: bool = False,
     ):
         super().__init__(settings_cls)
         self.config = config or (client.config if client is not None else Configuration())
         self._client = client
         self._tree_name = tree_name
         self._local_file = Path(local_file) if local_file is not None else None
+        self._local_export = local_export
         self._top_prefix = key_prefix.strip("/")
         self._with_project = with_project
         self._configtree_data: dict[str, Any] | None = None
@@ -97,7 +101,9 @@ class ConfigTreeSource(PydanticBaseSettingsSource):
                 raise ValueError("unsupported local file format; use JSON or YAML")
             if not isinstance(value, dict):
                 raise ValueError("local ConfigTree data must be a mapping")
-            flat = _flatten({self._local_file.stem: _without_metadata(value)})
+            if self._local_export:
+                value = _unwrap_export_records(value)
+            flat = _flatten({self._local_file.stem: value})
         else:
             from rapyuta_io_sdk_v2.client import Client
             from rapyuta_io_sdk_v2.context import RequestContext

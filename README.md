@@ -125,7 +125,7 @@ class ServiceSettings(BaseSettings):
         )
 ```
 
-The source loads when invoked, decodes base64 values and JSON, and nests slash-separated paths. It supports settings aliases, injected clients, and local JSON/YAML exports via `local_file=`. Local exports are wrapped under the file stem: use `key_prefix="service"` with `service.yaml`. Owned clients close after loading; injected clients stay open.
+The source loads when invoked, decodes base64 values and JSON, and nests slash-separated paths. It supports settings aliases, injected clients, and local JSON/YAML via `local_file=`. Local data is wrapped under the file stem: use `key_prefix="service"` with `service.yaml`. Pass `local_export=True` to unwrap CLI export records containing `value` and `metadata`; ordinary local files preserve those application fields. Owned clients close after loading; injected clients stay open.
 
 ## Resource operations
 

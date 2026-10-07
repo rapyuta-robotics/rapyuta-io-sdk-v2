@@ -20,6 +20,10 @@ class Settings(BaseSettings):
     nullable: str | None = "default"
 
 
+class CredentialSettings(BaseSettings):
+    credentials: dict
+
+
 def config():
     return Configuration(load_cli_config=False, features={"configtree_source": True})
 
@@ -76,7 +80,9 @@ def test_local_file_uses_export_stem_and_unwraps_metadata(tmp_path, monkeypatch)
         "rapyuta_io_sdk_v2.client.Client",
         lambda *a, **kw: pytest.fail("unexpected client construction"),
     )
-    source = ConfigTreeSource(Settings, config(), key_prefix="app", local_file=path)
+    source = ConfigTreeSource(
+        Settings, config(), key_prefix="app", local_file=path, local_export=True
+    )
     assert Settings.model_validate(source()).count == 5
 
 
@@ -87,6 +93,26 @@ def test_yaml_local_export(tmp_path):
         ConfigTreeSource(Settings, config(), key_prefix="app", local_file=path)()["count"]
         == 7
     )
+
+
+def test_local_settings_preserve_value_and_metadata_application_fields(tmp_path):
+    path = tmp_path / "app.json"
+    credentials = {"value": "token", "metadata": {"scope": "reader"}}
+    path.write_text(json.dumps({"credentials": credentials}))
+    source = ConfigTreeSource(
+        CredentialSettings, config(), key_prefix="app", local_file=path
+    )
+    assert CredentialSettings.model_validate(source()).credentials == credentials
+
+
+def test_local_export_unwraps_record_without_unwrapping_its_application_value(tmp_path):
+    path = tmp_path / "app.json"
+    credentials = {"value": "token", "metadata": {"scope": "reader"}}
+    path.write_text(json.dumps({"credentials": {"value": credentials, "metadata": {}}}))
+    source = ConfigTreeSource(
+        CredentialSettings, config(), key_prefix="app", local_file=path, local_export=True
+    )
+    assert CredentialSettings.model_validate(source()).credentials == credentials
 
 
 def test_settings_alias_choices():
