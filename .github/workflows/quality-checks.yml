@@ -34,3 +34,19 @@ jobs:
           print('smoke imports OK')
           "
           uv run --python ${{ matrix.python-version }} pytest tests/ --cov
+
+      - name: Verify core-only imports
+        env:
+          UV_PROJECT_ENVIRONMENT: ${{ runner.temp }}/sdk-core
+        run: |
+          uv sync --python ${{ matrix.python-version }} --no-dev
+          uv run --python ${{ matrix.python-version }} --no-dev python -c "
+          import importlib.util
+          from rapyuta_io_sdk_v2 import Client, AsyncClient, Configuration
+          from rapyuta_io_sdk_v2.apply import Applier
+          from rapyuta_io_sdk_v2.charts import ChartRepository
+          from rapyuta_io_sdk_v2.pydantic_source import ConfigTreeSource
+          assert importlib.util.find_spec('yaml') is None
+          assert importlib.util.find_spec('jinja2') is None
+          print('core-only imports OK')
+          "

@@ -25,7 +25,7 @@ uv build
 
 ## Architecture
 
-This is a Python SDK for the rapyuta.io platform v2 API (Python 3.10+, managed with `uv`).
+This is a Python SDK for the rapyuta.io platform v2 API (Python 3.13+, managed with `uv`).
 
 ### Client Layer
 
@@ -35,7 +35,8 @@ This is a Python SDK for the rapyuta.io platform v2 API (Python 3.10+, managed w
 
 `rapyuta_io_sdk_v2/models/` — Pydantic models following Kubernetes conventions with `kind`, `metadata`, `spec`, `status` fields. Key base classes:
 
-- `BaseObject` — adds `apiVersion`
+- `SDKModel` — accepts snake_case Python fields and explicit API aliases
+- `BaseObject` — adds `api_version` (wire alias `apiVersion`)
 - `BaseMetadata` — adds `name`, `guid`, `labels`, timestamps, creator, organization/project refs
 - `BaseList[T]` — generic paginated list with `metadata.continue_` cursor token
 
@@ -43,13 +44,16 @@ Resource models inherit from these bases. Field aliases handle snake_case Python
 
 ### Configuration
 
-`rapyuta_io_sdk_v2/config.py` — `Configuration` dataclass managing host selection per environment. Environments: `ga` (production), `qa`, `dev`, `local`, `pr-*`. Bearer token auth is set via `auth_token`.
+`rapyuta_io_sdk_v2/config.py` — `Configuration(BaseSettings)` resolves constructor values, `RIO_` environment variables, and rio-cli JSON. `resolved_v2_api_host` and `resolved_rip_host` derive URLs from environment and overrides. `RequestContext` sets per-request scope and headers.
 
 ### Utilities & Error Handling
 
 - `exceptions.py` — HTTP status code → custom exception mapping (`UnauthorizedAccessError`, `HttpNotFoundError`, `InternalServerError`, etc.)
-- `utils.py` — `walk_pages()` for transparent cursor-based pagination
-- `pydantic_source.py` — Custom Pydantic settings source for loading config from the ConfigTree API
+- `pagination.py` — `Paginator`/`AsyncPaginator` collect all items or stream typed items/pages
+- `pydantic_source/` — optional, lazy ConfigTree settings source
+- `features.py` — validated runtime flags for ConfigTree source, Apply, and Charts; dependencies are package extras
+- `apply/` — typed resource handlers, rendering, dependency planning, sync/async execution and structured reports
+- `charts/` — chart repositories, bounded downloads, safe archives and Apply integration
 
 ### Tests
 
