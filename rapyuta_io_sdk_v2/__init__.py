@@ -66,6 +66,12 @@ from rapyuta_io_sdk_v2.models import (
     SharedURL as SharedURL,
     SharedURLList as SharedURLList,
 )
+from rapyuta_io_sdk_v2.context import RequestContext as RequestContext
+from rapyuta_io_sdk_v2.features import (
+    FeatureFlags as FeatureFlags,
+    FeatureDisabledError as FeatureDisabledError,
+    MissingOptionalDependencyError as MissingOptionalDependencyError,
+)
 from rapyuta_io_sdk_v2.models.utils import SDKModel as SDKModel
 from rapyuta_io_sdk_v2.utils import walk_pages as walk_pages
 

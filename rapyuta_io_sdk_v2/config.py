@@ -1,199 +1,201 @@
-# Copyright 2024 Rapyuta Robotics
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+"""Validated SDK settings composed from arguments, environment, and rio-cli."""
+
 from __future__ import annotations
 
-import json
 import os
-from dataclasses import dataclass
+from pathlib import Path
+from typing import TYPE_CHECKING, Any
+
+from pydantic import Field, field_validator
+from pydantic_settings import (
+    BaseSettings,
+    JsonConfigSettingsSource,
+    PydanticBaseSettingsSource,
+    SettingsConfigDict,
+    SettingsError,
+)
 
 from rapyuta_io_sdk_v2.constants import (
     APP_NAME,
     NAMED_ENVIRONMENTS,
     STAGING_ENVIRONMENT_SUBDOMAIN,
 )
-from rapyuta_io_sdk_v2.exceptions import ValidationError
+from rapyuta_io_sdk_v2.features import FeatureFlags
 from rapyuta_io_sdk_v2.utils import get_default_app_dir
 
+if TYPE_CHECKING:
+    from rapyuta_io_sdk_v2.context import RequestContext
 
-@dataclass
-class Configuration:
-    """Configuration class for the SDK."""
 
-    email: str = None
-    password: str = None
-    auth_token: str = None
-    project_guid: str = None
-    organization_guid: str = None
-    environment: str = "ga"  # Default environment is prod
-    v2_api_host: str = None
-    rip_host: str = None
+class RioCliSettingsSource(JsonConfigSettingsSource):
+    """Use Pydantic's JSON reader, normalizing only rio-cli's key names."""
 
-    def __post_init__(self):
-        # Normalize empty or whitespace-only host strings to None so that they
-        # are treated the same as "not provided".
-        if isinstance(self.v2_api_host, str):
-            self.v2_api_host = self.v2_api_host.strip() or None
-        if isinstance(self.rip_host, str):
-            self.rip_host = self.rip_host.strip() or None
+    KEY_NAMES = {
+        "email_id": "email",
+        "project_id": "project_guid",
+        "organization_id": "organization_guid",
+        "v2api_host": "v2_api_host",
+    }
 
-        self.hosts = {}
-        self.set_environment(self.environment)
+    def _read_file(self, file_path: Path) -> dict[str, Any]:
+        data = super()._read_file(file_path)
+        if not isinstance(data, dict):
+            raise ValueError("rio-cli configuration must be a JSON object")
+        return data
+
+    def __call__(self) -> dict[str, Any]:
+        data = super().__call__()
+        for cli_name, sdk_name in self.KEY_NAMES.items():
+            if cli_name in data:
+                data.setdefault(sdk_name, data.pop(cli_name))
+        return data
+
+
+class Configuration(BaseSettings):
+    """Settings priority: arguments, RIO_ variables, rio-cli JSON, defaults.
+
+    Set ``load_cli_config=False`` to disable file loading. ``config_file`` or
+    ``RIO_CONFIG`` selects a required file; the implicit default file is optional.
+    Construction performs no network requests and never writes the file.
+    """
+
+    model_config = SettingsConfigDict(
+        env_prefix="RIO_",
+        env_nested_delimiter="__",
+        extra="ignore",
+        validate_assignment=True,
+    )
+
+    email: str | None = None
+    password: str | None = Field(default=None, repr=False)
+    auth_token: str | None = Field(default=None, repr=False)
+    project_guid: str | None = None
+    organization_guid: str | None = None
+    project_name: str | None = None
+    organization_name: str | None = None
+    organization_short_id: str | None = None
+    environment: str = "ga"
+    v2_api_host: str | None = None
+    rip_host: str | None = None
+    features: FeatureFlags = Field(default_factory=FeatureFlags)
+    config_file: Path | None = Field(default=None, exclude=True)
+    load_cli_config: bool = Field(default=True, exclude=True)
 
     @classmethod
-    def from_env(cls) -> Configuration:
-        raise NotImplementedError
+    def settings_customise_sources(
+        cls,
+        settings_cls: type[BaseSettings],
+        init_settings: PydanticBaseSettingsSource,
+        env_settings: PydanticBaseSettingsSource,
+        dotenv_settings: PydanticBaseSettingsSource,
+        file_secret_settings: PydanticBaseSettingsSource,
+    ) -> tuple[PydanticBaseSettingsSource, ...]:
+        selected = {**env_settings(), **init_settings()}
+        load_file = selected.get("load_cli_config", True)
+        if isinstance(load_file, str):
+            load_file = load_file.lower() not in ("false", "0", "no", "off")
+        if not load_file:
+            return init_settings, env_settings
+        explicit_path = selected.get("config_file") or os.getenv("RIO_CONFIG")
+        path = Path(explicit_path or Path(get_default_app_dir(APP_NAME)) / "config.json")
+        if explicit_path and not path.is_file():
+            raise SettingsError(f"rio-cli configuration file not found: {path}")
+        try:
+            source = RioCliSettingsSource(settings_cls, json_file=path)
+        except (OSError, ValueError, TypeError) as exc:
+            raise SettingsError(
+                f"cannot read rio-cli configuration file {path}: {exc}"
+            ) from exc
+        return init_settings, env_settings, source
 
+    @field_validator("environment", mode="before")
     @classmethod
-    def from_file(cls, file_path: str = None) -> Configuration:
-        """Create a configuration object from a file.
+    def validate_environment(cls, value):
+        value = value or "ga"
+        if not isinstance(value, str) or (
+            value not in (*NAMED_ENVIRONMENTS, "local") and not value.startswith("pr")
+        ):
+            raise ValueError("invalid environment")
+        return value
 
-        Args:
-            file_path (str): Path to the file.
+    @field_validator("v2_api_host", "rip_host", mode="before")
+    @classmethod
+    def normalize_host(cls, value):
+        if isinstance(value, str):
+            return value.strip().rstrip("/") or None
+        return value
 
-        Returns:
-            Configuration: Configuration object.
-        """
-        if file_path is None:
-            default_dir = get_default_app_dir(APP_NAME)
-            file_path = os.path.join(default_dir, "config.json")
+    @property
+    def resolved_v2_api_host(self) -> str:
+        if self.v2_api_host:
+            return self.v2_api_host
+        if self.environment == "local":
+            return os.getenv("LOCAL_V2API_HOST") or "http://gateway/io"
+        if self.environment == "ga":
+            return "https://api.rapyuta.io"
+        return f"https://{self.environment}api.{STAGING_ENVIRONMENT_SUBDOMAIN}"
 
-        with open(file_path) as file:
-            data = json.load(file)
-            return cls(
-                email=data.get("email_id"),
-                password=data.get("password"),
-                project_guid=data.get("project_id"),
-                organization_guid=data.get("organization_id"),
-                environment=data.get("environment"),
-                auth_token=data.get("auth_token"),
-            )
+    @property
+    def resolved_rip_host(self) -> str:
+        if self.rip_host:
+            return self.rip_host
+        if self.environment == "local":
+            return os.getenv("LOCAL_RIP_HOST") or "http://rip"
+        if self.environment == "ga":
+            return "https://garip.apps.okd4v2.prod.rapyuta.io"
+        return f"https://{self.environment}rip.{STAGING_ENVIRONMENT_SUBDOMAIN}"
 
     def get_headers(
         self,
+        *,
         with_organization: bool = True,
         organization_guid: str | None = None,
         with_project: bool = True,
         project_guid: str | None = None,
         with_group: bool = False,
         group_guid: str | None = None,
-        **kwargs,
+        context: RequestContext | None = None,
+        request_id: str | None = None,
+        x_checksum: str | None = None,
+        content_type: str | None = None,
     ) -> dict[str, str]:
-        """Get the headers for the configuration.
-
-        Args:
-            with_organization (bool): Whether to include the organization headers. Defaults to True.
-            organization_guid (str, optional): The organization guid. Defaults to None.
-            with_project (bool): Whether to include the project headers. Defaults to True.
-            project_guid (str, optional): The project guid. Defaults to None.
-            with_group (bool): Whether to include the group headers. Defaults to False.
-            group_guid (str, optional): The group guid. Defaults to None.
-            **kwargs: Additional keyword arguments (e.g., x_checksum, content_type).
-
-        Returns:
-            dict: Headers for the configuration, including Authorization, organizationguid,
-                  project, groupguid, and other custom headers.
-        """
-        auth_value = self.auth_token.strip() if self.auth_token else None
-        if auth_value and not auth_value.lower().startswith("bearer "):
-            auth_value = f"Bearer {auth_value}"
-        headers = {"Authorization": auth_value} if auth_value else {}
-
-        organization_guid = organization_guid or self.organization_guid
+        """Build per-request headers without changing shared settings."""
+        if context is not None:
+            context_data = context.model_dump(exclude_none=True)
+            with_organization = context_data.get("with_organization", with_organization)
+            with_project = context_data.get("with_project", with_project)
+            with_group = context_data.get("with_group", with_group)
+            organization_guid = context_data.get("organization_guid", organization_guid)
+            project_guid = context_data.get("project_guid", project_guid)
+            group_guid = context_data.get("group_guid", group_guid)
+            request_id = context_data.get("request_id", request_id)
+            x_checksum = context_data.get("x_checksum", x_checksum)
+            content_type = context_data.get("content_type", content_type)
+        headers: dict[str, str] = {}
+        token = self.auth_token.strip() if self.auth_token else ""
+        if token:
+            headers["Authorization"] = (
+                token if token.lower().startswith("bearer ") else f"Bearer {token}"
+            )
+        organization_guid = (
+            organization_guid if organization_guid is not None else self.organization_guid
+        )
+        project_guid = project_guid if project_guid is not None else self.project_guid
         if with_organization and organization_guid:
             headers["organizationguid"] = organization_guid
-
-        project_guid = project_guid or self.project_guid
         if with_project and project_guid:
             headers["project"] = project_guid
-
         if with_group and group_guid:
             headers["groupguid"] = group_guid
-
-        custom_client_request_id = os.getenv("REQUEST_ID")
-        if custom_client_request_id:
-            headers["X-Request-ID"] = custom_client_request_id
-
-        x_checksum = kwargs.get("x_checksum", None)
-        if x_checksum:
-            headers["X-Checksum"] = x_checksum
-
-        content_type = kwargs.get("content_type", None)
-        if content_type:
-            headers["Content-Type"] = content_type
-
-        return headers
-
-    def set_project(self, project_guid: str) -> None:
-        """Set the project for the configuration.
-
-        Args:
-            project_guid (str): The project guid to be set.
-        """
-        self.project_guid = project_guid
-
-    def set_organization(self, organization_guid: str) -> None:
-        """Set the organization for the configuration.
-
-        Args:
-            organization_guid (str): The organization guid to be set.
-        """
-        self.organization_guid = organization_guid
-
-    def set_environment(self, name: str = None) -> None:
-        """Set the environment for the configuration.
-
-        Populates ``hosts`` with the correct URLs for *name*.  If the caller
-        provided ``v2_api_host`` or ``rip_host`` at construction time those
-        values are used as-is; otherwise the canonical defaults for the
-        environment are applied.  Calling this method again with a different
-        environment name always recomputes the default slots so that switching
-        environments produces correct URLs.
-
-        Args:
-            name (str): Name of the environment. Defaults to ``"ga"`` (production).
-
-        Raises:
-            ValidationError: If *name* is not a recognised environment.
-        """
-        name = name or "ga"
-
-        if (
-            name not in ("local", "ga")
-            and name not in NAMED_ENVIRONMENTS
-            and not name.startswith("pr")
+        request_id = request_id or os.getenv("REQUEST_ID")
+        if request_id:
+            headers["X-Request-ID"] = request_id
+        for value, wire_name in (
+            (x_checksum, "X-Checksum"),
+            (content_type, "Content-Type"),
         ):
-            raise ValidationError("invalid environment")
-
-        self.hosts["environment"] = name
-
-        if name == "local":
-            self.hosts["v2api_host"] = self.v2_api_host or (
-                os.getenv("LOCAL_V2API_HOST") or "http://gateway/io"
-            )
-            self.hosts["rip_host"] = self.rip_host or (
-                os.getenv("LOCAL_RIP_HOST") or "http://rip"
-            )
-        elif name == "ga":
-            self.hosts["rip_host"] = (
-                self.rip_host or "https://garip.apps.okd4v2.prod.rapyuta.io"
-            )
-            self.hosts["v2api_host"] = self.v2_api_host or "https://api.rapyuta.io"
-        else:
-            # Staging environments: qa, dev, pr*
-            self.hosts["rip_host"] = (
-                self.rip_host or f"https://{name}rip.{STAGING_ENVIRONMENT_SUBDOMAIN}"
-            )
-            self.hosts["v2api_host"] = (
-                self.v2_api_host or f"https://{name}api.{STAGING_ENVIRONMENT_SUBDOMAIN}"
-            )
+            if value:
+                headers[wire_name] = value
+        if context is not None:
+            headers.update(context.headers)
+        return headers
