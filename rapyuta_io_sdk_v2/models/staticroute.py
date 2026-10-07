@@ -9,12 +9,14 @@ incorrect fields.
 from __future__ import annotations
 
 import re
-from typing import Literal
+from typing import ClassVar, Literal
 
 from pydantic import Field, field_validator
 
-from .utils import BaseList, BaseMetadata, BaseObject
 from rapyuta_io_sdk_v2.models.utils import SDKModel
+from rapyuta_io_sdk_v2.resource_operations import Request
+
+from .utils import BaseList, BaseMetadata, BaseObject
 
 
 class StaticRouteSpec(SDKModel):
@@ -80,6 +82,15 @@ class StaticRoute(BaseObject):
     status: StaticRouteStatus | None = Field(
         default=None, description="Status of the StaticRoute resource"
     )
+
+    resource_kind: ClassVar[str] = "StaticRoute"
+
+    endpoint: ClassVar[str] = "staticroute"
+
+    mutable: ClassVar[bool] = True
+
+    def _update(self):
+        return (yield Request("update_staticroute", (self.metadata.name, self)))
 
 
 class StaticRouteList(BaseList[StaticRoute]):

@@ -8,21 +8,24 @@ incorrect fields.
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import ClassVar, Literal
 
 from pydantic import Field, field_validator, model_validator
 
 from rapyuta_io_sdk_v2.models.utils import (
-    resource_key,
-    SDKModel,
     Architecture,
     BaseList,
     BaseMetadata,
     RestartPolicy,
     Runtime,
+    SDKModel,
     SecretDepends,
     ValueFrom,
+    resource_key,
 )
+from rapyuta_io_sdk_v2.resource_operations import Request
+
+from .resource import ResourceModel
 
 # --- Helper Models ---
 
@@ -215,7 +218,7 @@ class PackageMetadata(BaseMetadata):
     description: str | None = Field(default=None)
 
 
-class Package(SDKModel):
+class Package(ResourceModel):
     """Package model."""
 
     api_version: str | None = Field(default="api.rapyuta.io/v2", alias="apiVersion")
@@ -239,6 +242,16 @@ class Package(SDKModel):
             return None
 
         return dependencies
+
+    resource_kind: ClassVar[str] = "Package"
+
+    endpoint: ClassVar[str] = "package"
+
+    def _delete(self):
+        yield Request(
+            "delete_package",
+            (self.metadata.name, self.metadata.version),
+        )
 
 
 class PackageList(BaseList[Package]):

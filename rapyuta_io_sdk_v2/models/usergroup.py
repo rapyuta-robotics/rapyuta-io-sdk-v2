@@ -1,18 +1,20 @@
 from __future__ import annotations
 
-from typing import Literal
+from typing import ClassVar, Literal
 
 from pydantic import Field
 
+from rapyuta_io_sdk_v2.exceptions import HttpNotFoundError
 from rapyuta_io_sdk_v2.models.utils import (
-    resource_key,
-    SDKModel,
     BaseList,
     BaseMetadata,
     BaseObject,
     Domain,
+    SDKModel,
     Subject,
+    resource_key,
 )
+from rapyuta_io_sdk_v2.resource_operations import ApplyError, Request
 
 
 class UserGroupMemberCreate(SDKModel):
@@ -45,8 +47,45 @@ class UserGroup(BaseObject):
     metadata: BaseMetadata
     spec: UserGroupSpec
 
+    resource_kind: ClassVar[str] = "UserGroup"
+
+    can_apply: ClassVar[bool] = False
+
+    endpoint: ClassVar[str] = "user_group"
+
+    mutable: ClassVar[bool] = True
+
+    def _lookup(self):
+        if self.metadata.guid:
+            return self.metadata.guid
+        matches = yield from self._named_resources("list_user_groups")
+        if not matches or not matches[0].metadata.guid:
+            raise HttpNotFoundError(f"Group {self.metadata.name} not found")
+        if len(matches) != 1:
+            raise ApplyError(f"Ambiguous group name {self.metadata.name}")
+        return matches[0].metadata.guid
+
+    def _update(self):
+        self.metadata.guid = yield from self._lookup()
+        return (
+            yield Request(
+                "update_user_group",
+                (
+                    self.metadata.name,
+                    self.metadata.guid,
+                    self,
+                ),
+            )
+        )
+
+    def _delete(self):
+        guid = yield from self._lookup()
+        yield Request("delete_user_group", (self.metadata.name, guid))
+
 
 class UserGroupCreate(UserGroup):
+    can_apply: ClassVar[bool] = True
+
     spec: UserGroupSpecCreate
 
     def list_dependencies(self) -> list[str] | None:

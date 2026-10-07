@@ -6,8 +6,8 @@ import asyncio
 import glob
 import graphlib
 import json
+import math
 import os
-import time
 from collections.abc import Callable, Iterable, Iterator, Mapping
 from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
@@ -16,13 +16,67 @@ from typing import Any
 
 from pydantic import BaseModel
 
+from rapyuta_io_sdk_v2.context import RequestContext
 from rapyuta_io_sdk_v2.features import require_dependency
-from rapyuta_io_sdk_v2.models.secret import Secret
-from rapyuta_io_sdk_v2.models.usergroup import UserGroup
+from rapyuta_io_sdk_v2.models import (
+    Deployment,
+    Disk,
+    Network,
+    Organization,
+    Package,
+    Project,
+    Role,
+    RoleBinding,
+    Secret,
+    SecretCreate,
+    ServiceAccount,
+    StaticRoute,
+    UserGroup,
+    UserGroupCreate,
+)
+from rapyuta_io_sdk_v2.models.resource import ResourceModel
 from rapyuta_io_sdk_v2.models.utils import resource_key
 
-from .handlers import DEFAULT_HANDLERS, Pause, Request, ResourceHandler, resource_kind
 from .types import ApplyError, ApplyPlan, ApplyReport, Outcome, ResourceResult
+
+
+DEFAULT_RESOURCE_MODELS: dict[str, type[ResourceModel]] = {
+    model.__name__.removesuffix("Create").lower(): model
+    for model in (
+        Organization,
+        Project,
+        Package,
+        Deployment,
+        Disk,
+        Network,
+        StaticRoute,
+        SecretCreate,
+        UserGroupCreate,
+        Role,
+        RoleBinding,
+        ServiceAccount,
+    )
+}
+
+
+def resource_kind(resource: BaseModel, models: Mapping[str, type[ResourceModel]]) -> str:
+    """Infer an omitted kind from the registered typed models."""
+    if getattr(resource, "kind", None):
+        return resource.kind
+    exact = [name for name, model in models.items() if type(resource) is model]
+    candidates = exact or [
+        name for name, model in models.items() if isinstance(resource, model)
+    ]
+    if len(candidates) != 1:
+        raise ApplyError(f"Cannot infer resource kind for {type(resource).__name__}")
+    name = candidates[0]
+    model_name = models[name].__name__.removesuffix("Create")
+    return model_name if model_name.lower() == name else name
+
+
+def identity(resource: ResourceModel) -> str:
+    """Return the resource's canonical operation identity."""
+    return resource.identity
 
 
 def merge_values(destination: dict, source: Mapping) -> dict:
@@ -52,14 +106,29 @@ class _BaseApplier:
         workers: int = 6,
         readiness_attempts: int = 50,
         readiness_interval: float = 6,
-        context: Any = None,
-        handlers: Mapping[str, type[ResourceHandler]] | None = None,
+        context: RequestContext | None = None,
+        resource_models: Mapping[str, type[ResourceModel]] | None = None,
     ):
         client.config.features.require("apply")
         self.yaml = require_dependency("yaml", "apply")
         jinja = require_dependency("jinja2", "apply")
-        if workers < 1 or readiness_attempts < 1 or readiness_interval < 0:
-            raise ValueError("workers/attempts must be positive and interval nonnegative")
+        if not isinstance(workers, int) or isinstance(workers, bool) or workers < 1:
+            raise ValueError("workers must be a positive integer")
+        if (
+            not isinstance(readiness_attempts, int)
+            or isinstance(readiness_attempts, bool)
+            or readiness_attempts < 1
+        ):
+            raise ValueError("readiness_attempts must be a positive integer")
+        if (
+            isinstance(readiness_interval, bool)
+            or not isinstance(readiness_interval, (int, float))
+            or not math.isfinite(readiness_interval)
+            or readiness_interval < 0
+        ):
+            raise ValueError("readiness_interval must be a finite nonnegative number")
+        if context is not None and not isinstance(context, RequestContext):
+            raise TypeError("context must be a RequestContext")
         self.client = client
         # Plans and execution must see the same inputs, even with a generator.
         self.resources = (
@@ -69,10 +138,15 @@ class _BaseApplier:
         self.readiness_attempts = readiness_attempts
         self.readiness_interval = readiness_interval
         self.context = context
-        self.handlers = {
-            **DEFAULT_HANDLERS,
-            **{k.lower(): v for k, v in (handlers or {}).items()},
+        self.resource_models = {
+            **DEFAULT_RESOURCE_MODELS,
+            **{k.lower(): v for k, v in (resource_models or {}).items()},
         }
+        if any(
+            not isinstance(model, type) or not issubclass(model, ResourceModel)
+            for model in self.resource_models.values()
+        ):
+            raise TypeError("resource_models values must be ResourceModel subclasses")
         self.environment = jinja.Environment(
             undefined=jinja.StrictUndefined, autoescape=False
         )
@@ -150,9 +224,18 @@ class _BaseApplier:
 
     def render(
         self, resources: Any = None, *, operation: str = "apply"
-    ) -> list[BaseModel]:
+    ) -> list[ResourceModel]:
         """Render templates and validate resource data without any platform calls."""
         self.client.config.features.require("apply")
+        if operation not in ("apply", "delete"):
+            raise ValueError("operation must be apply or delete")
+        models = self.resource_models
+        if operation == "delete":
+            response_models = {SecretCreate: Secret, UserGroupCreate: UserGroup}
+            models = {
+                kind: response_models.get(model, model)
+                for kind, model in self.resource_models.items()
+            }
         source = self.resources if resources is None else resources
         if isinstance(source, (str, Path, Mapping, BaseModel)):
             source = [source]
@@ -174,18 +257,13 @@ class _BaseApplier:
         rendered = []
         for document in documents:
             kind = (
-                resource_kind(document, self.handlers)
+                resource_kind(document, models)
                 if isinstance(document, BaseModel)
                 else document.get("kind")
             )
-            handler = self.handlers.get((kind or "").lower())
-            if handler is None:
+            model = models.get((kind or "").lower())
+            if model is None:
                 raise ApplyError(f"Unsupported resource kind: {kind}")
-            model = handler.model
-            if operation == "delete":
-                model = {"secret": Secret, "usergroup": UserGroup}.get(
-                    kind.lower(), model
-                )
             if isinstance(document, BaseModel):
                 if not isinstance(document, model):
                     document = model.model_validate(
@@ -212,18 +290,16 @@ class _BaseApplier:
         if operation not in ("apply", "delete"):
             raise ValueError("operation must be apply or delete")
         rendered = self.render(resources, operation=operation)
-        objects: dict[str, ResourceHandler] = {}
+        objects: dict[str, ResourceModel] = {}
         for resource in rendered:
-            handler = self.handlers[resource.kind.lower()](resource)
-            handler.validate_operation(operation)
-            if handler.identity in objects:
-                raise ApplyError(f"Duplicate resource: {handler.identity}")
-            objects[handler.identity] = handler
+            resource.validate_operation(operation)
+            if resource.identity in objects:
+                raise ApplyError(f"Duplicate resource: {resource.identity}")
+            objects[resource.identity] = resource
         # Both names and GUIDs may refer to resources included in this operation.
         # Validate aliases against every name before resolving dependency edges.
         aliases = {key: key for key in objects}
-        for key, handler in objects.items():
-            resource = handler.resource
+        for key, resource in objects.items():
             guid = resource.metadata.guid
             if not guid:
                 continue
@@ -238,9 +314,9 @@ class _BaseApplier:
                 )
             aliases[alias] = key
         graph = graphlib.TopologicalSorter()
-        for key, handler in objects.items():
+        for key, resource in objects.items():
             # Dependencies outside this manifest set refer to existing resources.
-            graph.add(key, *(aliases[d] for d in handler.dependencies() if d in aliases))
+            graph.add(key, *(aliases[d] for d in resource.dependencies() if d in aliases))
         try:
             graph.prepare()
         except graphlib.CycleError as error:
@@ -254,9 +330,8 @@ class _BaseApplier:
             layers.reverse()
         return ApplyPlan(operation=operation, layers=layers, resources=rendered)
 
-    def _objects(self, plan: ApplyPlan) -> dict[str, ResourceHandler]:
-        handlers = [self.handlers[r.kind.lower()](r) for r in plan.resources]
-        return {h.identity: h for h in handlers}
+    def _objects(self, plan: ApplyPlan) -> dict[str, ResourceModel]:
+        return {resource.identity: resource for resource in plan.resources}
 
     @staticmethod
     def _finish(plan: ApplyPlan, completed: dict[str, ResourceResult]) -> ApplyReport:
@@ -273,44 +348,18 @@ class _BaseApplier:
 class Applier(_BaseApplier):
     """Synchronous declarative operations using a shared, thread-safe client."""
 
-    def _run(self, handler: ResourceHandler, operation: str) -> ResourceResult:
-        workflow = handler.workflow(
-            operation, self.readiness_attempts, self.readiness_interval
-        )
-        value = None
-        error = None
+    def _run(self, resource: ResourceModel, operation: str) -> ResourceResult:
         try:
-            while True:
-                try:
-                    step = (
-                        workflow.throw(error)
-                        if error is not None
-                        else workflow.send(value)
-                    )
-                except StopIteration as stop:
-                    outcome, resource = stop.value
-                    return ResourceResult(
-                        identity=handler.identity, outcome=outcome, resource=resource
-                    )
-                value, error = None, None
-                try:
-                    if isinstance(step, Pause):
-                        time.sleep(step.seconds)
-                    elif isinstance(step, Request):
-                        kwargs = dict(step.kwargs)
-                        if self.context is not None:
-                            kwargs["context"] = self.context
-                        value = getattr(self.client, step.method)(*step.args, **kwargs)
-                    else:
-                        raise ApplyError(f"Invalid handler step: {step}")
-                except Exception as caught:
-                    error = caught
-        except Exception as caught:
-            return ResourceResult(
-                identity=handler.identity, outcome=Outcome.FAILED, error=str(caught)
+            return getattr(resource, operation)(
+                self.client,
+                context=self.context,
+                readiness_attempts=self.readiness_attempts,
+                readiness_interval=self.readiness_interval,
             )
-        finally:
-            workflow.close()
+        except Exception as error:
+            return ResourceResult(
+                identity=resource.identity, outcome=Outcome.FAILED, error=str(error)
+            )
 
     def _execute(self, resources: Any, operation: str, dry_run: bool) -> ApplyReport:
         self.client.config.features.require("apply")
@@ -350,46 +399,18 @@ class Applier(_BaseApplier):
 class AsyncApplier(_BaseApplier):
     """Async execution; local rendering and planning remain synchronous."""
 
-    async def _run(self, handler: ResourceHandler, operation: str) -> ResourceResult:
-        workflow = handler.workflow(
-            operation, self.readiness_attempts, self.readiness_interval
-        )
-        value = None
-        error = None
+    async def _run(self, resource: ResourceModel, operation: str) -> ResourceResult:
         try:
-            while True:
-                try:
-                    step = (
-                        workflow.throw(error)
-                        if error is not None
-                        else workflow.send(value)
-                    )
-                except StopIteration as stop:
-                    outcome, resource = stop.value
-                    return ResourceResult(
-                        identity=handler.identity, outcome=outcome, resource=resource
-                    )
-                value, error = None, None
-                try:
-                    if isinstance(step, Pause):
-                        await asyncio.sleep(step.seconds)
-                    elif isinstance(step, Request):
-                        kwargs = dict(step.kwargs)
-                        if self.context is not None:
-                            kwargs["context"] = self.context
-                        value = await getattr(self.client, step.method)(
-                            *step.args, **kwargs
-                        )
-                    else:
-                        raise ApplyError(f"Invalid handler step: {step}")
-                except Exception as caught:
-                    error = caught
-        except Exception as caught:
-            return ResourceResult(
-                identity=handler.identity, outcome=Outcome.FAILED, error=str(caught)
+            return await getattr(resource, f"{operation}_async")(
+                self.client,
+                context=self.context,
+                readiness_attempts=self.readiness_attempts,
+                readiness_interval=self.readiness_interval,
             )
-        finally:
-            workflow.close()
+        except Exception as error:
+            return ResourceResult(
+                identity=resource.identity, outcome=Outcome.FAILED, error=str(error)
+            )
 
     async def _execute(
         self, resources: Any, operation: str, dry_run: bool

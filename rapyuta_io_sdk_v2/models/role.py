@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from typing import Literal
+from typing import ClassVar, Literal
 
-from rapyuta_io_sdk_v2.models.utils import SDKModel, BaseList, BaseMetadata, BaseObject
+from rapyuta_io_sdk_v2.models.utils import BaseList, BaseMetadata, BaseObject, SDKModel
+from rapyuta_io_sdk_v2.resource_operations import Request
 
 
 class Rule(SDKModel):
@@ -20,6 +21,15 @@ class Role(BaseObject):
     kind: Literal["Role"] | None = "Role"
     metadata: BaseMetadata
     spec: RoleSpec
+
+    resource_kind: ClassVar[str] = "Role"
+
+    endpoint: ClassVar[str] = "role"
+
+    mutable: ClassVar[bool] = True
+
+    def _update(self):
+        return (yield Request("update_role", (self.metadata.name, self)))
 
 
 class RoleList(BaseList[Role]):

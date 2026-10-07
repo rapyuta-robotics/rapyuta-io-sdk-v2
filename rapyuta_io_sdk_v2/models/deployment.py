@@ -9,14 +9,12 @@ incorrect fields.
 from __future__ import annotations
 
 from os import path
+from typing import Any, ClassVar, Literal
 
-from typing import Any, Literal
+from pydantic import ConfigDict, Field, RootModel, field_validator, model_validator
 
-from pydantic import ConfigDict, Field, RootModel, model_validator, field_validator
-
+from rapyuta_io_sdk_v2.exceptions import HttpNotFoundError
 from rapyuta_io_sdk_v2.models.utils import (
-    SDKModel,
-    resource_key,
     BaseList,
     BaseMetadata,
     BaseObject,
@@ -30,9 +28,12 @@ from rapyuta_io_sdk_v2.models.utils import (
     PackageDepends,
     RestartPolicy,
     Runtime,
+    SDKModel,
     StaticRouteDepends,
     ValueFrom,
+    resource_key,
 )
+from rapyuta_io_sdk_v2.resource_operations import Pause, ReadinessError, Request
 
 
 class DeploymentMetadata(BaseMetadata):
@@ -328,6 +329,46 @@ class Deployment(BaseObject):
                     dependencies.append(key)
 
         return dependencies
+
+    resource_kind: ClassVar[str] = "Deployment"
+
+    endpoint: ClassVar[str] = "deployment"
+
+    def dependencies(self) -> list[str]:
+        dependencies = super().dependencies()
+        package = self.metadata.depends
+        if package:
+            dependencies = [
+                d for d in dependencies if d != f"package:{package.name_or_guid}"
+            ]
+            key = resource_key("Package", package.name_or_guid, package.version)
+            if key not in dependencies:
+                dependencies.append(key)
+        return dependencies
+
+    def _prerequisites(self, attempts: int, interval: float):
+        required = {d.name_or_guid for d in (self.spec.depends or []) if d.wait}
+        if not required:
+            return
+        for attempt in range(attempts):
+            # Get each named dependency; an empty list response cannot pass.
+            ready = True
+            for name in sorted(required):
+                try:
+                    deployment = yield Request("get_deployment", (name,))
+                except HttpNotFoundError:
+                    ready = False
+                    continue
+                state = getattr(deployment.status, "status", None)
+                phase = getattr(deployment.status, "phase", None)
+                if state in ("Error", "Stopped") or phase in ("FailedToStart", "Stopped"):
+                    raise ReadinessError(f"Dependency deployment:{name} failed")
+                ready &= state == "Running"
+            if ready:
+                return
+            if attempt + 1 < attempts:
+                yield Pause(interval)
+        raise ReadinessError(f"Dependencies did not become ready: {sorted(required)}")
 
 
 class DeploymentList(BaseList[Deployment]):

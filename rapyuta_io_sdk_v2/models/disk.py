@@ -8,17 +8,18 @@ incorrect fields.
 
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import Any, ClassVar, Literal
 
 from pydantic import ConfigDict, Field, field_validator
 
 from rapyuta_io_sdk_v2.models.utils import (
-    SDKModel,
     BaseList,
     BaseMetadata,
     BaseObject,
     Runtime,
+    SDKModel,
 )
+from rapyuta_io_sdk_v2.resource_operations import Pause, ReadinessError, Request
 
 
 class DiskSpec(SDKModel):
@@ -74,6 +75,22 @@ class Disk(BaseObject):
     metadata: BaseMetadata = Field(description="Metadata for the Disk resource")
     spec: DiskSpec = Field(description="Specification for the Disk resource")
     status: DiskStatus | None = Field(default=None)
+
+    resource_kind: ClassVar[str] = "Disk"
+
+    endpoint: ClassVar[str] = "disk"
+
+    def _wait(self, attempts: int, interval: float):
+        for attempt in range(attempts):
+            resource = yield Request(f"get_{self.endpoint}", (self.metadata.name,))
+            status = getattr(resource.status, "status", None)
+            if status in ("Available", "Released", "Bound"):
+                return
+            if status == "Failed":
+                raise ReadinessError(f"{self.identity} failed")
+            if attempt + 1 < attempts:
+                yield Pause(interval)
+        raise ReadinessError(f"{self.identity} readiness timed out")
 
 
 class DiskList(BaseList[Disk]):

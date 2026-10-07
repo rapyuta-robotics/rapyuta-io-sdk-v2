@@ -15,6 +15,7 @@ from rapyuta_io_sdk_v2.apply import (
     identity,
 )
 from rapyuta_io_sdk_v2.config import Configuration
+from rapyuta_io_sdk_v2.context import RequestContext
 from rapyuta_io_sdk_v2.exceptions import HttpAlreadyExistsError, UnauthorizedAccessError
 from rapyuta_io_sdk_v2.features import FeatureDisabledError
 from rapyuta_io_sdk_v2.models import Deployment, Package, Role, RoleBinding
@@ -404,7 +405,7 @@ def test_disk_and_network_wait_for_ready(kind, spec, state):
     getter.assert_called_once_with("resource")
 
 
-def test_real_client_handler_request_contracts():
+def test_real_client_resource_request_contracts():
     import json
 
     import httpx
@@ -495,7 +496,7 @@ async def test_async_readiness_and_context():
         )
     )
     c.create_deployment = AsyncMock()
-    context = object()
+    context = RequestContext(request_id="apply-request")
     report = await AsyncApplier(
         c, deployment("child", "existing", True), context=context
     ).apply()
@@ -535,3 +536,182 @@ def test_broken_symlink_manifest_is_rejected_without_recursion(tmp_path):
     link.symlink_to(tmp_path / "missing.yaml")
     with pytest.raises(ApplyError, match="broken symlink"):
         Applier(client(), link).render()
+
+
+def test_custom_resource_model_registration_and_workflow():
+    from typing import Literal
+
+    from rapyuta_io_sdk_v2.resource_operations import Request
+
+    class CustomRole(Role):
+        kind: Literal["CustomRole"] = "CustomRole"
+
+        def workflow(self, operation, attempts, interval):
+            response = yield Request(f"{operation}_custom", (self,))
+            return (
+                Outcome.CREATED if operation == "apply" else Outcome.DELETED,
+                response,
+            )
+
+    c = client()
+    c.apply_custom = Mock(side_effect=lambda resource: resource)
+    c.delete_custom = Mock()
+    custom = CustomRole.model_validate({"metadata": {"name": "custom"}, "spec": {}})
+    applier = Applier(c, custom, resource_models={"CustomRole": CustomRole})
+    assert applier.plan().layers == [["customrole:custom"]]
+    assert applier.apply().results[0].outcome == Outcome.CREATED
+    assert applier.delete().results[0].outcome == Outcome.DELETED
+    assert isinstance(c.apply_custom.call_args.args[0], CustomRole)
+    assert isinstance(c.delete_custom.call_args.args[0], CustomRole)
+
+
+def test_applier_dispatches_to_model_methods(monkeypatch):
+    from rapyuta_io_sdk_v2.resource_operations import ResourceResult
+
+    c = client()
+    calls = []
+    context = RequestContext(request_id="apply-request")
+
+    def operate(resource, client, **kwargs):
+        calls.append((resource, client, kwargs))
+        return ResourceResult(identity=resource.identity, outcome=Outcome.CREATED)
+
+    monkeypatch.setattr(Role, "apply", operate)
+    monkeypatch.setattr(Role, "delete", operate)
+    applier = Applier(
+        c, role(), context=context, readiness_attempts=3, readiness_interval=0.1
+    )
+    assert applier.apply(dry_run=True).successful
+    assert calls == []
+    assert applier.apply().successful
+    assert applier.delete().successful
+    assert len(calls) == 2
+    assert all(call[1] is c for call in calls)
+    assert all(
+        call[2]
+        == {
+            "context": context,
+            "readiness_attempts": 3,
+            "readiness_interval": 0.1,
+        }
+        for call in calls
+    )
+    c.create_role.assert_not_called()
+    c.delete_role.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_async_applier_dispatches_to_model_methods(monkeypatch):
+    from rapyuta_io_sdk_v2.resource_operations import ResourceResult
+
+    c = client()
+    calls = []
+    context = RequestContext(request_id="apply-request")
+
+    async def operate(resource, client, **kwargs):
+        calls.append((resource, client, kwargs))
+        return ResourceResult(identity=resource.identity, outcome=Outcome.CREATED)
+
+    monkeypatch.setattr(Role, "apply_async", operate)
+    monkeypatch.setattr(Role, "delete_async", operate)
+    applier = AsyncApplier(
+        c, role(), context=context, readiness_attempts=3, readiness_interval=0.1
+    )
+    assert (await applier.apply(dry_run=True)).successful
+    assert calls == []
+    assert (await applier.apply()).successful
+    assert (await applier.delete()).successful
+    assert len(calls) == 2
+    assert all(call[1] is c for call in calls)
+    assert all(
+        call[2]
+        == {
+            "context": context,
+            "readiness_attempts": 3,
+            "readiness_interval": 0.1,
+        }
+        for call in calls
+    )
+
+
+def test_resource_registration_requires_model_subclasses():
+    with pytest.raises(TypeError, match="ResourceModel subclasses"):
+        Applier(client(), resource_models={"Wrong": object})
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {"workers": 0},
+        {"workers": 1.5},
+        {"workers": True},
+        {"readiness_attempts": 0},
+        {"readiness_attempts": 1.5},
+        {"readiness_attempts": True},
+        {"readiness_interval": -1},
+        {"readiness_interval": float("inf")},
+        {"readiness_interval": float("nan")},
+        {"readiness_interval": True},
+    ],
+)
+def test_invalid_execution_limits_rejected_before_operations(kwargs):
+    c = client()
+    with pytest.raises(ValueError):
+        Applier(c, role(), **kwargs)
+    c.create_role.assert_not_called()
+
+
+def test_invalid_context_rejected_before_operations():
+    c = client()
+    with pytest.raises(TypeError, match="RequestContext"):
+        Applier(c, role(), context=object())
+    c.create_role.assert_not_called()
+
+
+def test_render_rejects_invalid_operation_before_reading_manifests(tmp_path):
+    with pytest.raises(ValueError, match="operation must be"):
+        Applier(client(), tmp_path / "missing.yaml").render(operation="unknown")
+
+
+def test_delete_response_secret_with_omitted_kind():
+    from rapyuta_io_sdk_v2.models import Secret
+
+    secret = Secret.model_validate(
+        {
+            "kind": None,
+            "metadata": {"name": "hidden"},
+            "spec": {"type": "Opaque"},
+        }
+    )
+    c = client()
+    c.delete_secret = Mock()
+    assert Applier(c, secret).delete().successful
+    c.delete_secret.assert_called_once_with("hidden")
+    assert secret.kind is None
+
+
+@pytest.mark.asyncio
+async def test_custom_model_workflow_uses_async_client():
+    from typing import Literal
+
+    from rapyuta_io_sdk_v2.resource_operations import Request
+
+    class CustomRole(Role):
+        kind: Literal["CustomRole"] = "CustomRole"
+
+        def workflow(self, operation, attempts, interval):
+            response = yield Request(f"{operation}_custom", (self,))
+            return (
+                Outcome.CREATED if operation == "apply" else Outcome.DELETED,
+                response,
+            )
+
+    c = client()
+    c.apply_custom = AsyncMock(side_effect=lambda resource: resource)
+    c.delete_custom = AsyncMock()
+    custom = CustomRole.model_validate({"metadata": {"name": "custom"}, "spec": {}})
+    applier = AsyncApplier(c, custom, resource_models={"CustomRole": CustomRole})
+    assert (await applier.apply()).successful
+    assert (await applier.delete()).successful
+    c.apply_custom.assert_awaited_once()
+    c.delete_custom.assert_awaited_once()

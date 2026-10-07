@@ -5,18 +5,14 @@ from typing import Any, Literal
 
 from pydantic import (
     AliasChoices,
-    BaseModel,
     ConfigDict,
     Field,
     field_validator,
     model_validator,
 )
 
-
-class SDKModel(BaseModel):
-    """Common data model accepting Python names and explicit API aliases."""
-
-    model_config = ConfigDict(populate_by_name=True)
+from .base import SDKModel as SDKModel
+from .resource import ResourceModel
 
 
 def resource_key(kind: str, name: str, version: str | None = None) -> str:
@@ -29,7 +25,7 @@ def resource_key(kind: str, name: str, version: str | None = None) -> str:
     return f"{normalized_kind}:{name}"
 
 
-class BaseObject(SDKModel):
+class BaseObject(ResourceModel):
     api_version: Literal["api.rapyuta.io/v2", "apiextensions.rapyuta.io/v1"] = Field(
         default="api.rapyuta.io/v2", alias="apiVersion"
     )

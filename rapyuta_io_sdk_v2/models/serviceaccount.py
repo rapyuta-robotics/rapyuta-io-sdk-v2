@@ -7,20 +7,20 @@ This module mirrors the Go `ServiceAccount` and related types from the
 
 from __future__ import annotations
 
-from typing import Literal
 from datetime import datetime
+from typing import ClassVar, Literal
 
-from pydantic import Field
-from pydantic import field_validator
+from pydantic import Field, field_validator
 
 from rapyuta_io_sdk_v2.models.utils import (
-    resource_key,
-    SDKModel,
     BaseList,
     BaseMetadata,
     BaseObject,
     Domain,
+    SDKModel,
+    resource_key,
 )
+from rapyuta_io_sdk_v2.resource_operations import Request
 
 
 class ServiceAccountBinding(SDKModel):
@@ -62,6 +62,15 @@ class ServiceAccount(BaseObject):
                         dependencies.append(resource_key("role", role))
 
         return dependencies
+
+    resource_kind: ClassVar[str] = "ServiceAccount"
+
+    endpoint: ClassVar[str] = "service_account"
+
+    mutable: ClassVar[bool] = True
+
+    def _update(self):
+        return (yield Request("update_service_account", (self, self.metadata.name)))
 
 
 class ServiceAccountList(BaseList[ServiceAccount]):

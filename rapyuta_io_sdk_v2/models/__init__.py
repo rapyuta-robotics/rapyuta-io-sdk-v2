@@ -145,3 +145,5 @@ from .deployment import (
 )
 from .rolebinding import BulkRoleBindingResponse as BulkRoleBindingResponse
 from .fileupload import FileDownloadMetadata as FileDownloadMetadata
+
+from .resource import ResourceModel as ResourceModel

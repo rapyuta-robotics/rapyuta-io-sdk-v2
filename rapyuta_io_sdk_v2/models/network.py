@@ -8,19 +8,22 @@ incorrect fields.
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import ClassVar, Literal
 
-from pydantic import ConfigDict, Field, field_validator, AliasChoices
+from pydantic import AliasChoices, ConfigDict, Field, field_validator
 
 from rapyuta_io_sdk_v2.models.utils import (
-    resource_key,
-    SDKModel,
     Architecture,
     BaseList,
     BaseMetadata,
     RestartPolicy,
     Runtime,
+    SDKModel,
+    resource_key,
 )
+from rapyuta_io_sdk_v2.resource_operations import Pause, ReadinessError, Request
+
+from .resource import ResourceModel
 
 
 class RabbitMQCreds(SDKModel):
@@ -76,7 +79,7 @@ class NetworkStatus(SDKModel):
     error_codes: list[str] | None = Field(default=None, alias="errorCodes")
 
 
-class Network(SDKModel):
+class Network(ResourceModel):
     """Network model."""
 
     model_config = ConfigDict(extra="forbid")
@@ -97,6 +100,22 @@ class Network(SDKModel):
             return None
 
         return dependencies
+
+    resource_kind: ClassVar[str] = "Network"
+
+    endpoint: ClassVar[str] = "network"
+
+    def _wait(self, attempts: int, interval: float):
+        for attempt in range(attempts):
+            resource = yield Request("get_network", (self.metadata.name,))
+            phase = getattr(resource.status, "phase", None)
+            if phase == "Succeeded":
+                return
+            if phase in ("Stopped", "FailedToStart", "FailedToUpdate"):
+                raise ReadinessError(f"{self.identity} entered {phase}")
+            if attempt + 1 < attempts:
+                yield Pause(interval)
+        raise ReadinessError(f"{self.identity} readiness timed out")
 
 
 class NetworkList(BaseList[Network]):

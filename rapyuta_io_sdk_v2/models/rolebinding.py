@@ -1,18 +1,19 @@
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import Any, ClassVar, Literal
 
 from pydantic import Field, RootModel, model_validator
 
 from rapyuta_io_sdk_v2.models.utils import (
-    resource_key,
-    SDKModel,
     BaseList,
     BaseMetadata,
     BaseObject,
     Domain,
+    SDKModel,
     Subject,
+    resource_key,
 )
+from rapyuta_io_sdk_v2.resource_operations import Request
 
 
 class RoleBindingMetadata(BaseMetadata):
@@ -63,6 +64,22 @@ class RoleBinding(BaseObject):
             )
 
         return dependencies
+
+    resource_kind: ClassVar[str] = "RoleBinding"
+
+    endpoint: ClassVar[str] = "role_binding"
+
+    def _create(self):
+        body = BulkRoleBindingUpdate.model_validate(
+            {"newBindings": [self], "oldBindings": []}
+        )
+        return (yield Request("update_role_binding", (body,)))
+
+    def _delete(self):
+        body = BulkRoleBindingUpdate.model_validate(
+            {"newBindings": [], "oldBindings": [self]}
+        )
+        yield Request("update_role_binding", (body,))
 
 
 class BulkRoleBindingUpdate(SDKModel):

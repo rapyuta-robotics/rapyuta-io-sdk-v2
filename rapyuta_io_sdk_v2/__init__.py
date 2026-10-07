@@ -78,5 +78,10 @@ from rapyuta_io_sdk_v2.pagination import (
     PaginationError as PaginationError,
 )
 from rapyuta_io_sdk_v2.models.utils import SDKModel as SDKModel
+from rapyuta_io_sdk_v2.models.resource import ResourceModel as ResourceModel
+from rapyuta_io_sdk_v2.resource_operations import (
+    ResourceResult as ResourceResult,
+    Outcome as Outcome,
+)
 
 __version__ = "0.3.0"

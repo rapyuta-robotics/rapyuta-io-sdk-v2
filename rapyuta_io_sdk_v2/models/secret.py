@@ -8,19 +8,20 @@ incorrect fields.
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import ClassVar, Literal
 
 from pydantic import Field, model_validator
 
 from rapyuta_io_sdk_v2.models.utils import (
-    resource_key,
-    SDKModel,
     BaseList,
     BaseMetadata,
     BaseObject,
     DeviceDepends,
     Runtime,
+    SDKModel,
+    resource_key,
 )
+from rapyuta_io_sdk_v2.resource_operations import Request
 
 
 class DockerSpec(SDKModel):
@@ -81,8 +82,21 @@ class Secret(BaseObject):
     metadata: BaseMetadata
     spec: SecretSpec = Field(description="Specification for the Secret resource")
 
+    resource_kind: ClassVar[str] = "Secret"
+
+    can_apply: ClassVar[bool] = False
+
+    endpoint: ClassVar[str] = "secret"
+
+    mutable: ClassVar[bool] = True
+
+    def _update(self):
+        return (yield Request("update_secret", (self.metadata.name, self)))
+
 
 class SecretCreate(Secret):
+    can_apply: ClassVar[bool] = True
+
     spec: SecretSpecCreate
 
     @model_validator(mode="after")
