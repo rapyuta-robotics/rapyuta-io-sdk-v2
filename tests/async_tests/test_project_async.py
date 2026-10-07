@@ -1,3 +1,4 @@
+from rapyuta_io_sdk_v2.models import Project
 import httpx
 import pytest
 from pytest_mock import MockFixture
@@ -66,7 +67,7 @@ async def test_create_project_unauthorized(
     )
 
     with pytest.raises(Exception) as exc:
-        await async_client.create_project(body=project_body)
+        await async_client.create_project(body=Project.model_validate(project_body))
 
     assert str(exc.value) == "unauthorized"
 
@@ -82,7 +83,7 @@ async def test_update_project_success(
     )
 
     response = await async_client.update_project(
-        project_guid="test-project", body=project_body
+        project_guid="test-project", body=Project.model_validate(project_body)
     )
 
     assert isinstance(response, Project)

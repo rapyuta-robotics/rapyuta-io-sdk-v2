@@ -1,3 +1,4 @@
+from rapyuta_io_sdk_v2.models import StaticRoute
 import httpx
 import pytest
 from pytest_mock import MockFixture
@@ -66,7 +67,9 @@ def test_create_staticroute_success(
     )
 
     # Call the create_staticroute method
-    response = client.create_staticroute(body=staticroute_body)
+    response = client.create_staticroute(
+        body=StaticRoute.model_validate(staticroute_body)
+    )
 
     # Validate the response
     assert isinstance(response, StaticRoute)
@@ -85,7 +88,7 @@ def test_create_staticroute_bad_request(client, staticroute_body, mocker: MockFi
     )
 
     with pytest.raises(Exception) as exc:
-        client.create_staticroute(body=staticroute_body)
+        client.create_staticroute(body=StaticRoute.model_validate(staticroute_body))
 
     assert str(exc.value) == "already exists"
 
@@ -123,7 +126,7 @@ def test_update_staticroute_success(
 
     # Call the update_staticroute method
     response = client.update_staticroute(
-        name="mock_staticroute_name", body=staticroute_body
+        name="mock_staticroute_name", body=StaticRoute.model_validate(staticroute_body)
     )
 
     # Validate the response

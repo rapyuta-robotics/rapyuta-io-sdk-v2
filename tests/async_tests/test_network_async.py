@@ -1,3 +1,4 @@
+from rapyuta_io_sdk_v2.models import Network
 import httpx
 import pytest
 from pytest_mock import MockFixture
@@ -66,7 +67,7 @@ async def test_create_network_unauthorized(
     )
 
     with pytest.raises(Exception) as exc:
-        await async_client.create_network(body=network_body)
+        await async_client.create_network(body=Network.model_validate(network_body))
 
     assert str(exc.value) == "unauthorized"
 

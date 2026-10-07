@@ -1,3 +1,4 @@
+from rapyuta_io_sdk_v2.models import Network
 import httpx
 import pytest
 from pytest_mock import MockFixture
@@ -85,7 +86,7 @@ def test_create_network_success(
     )
 
     # Call the create_network method
-    response = client.create_network(body=network_body)
+    response = client.create_network(body=Network.model_validate(network_body))
 
     # Validate the response
     assert isinstance(response, Network)
@@ -104,7 +105,7 @@ def test_create_network_failure(client, network_body, mocker: MockFixture):
     )
 
     with pytest.raises(Exception) as exc:
-        client.create_network(body=network_body)
+        client.create_network(body=Network.model_validate(network_body))
 
     assert str(exc.value) == "already exists"
 

@@ -1,3 +1,4 @@
+from rapyuta_io_sdk_v2.models import FileUpload, SharedURL
 # Copyright 2025 Rapyuta Robotics
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -98,7 +99,7 @@ async def test_create_fileupload_success(
 
     response = await async_client.create_fileupload(
         device_guid=MOCK_DEVICE_GUID,
-        body=fileupload_body,
+        body=FileUpload.model_validate(fileupload_body),
     )
 
     assert isinstance(response, FileUpload)
@@ -118,7 +119,7 @@ async def test_create_fileupload_unauthorized(
     with pytest.raises(Exception) as exc:
         await async_client.create_fileupload(
             device_guid=MOCK_DEVICE_GUID,
-            body=fileupload_body,
+            body=FileUpload.model_validate(fileupload_body),
         )
 
     assert str(exc.value) == "unauthorized"
@@ -167,7 +168,7 @@ async def test_download_fileupload_success(async_client, mocker: MockFixture):
         guid=MOCK_FILEUPLOAD_GUID,
     )
 
-    assert response["url"] == "https://storage.example.com/signed-url"
+    assert response.url == "https://storage.example.com/signed-url"
 
 
 # SharedURL Async Tests
@@ -200,7 +201,7 @@ async def test_create_sharedurl_success(
 
     response = await async_client.create_sharedurl(
         fileupload_guid=MOCK_FILEUPLOAD_GUID,
-        body=sharedurl_body,
+        body=SharedURL.model_validate(sharedurl_body),
     )
 
     assert isinstance(response, SharedURL)
@@ -268,7 +269,7 @@ async def test_create_fileupload_with_dict(
 
     response = await async_client.create_fileupload(
         device_guid=MOCK_DEVICE_GUID,
-        body=body_dict,
+        body=FileUpload.model_validate(body_dict),
     )
 
     assert isinstance(response, FileUpload)
@@ -297,7 +298,7 @@ async def test_create_sharedurl_with_dict(
 
     response = await async_client.create_sharedurl(
         fileupload_guid=MOCK_FILEUPLOAD_GUID,
-        body=body_dict,
+        body=SharedURL.model_validate(body_dict),
     )
 
     assert isinstance(response, SharedURL)

@@ -1,3 +1,4 @@
+from rapyuta_io_sdk_v2.models import User
 import httpx
 import pytest
 
@@ -56,7 +57,7 @@ async def test_update_user_success(async_client, mock_response_user, user_body, 
         json=mock_response_user,
     )
     response = await async_client.update_user(
-        email_id="test.user@example.com", body=user_body
+        email_id="test.user@example.com", body=User.model_validate(user_body)
     )
     assert response.metadata.name == "test user"
     assert response.metadata.guid == "user-testuser-guid-000000001"
@@ -77,7 +78,9 @@ async def test_update_user_unauthorized(
     )
 
     with pytest.raises(UnauthorizedAccessError) as exc:
-        await async_client.update_user(email_id="test.user@example.com", body=user_body)
+        await async_client.update_user(
+            email_id="test.user@example.com", body=User.model_validate(user_body)
+        )
     assert "user cannot be authenticated" in str(exc.value)
 
 

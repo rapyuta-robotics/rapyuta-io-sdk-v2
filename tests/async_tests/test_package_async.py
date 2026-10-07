@@ -1,3 +1,4 @@
+from rapyuta_io_sdk_v2.models import Package
 import httpx
 import pytest
 from pytest_mock import MockFixture
@@ -87,7 +88,7 @@ async def test_create_package_unauthorized(
     )
 
     with pytest.raises(Exception) as exc:
-        await async_client.create_package(body=package_body)
+        await async_client.create_package(body=Package.model_validate(package_body))
 
     assert str(exc.value) == "unauthorized"
 
@@ -121,18 +122,19 @@ async def test_get_package_with_valuefrom_success(
     assert isinstance(response, Package)
     assert response.metadata.guid == "pkg-cccccccccccccccccccc"
 
-    api_key_var = next(
-        v for v in response.spec.environmentVars if v.name == "API_KEY"
-    )
-    assert api_key_var.valueFrom is not None
-    assert api_key_var.valueFrom.secret_key_ref.name == "my-api-secret"
-    assert api_key_var.valueFrom.secret_key_ref.key == "API_KEY"
-    assert api_key_var.valueFrom.secret_key_ref.value == "resolved-api-key"
+    api_key_var = next(v for v in response.spec.environment_vars if v.name == "API_KEY")
+    assert api_key_var.value_from is not None
+    assert api_key_var.value_from.secret_key_ref.name == "my-api-secret"
+    assert api_key_var.value_from.secret_key_ref.key == "API_KEY"
+    assert api_key_var.value_from.secret_key_ref.value == "resolved-api-key"
 
 
 @pytest.mark.asyncio
 async def test_create_package_with_valuefrom_success(
-    async_client, package_with_valuefrom_body, package_with_valuefrom_mock, mocker: MockFixture
+    async_client,
+    package_with_valuefrom_body,
+    package_with_valuefrom_mock,
+    mocker: MockFixture,
 ):
     """POST a package with valueFrom env vars and verify the response is parsed."""
     mock_post = mocker.patch("httpx.AsyncClient.post")
@@ -141,13 +143,13 @@ async def test_create_package_with_valuefrom_success(
         json=package_with_valuefrom_mock,
     )
 
-    response = await async_client.create_package(body=package_with_valuefrom_body)
+    response = await async_client.create_package(
+        body=Package.model_validate(package_with_valuefrom_body)
+    )
 
     assert isinstance(response, Package)
-    api_key_var = next(
-        v for v in response.spec.environmentVars if v.name == "API_KEY"
-    )
-    assert api_key_var.valueFrom.secret_key_ref.key == "API_KEY"
+    api_key_var = next(v for v in response.spec.environment_vars if v.name == "API_KEY")
+    assert api_key_var.value_from.secret_key_ref.key == "API_KEY"
 
 
 # ── New: EnvironmentSpec model validation ────────────────────────────────────
@@ -166,7 +168,6 @@ def test_environment_spec_valuefrom_model_validation():
             },
         }
     )
-    assert env.valueFrom.secret_key_ref.name == "my-secret"
-    assert env.valueFrom.secret_key_ref.key == "MY_KEY"
-    assert env.valueFrom.secret_key_ref.value is None
-
+    assert env.value_from.secret_key_ref.name == "my-secret"
+    assert env.value_from.secret_key_ref.key == "MY_KEY"
+    assert env.value_from.secret_key_ref.value is None

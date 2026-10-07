@@ -72,7 +72,11 @@ from rapyuta_io_sdk_v2.features import (
     FeatureDisabledError as FeatureDisabledError,
     MissingOptionalDependencyError as MissingOptionalDependencyError,
 )
+from rapyuta_io_sdk_v2.pagination import (
+    Paginator as Paginator,
+    AsyncPaginator as AsyncPaginator,
+    PaginationError as PaginationError,
+)
 from rapyuta_io_sdk_v2.models.utils import SDKModel as SDKModel
-from rapyuta_io_sdk_v2.utils import walk_pages as walk_pages
 
 __version__ = "0.3.0"

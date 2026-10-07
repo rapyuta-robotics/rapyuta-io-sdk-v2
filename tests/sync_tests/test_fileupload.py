@@ -1,3 +1,5 @@
+from rapyuta_io_sdk_v2 import RequestContext
+from rapyuta_io_sdk_v2.models import FileUpload, SharedURL
 import httpx
 import pytest
 from pytest_mock import MockFixture
@@ -96,8 +98,8 @@ def test_create_fileupload_success(
 
     response = client.create_fileupload(
         device_guid=MOCK_DEVICE_GUID,
-        body=fileupload_body,
-        project_guid="mock_project_guid",
+        body=FileUpload.model_validate(fileupload_body),
+        context=RequestContext(project_guid="mock_project_guid"),
     )
 
     assert isinstance(response, FileUpload)
@@ -163,7 +165,7 @@ def test_download_fileupload_success(client, mocker: MockFixture):
         guid=MOCK_FILEUPLOAD_GUID,
     )
 
-    assert response["url"] == "https://storage.example.com/signed-url"
+    assert response.url == "https://storage.example.com/signed-url"
 
 
 # SharedURL Tests
@@ -197,7 +199,7 @@ def test_create_sharedurl_success(
 
     response = client.create_sharedurl(
         fileupload_guid=MOCK_FILEUPLOAD_GUID,
-        body=sharedurl_body,
+        body=SharedURL.model_validate(sharedurl_body),
     )
 
     assert isinstance(response, SharedURL)
@@ -265,7 +267,7 @@ def test_create_fileupload_with_dict(client, fileupload_model_mock, mocker: Mock
 
     response = client.create_fileupload(
         device_guid=MOCK_DEVICE_GUID,
-        body=body_dict,
+        body=FileUpload.model_validate(body_dict),
     )
 
     assert isinstance(response, FileUpload)
@@ -291,7 +293,7 @@ def test_create_sharedurl_with_dict(client, sharedurl_model_mock, mocker: MockFi
 
     response = client.create_sharedurl(
         fileupload_guid=MOCK_FILEUPLOAD_GUID,
-        body=body_dict,
+        body=SharedURL.model_validate(body_dict),
     )
 
     assert isinstance(response, SharedURL)
@@ -328,7 +330,7 @@ def test_create_fileupload_conflict(client, fileupload_body, mocker: MockFixture
     with pytest.raises(Exception) as exc:
         client.create_fileupload(
             device_guid=MOCK_DEVICE_GUID,
-            body=fileupload_body,
+            body=FileUpload.model_validate(fileupload_body),
         )
 
     assert str(exc.value) == "file upload already exists"
@@ -346,7 +348,7 @@ def test_create_sharedurl_invalid_status(client, sharedurl_body, mocker: MockFix
     with pytest.raises(Exception) as exc:
         client.create_sharedurl(
             fileupload_guid=MOCK_FILEUPLOAD_GUID,
-            body=sharedurl_body,
+            body=SharedURL.model_validate(sharedurl_body),
         )
 
     assert "cannot create shared URL" in str(exc.value)

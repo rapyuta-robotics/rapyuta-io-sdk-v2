@@ -1,3 +1,4 @@
+from rapyuta_io_sdk_v2.models import Package
 import httpx
 import pytest
 from pydantic import ValidationError
@@ -137,7 +138,7 @@ def test_create_package_success(
     )
 
     # Call the create_package method
-    response = client.create_package(body=package_body)
+    response = client.create_package(body=Package.model_validate(package_body))
 
     # Validate the response
     assert isinstance(response, Package)
@@ -184,25 +185,25 @@ def test_get_package_with_valuefrom_success(
     assert isinstance(response, Package)
     assert response.metadata.guid == "pkg-cccccccccccccccccccc"
 
-    env_vars = response.spec.environmentVars
+    env_vars = response.spec.environment_vars
     assert env_vars is not None
 
     plain = next(v for v in env_vars if v.name == "PLAIN_VAR")
     assert plain.default == "plain-value"
-    assert plain.valueFrom is None
+    assert plain.value_from is None
 
     api_key_var = next(v for v in env_vars if v.name == "API_KEY")
-    assert api_key_var.valueFrom is not None
-    assert api_key_var.valueFrom.secret_key_ref is not None
-    assert api_key_var.valueFrom.secret_key_ref.name == "my-api-secret"
-    assert api_key_var.valueFrom.secret_key_ref.key == "API_KEY"
+    assert api_key_var.value_from is not None
+    assert api_key_var.value_from.secret_key_ref is not None
+    assert api_key_var.value_from.secret_key_ref.name == "my-api-secret"
+    assert api_key_var.value_from.secret_key_ref.key == "API_KEY"
     # server resolves the value and returns it
-    assert api_key_var.valueFrom.secret_key_ref.value == "resolved-api-key"
+    assert api_key_var.value_from.secret_key_ref.value == "resolved-api-key"
 
     db_pass_var = next(v for v in env_vars if v.name == "DB_PASS")
     assert db_pass_var.exposed is True
-    assert db_pass_var.exposedName == "DB_PASS"
-    assert db_pass_var.valueFrom.secret_key_ref.name == "db-credentials"
+    assert db_pass_var.exposed_name == "DB_PASS"
+    assert db_pass_var.value_from.secret_key_ref.name == "db-credentials"
 
 
 def test_create_package_with_valuefrom_success(
@@ -215,14 +216,14 @@ def test_create_package_with_valuefrom_success(
         json=package_with_valuefrom_mock,
     )
 
-    response = client.create_package(body=package_with_valuefrom_body)
+    response = client.create_package(
+        body=Package.model_validate(package_with_valuefrom_body)
+    )
 
     assert isinstance(response, Package)
     assert response.metadata.name == "secret-injected-app"
-    api_key_var = next(
-        v for v in response.spec.environmentVars if v.name == "API_KEY"
-    )
-    assert api_key_var.valueFrom.secret_key_ref.key == "API_KEY"
+    api_key_var = next(v for v in response.spec.environment_vars if v.name == "API_KEY")
+    assert api_key_var.value_from.secret_key_ref.key == "API_KEY"
 
 
 # ── New: EnvironmentSpec model validation ────────────────────────────────────
@@ -242,10 +243,10 @@ def test_environment_spec_valuefrom_model_validation():
         }
     )
     assert env.name == "MY_SECRET_VAR"
-    assert env.valueFrom is not None
-    assert env.valueFrom.secret_key_ref.name == "my-secret"
-    assert env.valueFrom.secret_key_ref.key == "MY_KEY"
-    assert env.valueFrom.secret_key_ref.value is None
+    assert env.value_from is not None
+    assert env.value_from.secret_key_ref.name == "my-secret"
+    assert env.value_from.secret_key_ref.key == "MY_KEY"
+    assert env.value_from.secret_key_ref.value is None
 
 
 def test_environment_spec_plain_and_valuefrom_coexist():
@@ -264,6 +265,4 @@ def test_environment_spec_plain_and_valuefrom_coexist():
         }
     )
     assert env.default == "fallback"
-    assert env.valueFrom.secret_key_ref.value == "injected"
-
-
+    assert env.value_from.secret_key_ref.value == "injected"

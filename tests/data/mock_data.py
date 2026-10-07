@@ -602,7 +602,6 @@ def cloud_deployment_with_valuefrom_mock() -> dict[str, Any]:
     }
 
 
-
 @pytest.fixture
 def disk_body() -> dict[str, Any]:
     return {
