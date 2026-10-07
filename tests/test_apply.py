@@ -12,11 +12,14 @@ from rapyuta_io_sdk_v2.apply import (
     ApplyExecutionError,
     AsyncApplier,
     Outcome,
-    identity,
 )
 from rapyuta_io_sdk_v2.config import Configuration
 from rapyuta_io_sdk_v2.context import RequestContext
-from rapyuta_io_sdk_v2.exceptions import HttpAlreadyExistsError, UnauthorizedAccessError
+from rapyuta_io_sdk_v2.exceptions import (
+    HttpAlreadyExistsError,
+    PermissionDeniedError,
+    UnauthorizedAccessError,
+)
 from rapyuta_io_sdk_v2.features import FeatureDisabledError
 from rapyuta_io_sdk_v2.models import Deployment, Package, Role, RoleBinding
 
@@ -58,7 +61,7 @@ def deployment(name="app", dependency="app", wait=False):
 
 def client():
     result = SimpleNamespace(config=configuration())
-    result.create_role = Mock(side_effect=lambda value: value)
+    result.create_role = Mock(side_effect=lambda value, **kwargs: value)
     result.delete_role = Mock()
     return result
 
@@ -170,7 +173,7 @@ def test_typed_network_infers_kind_on_copy_and_standalone_identity():
         }
     )
     assert network.kind is None
-    assert identity(network) == "network:ros"
+    assert network.identity == "network:ros"
     applier = Applier(client(), network)
     rendered = applier.render()
     assert rendered[0].kind == "Network"
@@ -208,7 +211,7 @@ def test_capability_validation_precedes_writes():
 def test_conflict_update_immutable_and_auth_failure():
     c = client()
     c.create_role.side_effect = HttpAlreadyExistsError()
-    c.update_role = Mock(side_effect=lambda name, value: value)
+    c.update_role = Mock(side_effect=lambda name, value, **kwargs: value)
     report = Applier(c, role()).apply()
     assert report.results[0].outcome == Outcome.UPDATED
     assert c.update_role.call_args.args[0] == "reader"
@@ -226,8 +229,7 @@ def test_conflict_update_immutable_and_auth_failure():
 
 def test_permission_denied_can_update():
     c = client()
-    error = RuntimeError("denied")
-    error.status_code = 403
+    error = PermissionDeniedError("denied", status_code=403)
     c.create_role.side_effect = error
     c.update_role = Mock(return_value=role())
     assert Applier(c, role()).apply().results[0].outcome == Outcome.UPDATED
@@ -302,7 +304,7 @@ def test_bulk_role_binding_add_remove():
 
 
 def test_project_docker_cache_create_then_update_without_mutating_input():
-    from rapyuta_io_sdk_v2.models import Project
+    from rapyuta_io_sdk_v2.models import Project, ProjectList
 
     project = Project.model_validate(
         {
@@ -326,7 +328,7 @@ def test_project_docker_cache_create_then_update_without_mutating_input():
     existing.metadata.guid = "p1"
     existing.status = SimpleNamespace(status="Success")
     c.list_projects = Mock(
-        side_effect=[SimpleNamespace(items=[]), SimpleNamespace(items=[existing])]
+        side_effect=[ProjectList(items=[]), ProjectList(items=[existing])]
     )
     c.create_project = Mock(return_value=existing)
     c.update_project = Mock(return_value=existing)
@@ -340,7 +342,7 @@ def test_project_docker_cache_create_then_update_without_mutating_input():
 
 
 def test_user_group_lookup_and_update_explicit_ids():
-    from rapyuta_io_sdk_v2.models import UserGroupCreate
+    from rapyuta_io_sdk_v2.models import UserGroupCreate, UserGroupList
 
     group = UserGroupCreate.model_validate(
         {"kind": "UserGroup", "metadata": {"name": "robots"}, "spec": {}}
@@ -349,7 +351,7 @@ def test_user_group_lookup_and_update_explicit_ids():
     existing = group.model_copy(deep=True)
     existing.metadata.guid = "g1"
     c.create_user_group = Mock(side_effect=HttpAlreadyExistsError())
-    c.list_user_groups = Mock(return_value=SimpleNamespace(items=[existing]))
+    c.list_user_groups = Mock(return_value=UserGroupList(items=[existing]))
     c.update_user_group = Mock(return_value=existing)
     c.delete_user_group = Mock()
     assert Applier(c, group).apply().successful
@@ -379,7 +381,7 @@ def test_delete_secret_response_does_not_require_create_credentials():
     c = client()
     c.delete_secret = Mock()
     assert Applier(c, secret).delete().successful
-    c.delete_secret.assert_called_once_with("registry")
+    c.delete_secret.assert_called_once_with("registry", context=None)
 
 
 @pytest.mark.parametrize(
@@ -402,7 +404,7 @@ def test_disk_and_network_wait_for_ready(kind, spec, state):
     getter = Mock(return_value=ready)
     setattr(c, f"get_{kind.lower()}", getter)
     assert Applier(c, resource, readiness_interval=0).apply().successful
-    getter.assert_called_once_with("resource")
+    getter.assert_called_once_with("resource", context=None)
 
 
 def test_real_client_resource_request_contracts():
@@ -438,7 +440,7 @@ async def test_async_execution_and_failure_settles_inflight():
     c = client()
     events = []
 
-    async def create(value):
+    async def create(value, *, context=None):
         if value.metadata.name == "one":
             raise RuntimeError("failed")
         await asyncio.sleep(0)
@@ -465,7 +467,7 @@ async def test_async_cancellation_settles_all_inflight_tasks():
     settled = set()
     ready = asyncio.Event()
 
-    async def create(value):
+    async def create(value, *, context=None):
         name = value.metadata.name
         started.add(name)
         if len(started) == 2:
@@ -528,7 +530,7 @@ def test_generator_resources_survive_planning_and_repeated_execution():
     assert len(applier.apply().results) == 1
     assert len(applier.delete().results) == 1
     assert c.create_role.call_count == 2
-    c.delete_role.assert_called_once_with("generator")
+    c.delete_role.assert_called_once_with("generator", context=None)
 
 
 def test_broken_symlink_manifest_is_rejected_without_recursion(tmp_path):
@@ -538,23 +540,27 @@ def test_broken_symlink_manifest_is_rejected_without_recursion(tmp_path):
         Applier(client(), link).render()
 
 
-def test_custom_resource_model_registration_and_workflow():
-    from typing import Literal
-
-    from rapyuta_io_sdk_v2.resource_operations import Request
+def test_custom_resource_model_registration_and_operations():
+    from typing import ClassVar, Literal
 
     class CustomRole(Role):
+        resource_kind: ClassVar[str] = "CustomRole"
         kind: Literal["CustomRole"] = "CustomRole"
 
-        def workflow(self, operation, attempts, interval):
-            response = yield Request(f"{operation}_custom", (self,))
-            return (
-                Outcome.CREATED if operation == "apply" else Outcome.DELETED,
-                response,
-            )
+        def create(self, client, *, context=None):
+            return client.apply_custom(self, context=context)
+
+        def _delete(self, client, *, context=None):
+            client.delete_custom(self, context=context)
+
+        async def create_async(self, client, *, context=None):
+            return await client.apply_custom(self, context=context)
+
+        async def _delete_async(self, client, *, context=None):
+            await client.delete_custom(self, context=context)
 
     c = client()
-    c.apply_custom = Mock(side_effect=lambda resource: resource)
+    c.apply_custom = Mock(side_effect=lambda resource, **kwargs: resource)
     c.delete_custom = Mock()
     custom = CustomRole.model_validate({"metadata": {"name": "custom"}, "spec": {}})
     applier = Applier(c, custom, resource_models={"CustomRole": CustomRole})
@@ -686,28 +692,32 @@ def test_delete_response_secret_with_omitted_kind():
     c = client()
     c.delete_secret = Mock()
     assert Applier(c, secret).delete().successful
-    c.delete_secret.assert_called_once_with("hidden")
+    c.delete_secret.assert_called_once_with("hidden", context=None)
     assert secret.kind is None
 
 
 @pytest.mark.asyncio
-async def test_custom_model_workflow_uses_async_client():
-    from typing import Literal
-
-    from rapyuta_io_sdk_v2.resource_operations import Request
+async def test_custom_model_operations_use_async_client():
+    from typing import ClassVar, Literal
 
     class CustomRole(Role):
+        resource_kind: ClassVar[str] = "CustomRole"
         kind: Literal["CustomRole"] = "CustomRole"
 
-        def workflow(self, operation, attempts, interval):
-            response = yield Request(f"{operation}_custom", (self,))
-            return (
-                Outcome.CREATED if operation == "apply" else Outcome.DELETED,
-                response,
-            )
+        def create(self, client, *, context=None):
+            return client.apply_custom(self, context=context)
+
+        def _delete(self, client, *, context=None):
+            client.delete_custom(self, context=context)
+
+        async def create_async(self, client, *, context=None):
+            return await client.apply_custom(self, context=context)
+
+        async def _delete_async(self, client, *, context=None):
+            await client.delete_custom(self, context=context)
 
     c = client()
-    c.apply_custom = AsyncMock(side_effect=lambda resource: resource)
+    c.apply_custom = AsyncMock(side_effect=lambda resource, **kwargs: resource)
     c.delete_custom = AsyncMock()
     custom = CustomRole.model_validate({"metadata": {"name": "custom"}, "spec": {}})
     applier = AsyncApplier(c, custom, resource_models={"CustomRole": CustomRole})
@@ -715,3 +725,70 @@ async def test_custom_model_workflow_uses_async_client():
     assert (await applier.delete()).successful
     c.apply_custom.assert_awaited_once()
     c.delete_custom.assert_awaited_once()
+
+
+def test_custom_model_kind_is_explicit_and_independent_of_class_name():
+    from typing import ClassVar, Literal
+
+    class DifferentClassName(Role):
+        resource_kind: ClassVar[str] = "CustomKind"
+        kind: Literal["CustomKind"] | None = None
+
+    resource = DifferentClassName.model_validate(
+        {"metadata": {"name": "custom"}, "spec": {}}
+    )
+    applier = Applier(
+        client(), resource, resource_models={"CUSTOMKIND": DifferentClassName}
+    )
+    assert resource.identity == "customkind:custom"
+    assert applier.plan().layers == [["customkind:custom"]]
+    assert isinstance(applier.render()[0], DifferentClassName)
+    assert resource.kind is None
+
+
+def test_registry_kind_must_match_explicit_model_kind_before_imports(monkeypatch):
+    importer = Mock(side_effect=AssertionError("must validate registry first"))
+    monkeypatch.setattr("rapyuta_io_sdk_v2.apply.engine.require_dependency", importer)
+    with pytest.raises(ValueError, match="resource_kind"):
+        Applier(client(), resource_models={"Alias": Role})
+    importer.assert_not_called()
+
+
+def test_custom_create_model_preserves_delete_override():
+    from rapyuta_io_sdk_v2.models import SecretCreate
+
+    class CustomSecret(SecretCreate):
+        def _delete(self, client, *, context=None):
+            client.delete_custom_secret(self, context=context)
+
+    secret = CustomSecret.model_validate(
+        {
+            "metadata": {"name": "custom"},
+            "spec": {"type": "Opaque", "data": {"key": "value"}},
+        }
+    )
+    c = client()
+    c.delete_custom_secret = Mock()
+    applier = Applier(c, secret, resource_models={"Secret": CustomSecret})
+    assert isinstance(applier.render(operation="delete")[0], CustomSecret)
+    assert applier.delete().successful
+    c.delete_custom_secret.assert_called_once()
+    assert isinstance(c.delete_custom_secret.call_args.args[0], CustomSecret)
+
+
+def test_project_context_binding_uses_copy_and_configured_rio_values():
+    from rapyuta_io_sdk_v2.models import Project
+
+    c = client()
+    c.config.project_name = "project-label"
+    c.config.organization_name = "organization-label"
+    c.config.organization_short_id = "short-id"
+    c.config.organization_guid = "configured-org"
+    context = RequestContext(organization_guid="selected-org")
+    project = Project.model_validate({"metadata": {"name": "project"}, "spec": {}})
+    applier = Applier(c, project, context=context)
+    assert applier.render()[0].metadata.organization_guid == "selected-org"
+    assert project.metadata.organization_guid is None
+    assert applier.values["rio"]["project"]["name"] == "project-label"
+    assert applier.values["rio"]["organization"]["name"] == "organization-label"
+    assert applier.values["rio"]["organization"]["short_id"] == "short-id"

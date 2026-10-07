@@ -66,7 +66,7 @@ def test_index_versions_relative_urls_values_and_cleanup():
             assert chart.metadata.version == "v2"
             c = SimpleNamespace(
                 config=configuration(),
-                create_role=Mock(side_effect=lambda resource: resource),
+                create_role=Mock(side_effect=lambda resource, *, context=None: resource),
             )
             rendered = chart.render(c, values={"name": "override"})
             assert rendered[0].metadata.name == "override"
@@ -150,7 +150,9 @@ async def test_async_download_render_apply_and_cleanup():
             async with await repository.find("demo:v1") as chart:
                 client = SimpleNamespace(
                     config=configuration(),
-                    create_role=AsyncMock(side_effect=lambda resource: resource),
+                    create_role=AsyncMock(
+                        side_effect=lambda resource, *, context=None: resource
+                    ),
                 )
                 report = await chart.apply(client, values={"name": "async"})
                 assert report.successful

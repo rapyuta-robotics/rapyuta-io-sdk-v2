@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Any, Literal
 
@@ -64,15 +63,3 @@ class ApplyExecutionError(ApplyError):
         self.report = report
         failures = [f"{r.identity}: {r.error}" for r in report.results if r.error]
         super().__init__("; ".join(failures) or "Operation did not complete")
-
-
-@dataclass
-class Request:
-    method: str
-    args: tuple = ()
-    kwargs: dict[str, Any] = field(default_factory=dict)
-
-
-@dataclass
-class Pause:
-    seconds: float

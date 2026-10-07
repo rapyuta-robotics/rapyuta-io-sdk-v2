@@ -8,7 +8,10 @@ incorrect fields.
 
 from __future__ import annotations
 
-from typing import Any, ClassVar, Literal
+import asyncio
+import time
+
+from typing import TYPE_CHECKING, Any, ClassVar, Literal
 
 from pydantic import ConfigDict, Field, field_validator
 
@@ -19,7 +22,13 @@ from rapyuta_io_sdk_v2.models.utils import (
     Runtime,
     SDKModel,
 )
-from rapyuta_io_sdk_v2.resource_operations import Pause, ReadinessError, Request
+from rapyuta_io_sdk_v2.resource_operations import ReadinessError
+
+
+if TYPE_CHECKING:
+    from rapyuta_io_sdk_v2.client import Client
+    from rapyuta_io_sdk_v2.async_client import AsyncClient
+    from rapyuta_io_sdk_v2.context import RequestContext
 
 
 class DiskSpec(SDKModel):
@@ -78,18 +87,58 @@ class Disk(BaseObject):
 
     resource_kind: ClassVar[str] = "Disk"
 
-    endpoint: ClassVar[str] = "disk"
+    def create(self, client: Client, *, context: RequestContext | None = None):
+        return client.create_disk(self, context=context)
 
-    def _wait(self, attempts: int, interval: float):
+    async def create_async(
+        self, client: AsyncClient, *, context: RequestContext | None = None
+    ):
+        return await client.create_disk(self, context=context)
+
+    def _delete(self, client: Client, *, context: RequestContext | None = None) -> None:
+        client.delete_disk(self.metadata.name, context=context)
+
+    async def _delete_async(
+        self, client: AsyncClient, *, context: RequestContext | None = None
+    ) -> None:
+        await client.delete_disk(self.metadata.name, context=context)
+
+    def wait(
+        self,
+        client: Client,
+        attempts: int,
+        interval: float,
+        *,
+        context: RequestContext | None = None,
+    ) -> None:
         for attempt in range(attempts):
-            resource = yield Request(f"get_{self.endpoint}", (self.metadata.name,))
-            status = getattr(resource.status, "status", None)
+            resource = client.get_disk(self.metadata.name, context=context)
+            status = resource.status.status if resource.status is not None else None
             if status in ("Available", "Released", "Bound"):
                 return
             if status == "Failed":
                 raise ReadinessError(f"{self.identity} failed")
             if attempt + 1 < attempts:
-                yield Pause(interval)
+                time.sleep(interval)
+        raise ReadinessError(f"{self.identity} readiness timed out")
+
+    async def wait_async(
+        self,
+        client: AsyncClient,
+        attempts: int,
+        interval: float,
+        *,
+        context: RequestContext | None = None,
+    ) -> None:
+        for attempt in range(attempts):
+            resource = await client.get_disk(self.metadata.name, context=context)
+            status = resource.status.status if resource.status is not None else None
+            if status in ("Available", "Released", "Bound"):
+                return
+            if status == "Failed":
+                raise ReadinessError(f"{self.identity} failed")
+            if attempt + 1 < attempts:
+                await asyncio.sleep(interval)
         raise ReadinessError(f"{self.identity} readiness timed out")
 
 

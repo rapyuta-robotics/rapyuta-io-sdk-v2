@@ -8,7 +8,7 @@ incorrect fields.
 
 from __future__ import annotations
 
-from typing import ClassVar, Literal
+from typing import TYPE_CHECKING, ClassVar, Literal
 
 from pydantic import Field, model_validator
 
@@ -21,7 +21,12 @@ from rapyuta_io_sdk_v2.models.utils import (
     SDKModel,
     resource_key,
 )
-from rapyuta_io_sdk_v2.resource_operations import Request
+
+
+if TYPE_CHECKING:
+    from rapyuta_io_sdk_v2.client import Client
+    from rapyuta_io_sdk_v2.async_client import AsyncClient
+    from rapyuta_io_sdk_v2.context import RequestContext
 
 
 class DockerSpec(SDKModel):
@@ -86,12 +91,27 @@ class Secret(BaseObject):
 
     can_apply: ClassVar[bool] = False
 
-    endpoint: ClassVar[str] = "secret"
-
     mutable: ClassVar[bool] = True
 
-    def _update(self):
-        return (yield Request("update_secret", (self.metadata.name, self)))
+    def _delete(self, client: Client, *, context: RequestContext | None = None) -> None:
+        client.delete_secret(self.metadata.name, context=context)
+
+    async def _delete_async(
+        self, client: AsyncClient, *, context: RequestContext | None = None
+    ) -> None:
+        await client.delete_secret(self.metadata.name, context=context)
+
+    def dependencies(self) -> list[str]:
+        runtime = self.spec.runtime
+
+        if not runtime or runtime == "cloud":
+            return []
+
+        if self.spec.depends is not None:
+            device_name = self.spec.depends.name_or_guid
+            return [resource_key("device", device_name)]
+
+        return []
 
 
 class SecretCreate(Secret):
@@ -112,17 +132,27 @@ class SecretCreate(Secret):
                 raise ValueError("'spec.data' is required when creating an Opaque secret")
         return self
 
-    def list_dependencies(self) -> list[str] | None:
-        runtime = self.spec.runtime
+    def create(self, client: Client, *, context: RequestContext | None = None):
+        return client.create_secret(self, context=context)
 
-        if not runtime or runtime == "cloud":
-            return None
+    def update(self, client: Client, *, context: RequestContext | None = None):
+        return client.update_secret(self.metadata.name, self, context=context)
 
-        if self.spec.depends is not None:
-            device_name = self.spec.depends.name_or_guid
-            return [resource_key("device", device_name)]
+    async def create_async(
+        self, client: AsyncClient, *, context: RequestContext | None = None
+    ):
+        return await client.create_secret(self, context=context)
 
-        return None
+    async def update_async(
+        self, client: AsyncClient, *, context: RequestContext | None = None
+    ):
+        return await client.update_secret(self.metadata.name, self, context=context)
+
+    @classmethod
+    def model_for_operation(cls, operation: str):
+        if operation == "delete" and cls is SecretCreate:
+            return Secret
+        return cls
 
 
 class SecretList(BaseList[Secret]):

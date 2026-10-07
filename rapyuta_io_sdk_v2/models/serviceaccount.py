@@ -8,7 +8,7 @@ This module mirrors the Go `ServiceAccount` and related types from the
 from __future__ import annotations
 
 from datetime import datetime
-from typing import ClassVar, Literal
+from typing import TYPE_CHECKING, ClassVar, Literal
 
 from pydantic import Field, field_validator
 
@@ -20,7 +20,12 @@ from rapyuta_io_sdk_v2.models.utils import (
     SDKModel,
     resource_key,
 )
-from rapyuta_io_sdk_v2.resource_operations import Request
+
+
+if TYPE_CHECKING:
+    from rapyuta_io_sdk_v2.client import Client
+    from rapyuta_io_sdk_v2.async_client import AsyncClient
+    from rapyuta_io_sdk_v2.context import RequestContext
 
 
 class ServiceAccountBinding(SDKModel):
@@ -40,7 +45,7 @@ class ServiceAccount(BaseObject):
     metadata: BaseMetadata
     spec: ServiceAccountSpec | None = None
 
-    def list_dependencies(self) -> list[str] | None:
+    def dependencies(self) -> list[str]:
         dependencies: list[str] = []
 
         # Process service account roles and their domains
@@ -61,16 +66,37 @@ class ServiceAccount(BaseObject):
                     for role in role_binding.role_names:
                         dependencies.append(resource_key("role", role))
 
-        return dependencies
+        return list(dict.fromkeys(dependencies))
 
     resource_kind: ClassVar[str] = "ServiceAccount"
 
-    endpoint: ClassVar[str] = "service_account"
-
     mutable: ClassVar[bool] = True
 
-    def _update(self):
-        return (yield Request("update_service_account", (self, self.metadata.name)))
+    def create(self, client: Client, *, context: RequestContext | None = None):
+        return client.create_service_account(self, context=context)
+
+    def update(self, client: Client, *, context: RequestContext | None = None):
+        return client.update_service_account(self, self.metadata.name, context=context)
+
+    async def create_async(
+        self, client: AsyncClient, *, context: RequestContext | None = None
+    ):
+        return await client.create_service_account(self, context=context)
+
+    async def update_async(
+        self, client: AsyncClient, *, context: RequestContext | None = None
+    ):
+        return await client.update_service_account(
+            self, self.metadata.name, context=context
+        )
+
+    def _delete(self, client: Client, *, context: RequestContext | None = None) -> None:
+        client.delete_service_account(self.metadata.name, context=context)
+
+    async def _delete_async(
+        self, client: AsyncClient, *, context: RequestContext | None = None
+    ) -> None:
+        await client.delete_service_account(self.metadata.name, context=context)
 
 
 class ServiceAccountList(BaseList[ServiceAccount]):

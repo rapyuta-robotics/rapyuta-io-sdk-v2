@@ -27,21 +27,18 @@ from rapyuta_io_sdk_v2.models import (
     Project,
     Role,
     RoleBinding,
-    Secret,
     SecretCreate,
     ServiceAccount,
     StaticRoute,
-    UserGroup,
     UserGroupCreate,
 )
 from rapyuta_io_sdk_v2.models.resource import ResourceModel
-from rapyuta_io_sdk_v2.models.utils import resource_key
 
 from .types import ApplyError, ApplyPlan, ApplyReport, Outcome, ResourceResult
 
 
 DEFAULT_RESOURCE_MODELS: dict[str, type[ResourceModel]] = {
-    model.__name__.removesuffix("Create").lower(): model
+    model.resource_kind.lower(): model
     for model in (
         Organization,
         Project,
@@ -57,26 +54,6 @@ DEFAULT_RESOURCE_MODELS: dict[str, type[ResourceModel]] = {
         ServiceAccount,
     )
 }
-
-
-def resource_kind(resource: BaseModel, models: Mapping[str, type[ResourceModel]]) -> str:
-    """Infer an omitted kind from the registered typed models."""
-    if getattr(resource, "kind", None):
-        return resource.kind
-    exact = [name for name, model in models.items() if type(resource) is model]
-    candidates = exact or [
-        name for name, model in models.items() if isinstance(resource, model)
-    ]
-    if len(candidates) != 1:
-        raise ApplyError(f"Cannot infer resource kind for {type(resource).__name__}")
-    name = candidates[0]
-    model_name = models[name].__name__.removesuffix("Create")
-    return model_name if model_name.lower() == name else name
-
-
-def identity(resource: ResourceModel) -> str:
-    """Return the resource's canonical operation identity."""
-    return resource.identity
 
 
 def merge_values(destination: dict, source: Mapping) -> dict:
@@ -110,25 +87,9 @@ class _BaseApplier:
         resource_models: Mapping[str, type[ResourceModel]] | None = None,
     ):
         client.config.features.require("apply")
-        self.yaml = require_dependency("yaml", "apply")
-        jinja = require_dependency("jinja2", "apply")
-        if not isinstance(workers, int) or isinstance(workers, bool) or workers < 1:
-            raise ValueError("workers must be a positive integer")
-        if (
-            not isinstance(readiness_attempts, int)
-            or isinstance(readiness_attempts, bool)
-            or readiness_attempts < 1
-        ):
-            raise ValueError("readiness_attempts must be a positive integer")
-        if (
-            isinstance(readiness_interval, bool)
-            or not isinstance(readiness_interval, (int, float))
-            or not math.isfinite(readiness_interval)
-            or readiness_interval < 0
-        ):
-            raise ValueError("readiness_interval must be a finite nonnegative number")
-        if context is not None and not isinstance(context, RequestContext):
-            raise TypeError("context must be a RequestContext")
+        self._validate_execution_options(
+            workers, readiness_attempts, readiness_interval, context
+        )
         self.client = client
         # Plans and execution must see the same inputs, even with a generator.
         self.resources = (
@@ -138,65 +99,97 @@ class _BaseApplier:
         self.readiness_attempts = readiness_attempts
         self.readiness_interval = readiness_interval
         self.context = context
-        self.resource_models = {
-            **DEFAULT_RESOURCE_MODELS,
-            **{k.lower(): v for k, v in (resource_models or {}).items()},
-        }
-        if any(
-            not isinstance(model, type) or not issubclass(model, ResourceModel)
-            for model in self.resource_models.values()
+        self.resource_models = self._build_registry(resource_models)
+        self.yaml = require_dependency("yaml", "apply")
+        self.environment = self._template_environment(filters)
+        self.values = self._load_values(values)
+        self._add_rio_context()
+        self._add_secrets(secrets)
+
+    @staticmethod
+    def _validate_execution_options(workers, attempts, interval, context) -> None:
+        if not isinstance(workers, int) or isinstance(workers, bool) or workers < 1:
+            raise ValueError("workers must be a positive integer")
+        if not isinstance(attempts, int) or isinstance(attempts, bool) or attempts < 1:
+            raise ValueError("readiness_attempts must be a positive integer")
+        if (
+            isinstance(interval, bool)
+            or not isinstance(interval, (int, float))
+            or not math.isfinite(interval)
+            or interval < 0
         ):
-            raise TypeError("resource_models values must be ResourceModel subclasses")
-        self.environment = jinja.Environment(
-            undefined=jinja.StrictUndefined, autoescape=False
-        )
-        self.environment.filters["getenv"] = template_getenv
-        self.environment.filters.update(filters or {})
-        self.values: dict[str, Any] = {}
-        if isinstance(values, Mapping):
-            values = [values]
-        elif isinstance(values, (str, Path)):
-            values = [values]
-        for value in values:
-            if isinstance(value, (str, Path)):
-                parsed = self._parse(Path(value).read_text(), str(value))
+            raise ValueError("readiness_interval must be a finite nonnegative number")
+        if context is not None and not isinstance(context, RequestContext):
+            raise TypeError("context must be a RequestContext")
+
+    @staticmethod
+    def _build_registry(overrides) -> dict[str, type[ResourceModel]]:
+        registry = dict(DEFAULT_RESOURCE_MODELS)
+        for kind, model in (overrides or {}).items():
+            if not isinstance(model, type) or not issubclass(model, ResourceModel):
+                raise TypeError("resource_models values must be ResourceModel subclasses")
+            if (
+                not isinstance(kind, str)
+                or not kind
+                or not isinstance(model.resource_kind, str)
+                or kind.lower() != model.resource_kind.lower()
+            ):
+                raise ValueError("Registry keys must match the model's resource_kind")
+            registry[kind.lower()] = model
+        return registry
+
+    @staticmethod
+    def _template_environment(filters):
+        jinja = require_dependency("jinja2", "apply")
+        environment = jinja.Environment(undefined=jinja.StrictUndefined, autoescape=False)
+        environment.filters["getenv"] = template_getenv
+        environment.filters.update(filters or {})
+        return environment
+
+    def _load_values(self, sources) -> dict[str, Any]:
+        if isinstance(sources, (Mapping, str, Path)):
+            sources = [sources]
+        values: dict[str, Any] = {}
+        for source in sources:
+            if isinstance(source, (str, Path)):
+                parsed = self._parse(Path(source).read_text(), str(source))
                 if len(parsed) != 1:
                     raise ApplyError("Each values file must contain one mapping")
-                value = parsed[0]
-            if not isinstance(value, Mapping):
+                source = parsed[0]
+            if not isinstance(source, Mapping):
                 raise ApplyError("Each values source must be a mapping")
-            merge_values(self.values, value)
-        config = client.config
+            merge_values(values, source)
+        return values
+
+    def _add_rio_context(self) -> None:
+        config = self.client.config
         rio = {
-            "project": {
-                "name": getattr(config, "project_name", None),
-                "guid": config.project_guid,
-            },
+            "project": {"name": config.project_name, "guid": config.project_guid},
             "organization": {
-                "name": getattr(config, "organization_name", None),
+                "name": config.organization_name,
                 "guid": config.organization_guid,
-                "short_id": getattr(config, "organization_short_id", None),
+                "short_id": config.organization_short_id,
             },
-            "email_id": getattr(config, "email", None),
+            "email_id": config.email,
         }
         merge_values(self.values, {"rio": rio})
-        if secrets is not None:
-            if not isinstance(secrets, Mapping):
-                raise ApplyError("secrets must be an already decrypted mapping")
-            merge_values(self.values, {"secrets": secrets})
-        else:
+
+    def _add_secrets(self, secrets) -> None:
+        if secrets is None:
             self.values.setdefault("secrets", {})
+            return
+        if not isinstance(secrets, Mapping):
+            raise ApplyError("secrets must be an already decrypted mapping")
+        merge_values(self.values, {"secrets": secrets})
 
     def _parse(self, content: str, name: str) -> list[Any]:
         try:
-            loaded = (
-                json.loads(content)
-                if Path(name).suffix.lower() == ".json"
-                else list(self.yaml.safe_load_all(content))
-            )
             if Path(name).suffix.lower() == ".json":
-                loaded = loaded if isinstance(loaded, list) else [loaded]
-            return [value for value in loaded if value is not None]
+                loaded = json.loads(content)
+                documents = loaded if isinstance(loaded, list) else [loaded]
+            else:
+                documents = list(self.yaml.safe_load_all(content))
+            return [value for value in documents if value is not None]
         except (ValueError, self.yaml.YAMLError) as error:
             raise ApplyError(f"Cannot parse {name}: {error}") from error
 
@@ -222,20 +215,14 @@ class _BaseApplier:
             raise ApplyError("Only YAML and JSON manifests are supported")
         return files
 
-    def render(
-        self, resources: Any = None, *, operation: str = "apply"
-    ) -> list[ResourceModel]:
-        """Render templates and validate resource data without any platform calls."""
-        self.client.config.features.require("apply")
-        if operation not in ("apply", "delete"):
-            raise ValueError("operation must be apply or delete")
-        models = self.resource_models
-        if operation == "delete":
-            response_models = {SecretCreate: Secret, UserGroupCreate: UserGroup}
-            models = {
-                kind: response_models.get(model, model)
-                for kind, model in self.resource_models.items()
-            }
+    def _render_file(self, path: Path) -> list[Any]:
+        try:
+            content = self.environment.from_string(path.read_text()).render(**self.values)
+        except Exception as error:
+            raise ApplyError(f"Cannot render {path}: {error}") from error
+        return self._parse(content, str(path))
+
+    def _collect_documents(self, resources) -> list[Any]:
         source = self.resources if resources is None else resources
         if isinstance(source, (str, Path, Mapping, BaseModel)):
             source = [source]
@@ -245,74 +232,76 @@ class _BaseApplier:
                 documents.append(item)
             elif isinstance(item, (str, Path)):
                 for path in self._expand(item):
-                    try:
-                        content = self.environment.from_string(path.read_text()).render(
-                            **self.values
-                        )
-                    except Exception as error:
-                        raise ApplyError(f"Cannot render {path}: {error}") from error
-                    documents.extend(self._parse(content, str(path)))
+                    documents.extend(self._render_file(path))
             else:
                 raise ApplyError(f"Unsupported resource input: {type(item).__name__}")
-        rendered = []
-        for document in documents:
-            kind = (
-                resource_kind(document, models)
-                if isinstance(document, BaseModel)
-                else document.get("kind")
-            )
-            model = models.get((kind or "").lower())
-            if model is None:
-                raise ApplyError(f"Unsupported resource kind: {kind}")
-            if isinstance(document, BaseModel):
-                if not isinstance(document, model):
-                    document = model.model_validate(
-                        document.model_dump(by_alias=True, exclude_none=True)
-                    )
-                else:
-                    document = document.model_copy(deep=True)
-            else:
-                document = model.model_validate(deepcopy(document))
-            if not document.kind:
-                document.kind = kind
-            if kind.lower() == "project":
-                organization = (
-                    getattr(self.context, "organization_guid", None)
-                    or self.client.config.organization_guid
-                )
-                if organization is not None:
-                    document.metadata.organization_guid = organization
-            rendered.append(document)
-        return rendered
+        return documents
 
-    def plan(self, resources: Any = None, *, operation: str = "apply") -> ApplyPlan:
-        """Validate the entire operation and produce dependency layers."""
+    def _select_model(self, document, operation: str) -> type[ResourceModel]:
+        if isinstance(document, ResourceModel):
+            kind = document.resource_kind
+        elif isinstance(document, Mapping):
+            kind = document.get("kind")
+        else:
+            raise ApplyError(f"Unsupported resource input: {type(document).__name__}")
+        if not isinstance(kind, str) or kind.lower() not in self.resource_models:
+            raise ApplyError(f"Unsupported resource kind: {kind}")
+        return self.resource_models[kind.lower()].model_for_operation(operation)
+
+    def _prepare_resource(self, document, operation: str) -> ResourceModel:
+        model = self._select_model(document, operation)
+        if isinstance(document, model):
+            resource = document.model_copy(deep=True)
+        elif isinstance(document, ResourceModel):
+            resource = model.model_validate(
+                document.model_dump(by_alias=True, exclude_none=True)
+            )
+        else:
+            resource = model.model_validate(deepcopy(document))
+        resource.bind_context(self.client.config, self.context)
+        return resource
+
+    def render(
+        self, resources: Any = None, *, operation: str = "apply"
+    ) -> list[ResourceModel]:
+        """Render templates and validate resource data without any platform calls."""
+        self.client.config.features.require("apply")
+        self._validate_operation(operation)
+        return [
+            self._prepare_resource(document, operation)
+            for document in self._collect_documents(resources)
+        ]
+
+    @staticmethod
+    def _validate_operation(operation: str) -> None:
         if operation not in ("apply", "delete"):
             raise ValueError("operation must be apply or delete")
-        rendered = self.render(resources, operation=operation)
-        objects: dict[str, ResourceModel] = {}
-        for resource in rendered:
+
+    @staticmethod
+    def _index_resources(resources, operation: str) -> dict[str, ResourceModel]:
+        objects = {}
+        for resource in resources:
             resource.validate_operation(operation)
             if resource.identity in objects:
                 raise ApplyError(f"Duplicate resource: {resource.identity}")
             objects[resource.identity] = resource
-        # Both names and GUIDs may refer to resources included in this operation.
+        return objects
+
+    @staticmethod
+    def _resolve_aliases(objects: Mapping[str, ResourceModel]) -> dict[str, str]:
         # Validate aliases against every name before resolving dependency edges.
         aliases = {key: key for key in objects}
         for key, resource in objects.items():
-            guid = resource.metadata.guid
-            if not guid:
-                continue
-            alias = resource_key(
-                resource.kind,
-                guid,
-                resource.metadata.version if resource.kind.lower() == "package" else None,
-            )
-            if alias in aliases and aliases[alias] != key:
-                raise ApplyError(
-                    f"Ambiguous resource reference {alias}: {aliases[alias]} and {key}"
-                )
-            aliases[alias] = key
+            for alias in resource.reference_keys():
+                if alias in aliases and aliases[alias] != key:
+                    raise ApplyError(
+                        f"Ambiguous resource reference {alias}: {aliases[alias]} and {key}"
+                    )
+                aliases[alias] = key
+        return aliases
+
+    @staticmethod
+    def _dependency_layers(objects, aliases, operation: str) -> list[list[str]]:
         graph = graphlib.TopologicalSorter()
         for key, resource in objects.items():
             # Dependencies outside this manifest set refer to existing resources.
@@ -328,10 +317,29 @@ class _BaseApplier:
             graph.done(*ready)
         if operation == "delete":
             layers.reverse()
+        return layers
+
+    def plan(self, resources: Any = None, *, operation: str = "apply") -> ApplyPlan:
+        """Validate the entire operation and produce dependency layers."""
+        rendered = self.render(resources, operation=operation)
+        objects = self._index_resources(rendered, operation)
+        aliases = self._resolve_aliases(objects)
+        layers = self._dependency_layers(objects, aliases, operation)
         return ApplyPlan(operation=operation, layers=layers, resources=rendered)
 
-    def _objects(self, plan: ApplyPlan) -> dict[str, ResourceModel]:
-        return {resource.identity: resource for resource in plan.resources}
+    def _batches(self, plan: ApplyPlan) -> Iterator[list[ResourceModel]]:
+        objects = {resource.identity: resource for resource in plan.resources}
+        for layer in plan.layers:
+            for offset in range(0, len(layer), self.workers):
+                yield [objects[key] for key in layer[offset : offset + self.workers]]
+
+    @staticmethod
+    def _record_results(completed, results: Iterable[ResourceResult]) -> bool:
+        failed = False
+        for result in results:
+            completed[result.identity] = result
+            failed |= result.outcome == Outcome.FAILED
+        return failed
 
     @staticmethod
     def _finish(plan: ApplyPlan, completed: dict[str, ResourceResult]) -> ApplyReport:
@@ -344,13 +352,31 @@ class _BaseApplier:
             ],
         )
 
+    def _dry_run_report(self, plan: ApplyPlan) -> ApplyReport:
+        return self._finish(
+            plan,
+            {
+                resource.identity: ResourceResult(
+                    identity=resource.identity, outcome=Outcome.PLANNED
+                )
+                for resource in plan.resources
+            },
+        )
+
 
 class Applier(_BaseApplier):
     """Synchronous declarative operations using a shared, thread-safe client."""
 
     def _run(self, resource: ResourceModel, operation: str) -> ResourceResult:
         try:
-            return getattr(resource, operation)(
+            if operation == "apply":
+                return resource.apply(
+                    self.client,
+                    context=self.context,
+                    readiness_attempts=self.readiness_attempts,
+                    readiness_interval=self.readiness_interval,
+                )
+            return resource.delete(
                 self.client,
                 context=self.context,
                 readiness_attempts=self.readiness_attempts,
@@ -362,30 +388,18 @@ class Applier(_BaseApplier):
             )
 
     def _execute(self, resources: Any, operation: str, dry_run: bool) -> ApplyReport:
-        self.client.config.features.require("apply")
         plan = self.plan(resources, operation=operation)
-        objects = self._objects(plan)
-        completed = {}
         if dry_run:
-            for key in objects:
-                completed[key] = ResourceResult(identity=key, outcome=Outcome.PLANNED)
-            return self._finish(plan, completed)
+            return self._dry_run_report(plan)
+        completed = {}
         with ThreadPoolExecutor(max_workers=self.workers) as executor:
-            failed = False
-            for layer in plan.layers:
-                for offset in range(0, len(layer), self.workers):
-                    batch = layer[offset : offset + self.workers]
-                    futures = [
-                        executor.submit(self._run, objects[key], operation)
-                        for key in batch
-                    ]
-                    for future in futures:
-                        result = future.result()
-                        completed[result.identity] = result
-                        failed |= result.outcome == Outcome.FAILED
-                    if failed:
-                        break
-                if failed:
+            for batch in self._batches(plan):
+                futures = [
+                    executor.submit(self._run, resource, operation) for resource in batch
+                ]
+                if self._record_results(
+                    completed, (future.result() for future in futures)
+                ):
                     break
         return self._finish(plan, completed)
 
@@ -401,7 +415,14 @@ class AsyncApplier(_BaseApplier):
 
     async def _run(self, resource: ResourceModel, operation: str) -> ResourceResult:
         try:
-            return await getattr(resource, f"{operation}_async")(
+            if operation == "apply":
+                return await resource.apply_async(
+                    self.client,
+                    context=self.context,
+                    readiness_attempts=self.readiness_attempts,
+                    readiness_interval=self.readiness_interval,
+                )
+            return await resource.delete_async(
                 self.client,
                 context=self.context,
                 readiness_attempts=self.readiness_attempts,
@@ -415,30 +436,17 @@ class AsyncApplier(_BaseApplier):
     async def _execute(
         self, resources: Any, operation: str, dry_run: bool
     ) -> ApplyReport:
-        self.client.config.features.require("apply")
         plan = self.plan(resources, operation=operation)
-        objects = self._objects(plan)
-        completed = {}
         if dry_run:
-            for key in objects:
-                completed[key] = ResourceResult(identity=key, outcome=Outcome.PLANNED)
-            return self._finish(plan, completed)
-        failed = False
-        for layer in plan.layers:
-            for offset in range(0, len(layer), self.workers):
-                batch = layer[offset : offset + self.workers]
-                async with asyncio.TaskGroup() as group:
-                    tasks = [
-                        group.create_task(self._run(objects[key], operation))
-                        for key in batch
-                    ]
-                results = [task.result() for task in tasks]
-                for result in results:
-                    completed[result.identity] = result
-                    failed |= result.outcome == Outcome.FAILED
-                if failed:
-                    break
-            if failed:
+            return self._dry_run_report(plan)
+        completed = {}
+        for batch in self._batches(plan):
+            async with asyncio.TaskGroup() as group:
+                tasks = [
+                    group.create_task(self._run(resource, operation))
+                    for resource in batch
+                ]
+            if self._record_results(completed, (task.result() for task in tasks)):
                 break
         return self._finish(plan, completed)
 

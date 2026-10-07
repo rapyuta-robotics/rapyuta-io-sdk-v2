@@ -8,8 +8,11 @@ incorrect fields.
 
 from __future__ import annotations
 
+import asyncio
+import time
+
 from os import path
-from typing import Any, ClassVar, Literal
+from typing import TYPE_CHECKING, Any, ClassVar, Literal
 
 from pydantic import ConfigDict, Field, RootModel, field_validator, model_validator
 
@@ -33,7 +36,13 @@ from rapyuta_io_sdk_v2.models.utils import (
     ValueFrom,
     resource_key,
 )
-from rapyuta_io_sdk_v2.resource_operations import Pause, ReadinessError, Request
+from rapyuta_io_sdk_v2.resource_operations import ReadinessError
+
+
+if TYPE_CHECKING:
+    from rapyuta_io_sdk_v2.client import Client
+    from rapyuta_io_sdk_v2.async_client import AsyncClient
+    from rapyuta_io_sdk_v2.context import RequestContext
 
 
 class DeploymentMetadata(BaseMetadata):
@@ -199,17 +208,7 @@ class DeploymentSpec(SDKModel):
     @model_validator(mode="after")
     def validate_runtime_and_volumes(self):
         """Validate that runtime and volume configurations are compatible."""
-        if self.runtime == "device" and self.volumes:
-            # For device runtime, volumes should not have cloud-specific depends
-            for volume in self.volumes:
-                if volume.depends and hasattr(volume.depends, "kind"):
-                    # Device volumes should depend on disks, not cloud resources
-                    if volume.depends.kind in ["managedService", "cloudService"]:
-                        raise ValueError(
-                            f"Device runtime cannot use cloud volume dependency: {volume.depends.kind}"
-                        )
-        elif self.runtime == "cloud" and self.volumes:
-            # For cloud runtime, volumes should not have device-specific fields
+        if self.runtime == "cloud" and self.volumes:
             for volume in self.volumes:
                 if any(
                     [
@@ -282,7 +281,7 @@ class Deployment(BaseObject):
     spec: DeploymentSpec
     status: DeploymentStatus | None = None
 
-    def list_dependencies(self) -> list[str] | None:
+    def dependencies(self) -> list[str]:
         dependencies: list[str] = []
 
         # Package Dependency
@@ -328,46 +327,103 @@ class Deployment(BaseObject):
                     key = resource_key("network", network.depends.name_or_guid)
                     dependencies.append(key)
 
-        return dependencies
+        for variable in self.spec.env_args or []:
+            if variable.value_from is not None:
+                reference = variable.value_from.secret_key_ref
+                if reference is not None and reference.name:
+                    dependencies.append(resource_key("Secret", reference.name))
+        if self.spec.service_account:
+            dependencies.append(resource_key("ServiceAccount", self.spec.service_account))
+        return list(dict.fromkeys(dependencies))
 
     resource_kind: ClassVar[str] = "Deployment"
 
-    endpoint: ClassVar[str] = "deployment"
+    def create(self, client: Client, *, context: RequestContext | None = None):
+        return client.create_deployment(self, context=context)
 
-    def dependencies(self) -> list[str]:
-        dependencies = super().dependencies()
-        package = self.metadata.depends
-        if package:
-            dependencies = [
-                d for d in dependencies if d != f"package:{package.name_or_guid}"
-            ]
-            key = resource_key("Package", package.name_or_guid, package.version)
-            if key not in dependencies:
-                dependencies.append(key)
-        return dependencies
+    async def create_async(
+        self, client: AsyncClient, *, context: RequestContext | None = None
+    ):
+        return await client.create_deployment(self, context=context)
 
-    def _prerequisites(self, attempts: int, interval: float):
-        required = {d.name_or_guid for d in (self.spec.depends or []) if d.wait}
+    def _delete(self, client: Client, *, context: RequestContext | None = None) -> None:
+        client.delete_deployment(self.metadata.name, context=context)
+
+    async def _delete_async(
+        self, client: AsyncClient, *, context: RequestContext | None = None
+    ) -> None:
+        await client.delete_deployment(self.metadata.name, context=context)
+
+    def prerequisites(
+        self,
+        client: Client,
+        attempts: int,
+        interval: float,
+        *,
+        context: RequestContext | None = None,
+    ) -> None:
+        required = {
+            dependency.name_or_guid
+            for dependency in (self.spec.depends or [])
+            if dependency.wait
+        }
         if not required:
             return
         for attempt in range(attempts):
-            # Get each named dependency; an empty list response cannot pass.
             ready = True
             for name in sorted(required):
                 try:
-                    deployment = yield Request("get_deployment", (name,))
+                    deployment = client.get_deployment(name, context=context)
                 except HttpNotFoundError:
                     ready = False
                     continue
-                state = getattr(deployment.status, "status", None)
-                phase = getattr(deployment.status, "phase", None)
+                state = (
+                    deployment.status.status if deployment.status is not None else None
+                )
+                phase = deployment.status.phase if deployment.status is not None else None
                 if state in ("Error", "Stopped") or phase in ("FailedToStart", "Stopped"):
                     raise ReadinessError(f"Dependency deployment:{name} failed")
                 ready &= state == "Running"
             if ready:
                 return
             if attempt + 1 < attempts:
-                yield Pause(interval)
+                time.sleep(interval)
+        raise ReadinessError(f"Dependencies did not become ready: {sorted(required)}")
+
+    async def prerequisites_async(
+        self,
+        client: AsyncClient,
+        attempts: int,
+        interval: float,
+        *,
+        context: RequestContext | None = None,
+    ) -> None:
+        required = {
+            dependency.name_or_guid
+            for dependency in (self.spec.depends or [])
+            if dependency.wait
+        }
+        if not required:
+            return
+        for attempt in range(attempts):
+            ready = True
+            for name in sorted(required):
+                try:
+                    deployment = await client.get_deployment(name, context=context)
+                except HttpNotFoundError:
+                    ready = False
+                    continue
+                state = (
+                    deployment.status.status if deployment.status is not None else None
+                )
+                phase = deployment.status.phase if deployment.status is not None else None
+                if state in ("Error", "Stopped") or phase in ("FailedToStart", "Stopped"):
+                    raise ReadinessError(f"Dependency deployment:{name} failed")
+                ready &= state == "Running"
+            if ready:
+                return
+            if attempt + 1 < attempts:
+                await asyncio.sleep(interval)
         raise ReadinessError(f"Dependencies did not become ready: {sorted(required)}")
 
 

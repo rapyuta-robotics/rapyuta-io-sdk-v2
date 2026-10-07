@@ -30,7 +30,7 @@ from rapyuta_io_sdk_v2.models import (
     UserGroupCreate,
 )
 from rapyuta_io_sdk_v2.models.resource import ResourceModel
-from rapyuta_io_sdk_v2.resource_operations import ApplyError, Outcome, Request
+from rapyuta_io_sdk_v2.resource_operations import ApplyError, Outcome
 
 
 def client(**methods):
@@ -101,7 +101,7 @@ def test_conflict_update_and_immutable_exists():
     assert resource.apply(c).outcome == Outcome.EXISTS
     c.delete_package = Mock()
     assert resource.delete(c).identity == "package:app:v2"
-    c.delete_package.assert_called_once_with("app", "v2")
+    c.delete_package.assert_called_once_with("app", "v2", context=None)
 
 
 def test_delete_retain_and_not_found():
@@ -168,12 +168,12 @@ def test_response_models_require_create_type_but_support_delete(response, create
     if model is Secret:
         c = client(delete_secret=Mock())
         assert resource.delete(c).outcome == Outcome.DELETED
-        c.delete_secret.assert_called_once_with("secret")
+        c.delete_secret.assert_called_once_with("secret", context=None)
     else:
         resource.metadata.guid = "group-guid"
         c = client(delete_user_group=Mock())
         assert resource.delete(c).outcome == Outcome.DELETED
-        c.delete_user_group.assert_called_once_with("group", "group-guid")
+        c.delete_user_group.assert_called_once_with("group", "group-guid", context=None)
 
 
 def test_user_group_update_resolves_guid_without_mutation():
@@ -228,7 +228,10 @@ def test_project_docker_cache_shell_and_update_preserve_input():
     shell = c.create_project.call_args.args[0]
     assert not shell.spec.features.docker_cache.enabled
     assert shell.spec.features.docker_cache.registry_secret is None
-    assert c.update_project.call_args.kwargs == {"project_guid": "project-guid"}
+    assert c.update_project.call_args.kwargs == {
+        "project_guid": "project-guid",
+        "context": None,
+    }
     assert resource.model_dump(by_alias=True) == before
 
 
@@ -277,17 +280,16 @@ def test_network_without_kind_and_failed_readiness():
 
 
 @pytest.mark.asyncio
-async def test_async_cancellation_propagates_and_closes_custom_workflow():
+async def test_async_cancellation_propagates_and_closes_custom_operation():
     closed = []
 
     class CustomRole(Role):
         kind: Literal["CustomRole"] = "CustomRole"
         resource_kind: ClassVar[str] = "CustomRole"
 
-        def workflow(self, operation, attempts, interval):
+        async def create_async(self, client, *, context=None):
             try:
-                yield Request("create_role", (self,))
-                return Outcome.CREATED, self
+                return await client.create_role(self, context=context)
             finally:
                 closed.append(True)
 
@@ -312,7 +314,7 @@ from types import SimpleNamespace
 from rapyuta_io_sdk_v2.config import Configuration
 from rapyuta_io_sdk_v2.models import Role
 from rapyuta_io_sdk_v2.resource_operations import Outcome
-client = SimpleNamespace(config=Configuration(load_cli_config=False, features={"apply": True}), create_role=lambda resource: resource)
+client = SimpleNamespace(config=Configuration(load_cli_config=False, features={"apply": True}), create_role=lambda resource, **kwargs: resource)
 resource = Role.model_validate({"metadata": {"name": "reader"}, "spec": {}})
 assert resource.apply(client).outcome == Outcome.CREATED
 assert "rapyuta_io_sdk_v2.apply.engine" not in sys.modules
@@ -320,3 +322,152 @@ assert "rapyuta_io_sdk_v2.apply.engine" not in sys.modules
     subprocess.run(
         [sys.executable, "-c", script], check=True, capture_output=True, text=True
     )
+
+
+def test_reference_keys_are_owned_by_models_and_package_versions():
+    assert role(guid="role-guid").reference_keys() == ["role:reader", "role:role-guid"]
+    app = Package.model_validate(
+        {
+            "metadata": {"name": "app", "guid": "package-guid", "version": "v2"},
+            "spec": {},
+        }
+    )
+    assert app.reference_keys() == ["package:app:v2", "package:package-guid:v2"]
+
+    class CustomPackage(Package):
+        resource_kind: ClassVar[str] = "CustomPackage"
+
+    custom = CustomPackage.model_validate(app.model_dump())
+    assert custom.reference_keys() == [
+        "custompackage:app:v2",
+        "custompackage:package-guid:v2",
+    ]
+    assert Role.model_for_operation("delete") is Role
+    assert SecretCreate.model_for_operation("delete") is Secret
+    assert UserGroupCreate.model_for_operation("delete") is UserGroup
+
+    class CustomSecret(SecretCreate):
+        resource_kind: ClassVar[str] = "CustomSecret"
+
+    assert CustomSecret.model_for_operation("delete") is CustomSecret
+
+
+def test_explicit_dependencies_cover_environment_secrets_and_service_accounts():
+    from rapyuta_io_sdk_v2.models import Deployment
+
+    app = Package.model_validate(
+        {
+            "metadata": {"name": "app", "version": "v2"},
+            "spec": {
+                "environmentVars": [
+                    {
+                        "name": "TOKEN",
+                        "valueFrom": {"secretKeyRef": {"name": "config", "key": "token"}},
+                    }
+                ],
+                "executables": [
+                    {
+                        "name": "app",
+                        "docker": {
+                            "image": "app",
+                            "pullSecret": {"depends": {"nameOrGUID": "registry"}},
+                        },
+                    }
+                ],
+            },
+        }
+    )
+    assert app.dependencies() == ["secret:registry", "secret:config"]
+    deployment = Deployment.model_validate(
+        {
+            "metadata": {
+                "name": "app",
+                "depends": {"nameOrGUID": "app", "version": "v2"},
+            },
+            "spec": {
+                "runtime": "cloud",
+                "serviceAccount": "robot",
+                "envArgs": [
+                    {
+                        "name": "TOKEN",
+                        "valueFrom": {"secretKeyRef": {"name": "config", "key": "token"}},
+                    },
+                    {
+                        "name": "OTHER",
+                        "valueFrom": {"secretKeyRef": {"name": "config", "key": "other"}},
+                    },
+                ],
+            },
+        }
+    )
+    assert deployment.dependencies() == [
+        "package:app:v2",
+        "secret:config",
+        "serviceaccount:robot",
+    ]
+
+
+def test_plain_exception_with_403_attribute_does_not_trigger_update():
+    error = RuntimeError("not a typed SDK response")
+    error.status_code = 403
+    c = client(create_role=Mock(side_effect=error), update_role=Mock())
+    assert role().apply(c).outcome == Outcome.FAILED
+    c.update_role.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_explicit_create_update_sync_async_parity():
+    resource = role()
+    context = RequestContext(project_guid="project")
+    sync_client = client(
+        create_role=Mock(return_value=resource), update_role=Mock(return_value=resource)
+    )
+    async_client = client(
+        create_role=AsyncMock(return_value=resource),
+        update_role=AsyncMock(return_value=resource),
+    )
+    assert resource.create(sync_client, context=context) is resource
+    assert resource.update(sync_client, context=context) is resource
+    assert await resource.create_async(async_client, context=context) is resource
+    assert await resource.update_async(async_client, context=context) is resource
+    sync_client.create_role.assert_called_once_with(resource, context=context)
+    sync_client.update_role.assert_called_once_with("reader", resource, context=context)
+    async_client.create_role.assert_awaited_once_with(resource, context=context)
+    async_client.update_role.assert_awaited_once_with("reader", resource, context=context)
+
+
+def test_project_direct_apply_binds_context_on_copy_only():
+    resource = Project.model_validate({"metadata": {"name": "project"}, "spec": {}})
+    c = client(
+        create_project=Mock(return_value=resource),
+        list_projects=Mock(
+            return_value=SimpleNamespace(
+                items=[
+                    SimpleNamespace(
+                        metadata=resource.metadata,
+                        status=SimpleNamespace(status="Success"),
+                    )
+                ]
+            )
+        ),
+    )
+    context = RequestContext(organization_guid="context-org")
+    assert resource.apply(c, context=context).outcome == Outcome.CREATED
+    copied = c.create_project.call_args.args[0]
+    assert copied.metadata.organization_guid == "context-org"
+    assert resource.metadata.organization_guid is None
+
+
+@pytest.mark.asyncio
+async def test_organization_async_apply_updates_explicit_guid():
+    resource = Organization.model_validate(
+        {"metadata": {"name": "org", "guid": "org-guid"}, "spec": {"members": []}}
+    )
+    c = client(update_organization=AsyncMock(return_value=resource))
+    result = await resource.apply_async(c)
+    assert result.outcome == Outcome.UPDATED
+    c.update_organization.assert_awaited_once()
+    assert c.update_organization.call_args.kwargs == {
+        "organization_guid": "org-guid",
+        "context": None,
+    }

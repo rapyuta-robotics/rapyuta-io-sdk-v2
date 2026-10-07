@@ -146,7 +146,9 @@ async def apply_role(config):
         return await role.apply_async(client)
 ```
 
-Individual operations return a `ResourceResult` containing the outcome, response resource, and error details. Clients are explicit arguments and remain owned by the caller. Operations use a copy of the input model, preserving its data. Resource-specific workflows implement lookup, create/update decisions, deletion, and readiness; sync and async methods execute the same workflow.
+Apply and delete operations return a `ResourceResult` containing the outcome, response resource, and error details. Clients are explicit arguments and remain owned by the caller. Operations use a copy of the input model, preserving its data. Models call their typed client methods directly; shared apply/delete policy handles conflicts, readiness, retained resources, and failures.
+
+Supported models also expose `create()` and `create_async()`, and mutable models expose `update()` and `update_async()`. These methods invoke typed client methods and return typed responses; resource-specific lookups stay on the model. The Apply feature flag controls the higher-level apply/delete orchestration.
 
 ## Apply
 
@@ -168,7 +170,7 @@ Inputs can be typed resources, mappings, YAML/JSON files, directories, or globs.
 
 Supported kinds: Organization, Project, Package, Deployment, Disk, Network, StaticRoute, Secret, UserGroup, Role, RoleBinding, and ServiceAccount. Package identity includes its version. Apply orders dependencies first; deletion reverses that order and respects `rapyuta.io/deletionPolicy=retain`. Dependencies outside the submitted manifests refer to existing resources. Deployment dependencies marked `wait` receive readiness checks.
 
-Execution uses at most six workers by default. Failure stops new work after the current batch settles, and the report includes failed and skipped resources. After rendering and validation, `Applier` invokes the resource models' operations. Custom resources subclass `ResourceModel`, define their workflow, and register through `resource_models={"MyKind": MyResource}`. SOPS execution, Ansible filters, and legacy v1 Device operations remain outside the SDK.
+Execution uses at most six workers by default. Failure stops new work after the current batch settles, and the report includes failed and skipped resources. After rendering and validation, `Applier` invokes the resource models' operations. Custom resources subclass `ResourceModel`, declare a fixed `resource_kind`, implement their client calls, and register through `resource_models={"MyKind": MyResource}`. Models provide their own identity, dependencies, reference aliases, and operation-specific input schemas. SOPS execution, Ansible filters, and legacy v1 Device operations remain outside the SDK.
 
 `AsyncApplier` provides awaited `apply()` and `delete()`; local `render()` and `plan()` remain synchronous.
 

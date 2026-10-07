@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, ClassVar, Literal
+from typing import TYPE_CHECKING, Any, ClassVar, Literal
 
 from pydantic import Field, RootModel, model_validator
 
@@ -13,7 +13,12 @@ from rapyuta_io_sdk_v2.models.utils import (
     Subject,
     resource_key,
 )
-from rapyuta_io_sdk_v2.resource_operations import Request
+
+
+if TYPE_CHECKING:
+    from rapyuta_io_sdk_v2.client import Client
+    from rapyuta_io_sdk_v2.async_client import AsyncClient
+    from rapyuta_io_sdk_v2.context import RequestContext
 
 
 class RoleBindingMetadata(BaseMetadata):
@@ -44,7 +49,7 @@ class RoleBinding(BaseObject):
     metadata: RoleBindingMetadata
     spec: RoleBindingSpec
 
-    def list_dependencies(self) -> list[str] | None:
+    def dependencies(self) -> list[str]:
         dependencies: list[str] = []
 
         # Add role dependency
@@ -63,23 +68,41 @@ class RoleBinding(BaseObject):
                 resource_key(self.spec.domain.kind, self.spec.domain.name)
             )
 
-        return dependencies
+        return list(dict.fromkeys(dependencies))
 
     resource_kind: ClassVar[str] = "RoleBinding"
 
-    endpoint: ClassVar[str] = "role_binding"
-
-    def _create(self):
-        body = BulkRoleBindingUpdate.model_validate(
-            {"newBindings": [self], "oldBindings": []}
+    @property
+    def identity(self) -> str:
+        references = (self.spec.role_ref, self.spec.domain, self.spec.subject)
+        return (
+            self.resource_kind.lower()
+            + ":"
+            + ":".join(
+                f"{reference.kind}:{reference.guid or reference.name}"
+                for reference in references
+            )
         )
-        return (yield Request("update_role_binding", (body,)))
 
-    def _delete(self):
-        body = BulkRoleBindingUpdate.model_validate(
-            {"newBindings": [], "oldBindings": [self]}
-        )
-        yield Request("update_role_binding", (body,))
+    def create(self, client: Client, *, context: RequestContext | None = None):
+        body = BulkRoleBindingUpdate(new_bindings=[self], old_bindings=[])
+        return client.update_role_binding(body, context=context)
+
+    def _delete(self, client: Client, *, context: RequestContext | None = None) -> None:
+        body = BulkRoleBindingUpdate(new_bindings=[], old_bindings=[self])
+        client.update_role_binding(body, context=context)
+
+    async def create_async(
+        self, client: AsyncClient, *, context: RequestContext | None = None
+    ):
+        body = BulkRoleBindingUpdate(new_bindings=[self], old_bindings=[])
+        return await client.update_role_binding(body, context=context)
+
+    async def _delete_async(
+        self, client: AsyncClient, *, context: RequestContext | None = None
+    ) -> None:
+        body = BulkRoleBindingUpdate(new_bindings=[], old_bindings=[self])
+        await client.update_role_binding(body, context=context)
 
 
 class BulkRoleBindingUpdate(SDKModel):

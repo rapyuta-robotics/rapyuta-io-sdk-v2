@@ -1,66 +1,70 @@
-"""Resource workflows independent of template rendering and optional packages."""
+"""Resource operations independent of manifest rendering and optional packages."""
 
 from __future__ import annotations
 
-import asyncio
 import math
-import time
-from typing import Any, ClassVar
+from typing import TYPE_CHECKING, ClassVar, Self
+
+from pydantic import BaseModel
 
 from rapyuta_io_sdk_v2.context import RequestContext
-from rapyuta_io_sdk_v2.exceptions import HttpAlreadyExistsError, HttpNotFoundError
-from rapyuta_io_sdk_v2.resource_operations import (
-    ApplyError,
-    Outcome,
-    Pause,
-    Request,
-    ResourceResult,
+from rapyuta_io_sdk_v2.exceptions import (
+    HttpAlreadyExistsError,
+    HttpNotFoundError,
+    SDKError,
 )
-
+from rapyuta_io_sdk_v2.resource_operations import ApplyError, Outcome, ResourceResult
 from .base import SDKModel
 
-
-def _permission_denied(error: Exception) -> bool:
-    return getattr(error, "status_code", None) == 403
+if TYPE_CHECKING:
+    from rapyuta_io_sdk_v2.client import Client
+    from rapyuta_io_sdk_v2.async_client import AsyncClient
+    from rapyuta_io_sdk_v2.config import Configuration
+    from .utils import BaseMetadata
 
 
 class ResourceModel(SDKModel):
-    """Validated resource with shared sync and async operational execution.
-
-    Concrete models define API policy through workflow hooks. Clients and
-    execution state are never stored in Pydantic fields.
-    """
+    """Shared apply/delete policy; concrete resources make explicit API calls."""
 
     resource_kind: ClassVar[str | None] = None
-    endpoint: ClassVar[str | None] = None
     mutable: ClassVar[bool] = False
     can_apply: ClassVar[bool] = True
     can_delete: ClassVar[bool] = True
 
+    if TYPE_CHECKING:
+        metadata: BaseMetadata
+        kind: str | None
+
     @property
     def identity(self) -> str:
-        from .utils import resource_key
-
-        kind = getattr(self, "kind", None) or self.resource_kind
-        if not kind:
-            raise ApplyError(f"Cannot infer resource kind for {type(self).__name__}")
-        kind = kind.lower()
-        metadata = getattr(self, "metadata", None)
-        if kind == "rolebinding":
-            references = [self.spec.role_ref, self.spec.domain, self.spec.subject]
-            return "rolebinding:" + ":".join(
-                f"{r.kind}:{r.guid or r.name}" for r in references
+        if not self.resource_kind:
+            raise ApplyError(
+                f"{type(self).__name__} does not support resource operations"
             )
-        if metadata is None or not metadata.name:
+        if not self.metadata.name:
             raise ApplyError("A resource must have a nonempty metadata.name")
-        if kind == "package":
-            return resource_key(kind, metadata.name, metadata.version)
-        return resource_key(kind, metadata.name)
+        return f"{self.resource_kind.lower()}:{self.metadata.name}"
+
+    def reference_keys(self) -> list[str]:
+        """Names and GUIDs that resolve to this manifest resource."""
+        keys = [self.identity]
+        if self.metadata.guid:
+            keys.append(f"{self.resource_kind.lower()}:{self.metadata.guid}")
+        return list(dict.fromkeys(keys))
+
+    @classmethod
+    def model_for_operation(cls, operation: str) -> type[ResourceModel]:
+        return cls
+
+    def bind_context(self, config: Configuration, context: RequestContext | None) -> None:
+        """Bind resource-specific context on the executor's private model copy."""
+        if self.resource_kind and self.kind is None:
+            self.kind = self.resource_kind
 
     def validate_operation(self, operation: str) -> None:
         if operation not in ("apply", "delete"):
             raise ApplyError(f"Unsupported resource operation: {operation}")
-        if self.endpoint is None:
+        if self.resource_kind is None:
             raise ApplyError(
                 f"{type(self).__name__} does not support resource operations"
             )
@@ -70,109 +74,132 @@ class ResourceModel(SDKModel):
             raise ApplyError(f"{self.identity} does not support deletion")
 
     def dependencies(self) -> list[str]:
-        from .utils import resource_key
+        return []
 
-        loader = getattr(self, "list_dependencies", None)
-        dependencies = list(loader() or []) if loader else []
-        spec = getattr(self, "spec", None)
-        environment = (
-            getattr(spec, "environment_vars", None)
-            or getattr(spec, "env_args", None)
-            or []
-        )
-        for variable in environment:
-            reference = getattr(
-                getattr(variable, "value_from", None), "secret_key_ref", None
-            )
-            if reference and reference.name:
-                dependencies.append(resource_key("Secret", reference.name))
-        service_account = getattr(spec, "service_account", None)
-        if service_account:
-            dependencies.append(resource_key("ServiceAccount", service_account))
-        for binding in (getattr(spec, "roles", None) or []) + (
-            getattr(spec, "members", None) or []
-        ):
-            for reference in (
-                getattr(binding, "domain", None),
-                getattr(binding, "subject", None),
-            ):
-                if reference and reference.kind and reference.name:
-                    dependencies.append(resource_key(reference.kind, reference.name))
-            for name in getattr(binding, "role_names", None) or []:
-                dependencies.append(resource_key("Role", name))
-            if getattr(binding, "role_name", None):
-                dependencies.append(resource_key("Role", binding.role_name))
-        return list(dict.fromkeys(dependencies))
+    def create(
+        self, client: Client, *, context: RequestContext | None = None
+    ) -> BaseModel:
+        raise ApplyError(f"{self.identity} does not support creation")
 
-    def _named_resources(self, method: str):
-        """Find all exact name matches, following a filtered list's cursor."""
-        matches = []
-        seen = set()
-        kwargs = {"name": self.metadata.name}
-        while True:
-            page = yield Request(method, kwargs=kwargs)
-            matches.extend(r for r in page.items if r.metadata.name == self.metadata.name)
-            cursor = getattr(getattr(page, "metadata", None), "continue_", None)
-            if cursor is None or not page.items or len(page.items) < 50:
-                return matches
-            if cursor in seen:
-                raise ApplyError(
-                    f"Repeated continuation token while resolving {self.identity}"
-                )
-            seen.add(cursor)
-            kwargs = {"name": self.metadata.name, "cont": cursor}
+    async def create_async(
+        self, client: AsyncClient, *, context: RequestContext | None = None
+    ) -> BaseModel:
+        raise ApplyError(f"{self.identity} does not support creation")
 
-    def _create(self):
-        return (yield Request(f"create_{self.endpoint}", (self,)))
+    def update(
+        self, client: Client, *, context: RequestContext | None = None
+    ) -> BaseModel:
+        raise ApplyError(f"{self.identity} does not support updates")
 
-    def _update(self):
-        return (yield Request(f"update_{self.endpoint}", (self,)))
+    async def update_async(
+        self, client: AsyncClient, *, context: RequestContext | None = None
+    ) -> BaseModel:
+        raise ApplyError(f"{self.identity} does not support updates")
 
-    def _delete(self):
-        yield Request(f"delete_{self.endpoint}", (self.metadata.name,))
+    def _delete(self, client: Client, *, context: RequestContext | None = None) -> None:
+        raise ApplyError(f"{self.identity} does not support deletion")
 
-    def _wait(self, attempts: int, interval: float):
-        # Ordinary resource creation is complete when the direct API returns.
-        if False:
-            yield
+    async def _delete_async(
+        self, client: AsyncClient, *, context: RequestContext | None = None
+    ) -> None:
+        raise ApplyError(f"{self.identity} does not support deletion")
 
-    def _prerequisites(self, attempts: int, interval: float):
-        if False:
-            yield
+    def wait(
+        self,
+        client: Client,
+        attempts: int,
+        interval: float,
+        *,
+        context: RequestContext | None = None,
+    ) -> None:
+        """Most resources are ready when their API call returns."""
 
-    def workflow(self, operation: str, attempts: int, interval: float):
-        if operation == "delete":
-            labels = self.metadata.labels or {}
-            if labels.get("rapyuta.io/deletionPolicy") == "retain":
-                return Outcome.RETAINED, None
-            try:
-                yield from self._delete()
-            except HttpNotFoundError:
-                return Outcome.NOT_FOUND, None
-            return Outcome.DELETED, None
-        yield from self._prerequisites(attempts, interval)
+    async def wait_async(
+        self,
+        client: AsyncClient,
+        attempts: int,
+        interval: float,
+        *,
+        context: RequestContext | None = None,
+    ) -> None:
+        """Most resources are ready when their API call returns."""
+
+    def prerequisites(
+        self,
+        client: Client,
+        attempts: int,
+        interval: float,
+        *,
+        context: RequestContext | None = None,
+    ) -> None:
+        """Wait for resource-specific prerequisites, when any are required."""
+
+    async def prerequisites_async(
+        self,
+        client: AsyncClient,
+        attempts: int,
+        interval: float,
+        *,
+        context: RequestContext | None = None,
+    ) -> None:
+        """Wait for resource-specific prerequisites, when any are required."""
+
+    def _apply(
+        self,
+        client: Client,
+        attempts: int,
+        interval: float,
+        *,
+        context: RequestContext | None,
+    ) -> tuple[Outcome, BaseModel | None]:
+        self.prerequisites(client, attempts, interval, context=context)
         try:
-            response = yield from self._create()
-            result = Outcome.CREATED
-        except Exception as error:
-            conflict = isinstance(error, HttpAlreadyExistsError)
-            if not conflict and not (_permission_denied(error) and self.mutable):
+            response = self.create(client, context=context)
+            outcome = Outcome.CREATED
+        except SDKError as error:
+            if not isinstance(error, HttpAlreadyExistsError) and not (
+                self.mutable and error.status_code == 403
+            ):
                 raise
             if not self.mutable:
                 return Outcome.EXISTS, None
-            response = yield from self._update()
-            result = Outcome.UPDATED
-        yield from self._wait(attempts, interval)
-        return result, response
+            response = self.update(client, context=context)
+            outcome = Outcome.UPDATED
+        self.wait(client, attempts, interval, context=context)
+        return outcome, response
+
+    async def _apply_async(
+        self,
+        client: AsyncClient,
+        attempts: int,
+        interval: float,
+        *,
+        context: RequestContext | None,
+    ) -> tuple[Outcome, BaseModel | None]:
+        await self.prerequisites_async(client, attempts, interval, context=context)
+        try:
+            response = await self.create_async(client, context=context)
+            outcome = Outcome.CREATED
+        except SDKError as error:
+            if not isinstance(error, HttpAlreadyExistsError) and not (
+                self.mutable and error.status_code == 403
+            ):
+                raise
+            if not self.mutable:
+                return Outcome.EXISTS, None
+            response = await self.update_async(client, context=context)
+            outcome = Outcome.UPDATED
+        await self.wait_async(client, attempts, interval, context=context)
+        return outcome, response
 
     def _prepare_operation(
         self,
-        client: Any,
+        client: Client | AsyncClient,
         operation: str,
         context: RequestContext | None,
         attempts: int,
         interval: float,
-    ):
+    ) -> Self:
         client.config.features.require("apply")
         self.validate_operation(operation)
         if not isinstance(attempts, int) or isinstance(attempts, bool) or attempts < 1:
@@ -186,166 +213,103 @@ class ResourceModel(SDKModel):
             raise ValueError("readiness_interval must be a finite nonnegative number")
         if context is not None and not isinstance(context, RequestContext):
             raise TypeError("context must be a RequestContext")
-        identity = self.identity
+        _ = self.identity
         resource = self.model_copy(deep=True)
-        return identity, resource.workflow(operation, attempts, interval)
-
-    def _execute_operation(
-        self,
-        client: Any,
-        operation: str,
-        *,
-        context: RequestContext | None,
-        readiness_attempts: int,
-        readiness_interval: float,
-    ) -> ResourceResult:
-        identity, workflow = self._prepare_operation(
-            client, operation, context, readiness_attempts, readiness_interval
-        )
-        value, error = None, None
-        try:
-            while True:
-                try:
-                    step = (
-                        workflow.throw(error)
-                        if error is not None
-                        else workflow.send(value)
-                    )
-                except StopIteration as completed:
-                    outcome, resource = completed.value
-                    return ResourceResult(
-                        identity=identity, outcome=outcome, resource=resource
-                    )
-                value, error = None, None
-                try:
-                    if isinstance(step, Pause):
-                        time.sleep(step.seconds)
-                    elif isinstance(step, Request):
-                        kwargs = dict(step.kwargs)
-                        if context is not None:
-                            kwargs["context"] = context
-                        value = getattr(client, step.method)(*step.args, **kwargs)
-                    else:
-                        raise ApplyError(f"Invalid resource workflow step: {step}")
-                except Exception as caught:
-                    error = caught
-        except Exception as caught:
-            return ResourceResult(
-                identity=identity, outcome=Outcome.FAILED, error=str(caught)
-            )
-        finally:
-            workflow.close()
-
-    async def _execute_operation_async(
-        self,
-        client: Any,
-        operation: str,
-        *,
-        context: RequestContext | None,
-        readiness_attempts: int,
-        readiness_interval: float,
-    ) -> ResourceResult:
-        identity, workflow = self._prepare_operation(
-            client, operation, context, readiness_attempts, readiness_interval
-        )
-        value, error = None, None
-        try:
-            while True:
-                try:
-                    step = (
-                        workflow.throw(error)
-                        if error is not None
-                        else workflow.send(value)
-                    )
-                except StopIteration as completed:
-                    outcome, resource = completed.value
-                    return ResourceResult(
-                        identity=identity, outcome=outcome, resource=resource
-                    )
-                value, error = None, None
-                try:
-                    if isinstance(step, Pause):
-                        await asyncio.sleep(step.seconds)
-                    elif isinstance(step, Request):
-                        kwargs = dict(step.kwargs)
-                        if context is not None:
-                            kwargs["context"] = context
-                        value = await getattr(client, step.method)(*step.args, **kwargs)
-                    else:
-                        raise ApplyError(f"Invalid resource workflow step: {step}")
-                except Exception as caught:
-                    error = caught
-        except Exception as caught:
-            return ResourceResult(
-                identity=identity, outcome=Outcome.FAILED, error=str(caught)
-            )
-        finally:
-            workflow.close()
+        resource.bind_context(client.config, context)
+        return resource
 
     def apply(
         self,
-        client: Any,
+        client: Client,
         *,
         context: RequestContext | None = None,
         readiness_attempts: int = 50,
         readiness_interval: float = 6,
     ) -> ResourceResult:
-        """Apply this rendered resource without changing the input model."""
-        return self._execute_operation(
-            client,
-            "apply",
-            context=context,
-            readiness_attempts=readiness_attempts,
-            readiness_interval=readiness_interval,
+        """Create or update this resource without changing the input model."""
+        resource = self._prepare_operation(
+            client, "apply", context, readiness_attempts, readiness_interval
         )
+        try:
+            outcome, response = resource._apply(
+                client, readiness_attempts, readiness_interval, context=context
+            )
+            return ResourceResult(
+                identity=self.identity, outcome=outcome, resource=response
+            )
+        except Exception as error:
+            return ResourceResult(
+                identity=self.identity, outcome=Outcome.FAILED, error=str(error)
+            )
 
     async def apply_async(
         self,
-        client: Any,
+        client: AsyncClient,
         *,
         context: RequestContext | None = None,
         readiness_attempts: int = 50,
         readiness_interval: float = 6,
     ) -> ResourceResult:
-        """Apply using only the supplied asynchronous client."""
-        return await self._execute_operation_async(
-            client,
-            "apply",
-            context=context,
-            readiness_attempts=readiness_attempts,
-            readiness_interval=readiness_interval,
+        """Apply through explicit asynchronous model methods."""
+        resource = self._prepare_operation(
+            client, "apply", context, readiness_attempts, readiness_interval
         )
+        try:
+            outcome, response = await resource._apply_async(
+                client, readiness_attempts, readiness_interval, context=context
+            )
+            return ResourceResult(
+                identity=self.identity, outcome=outcome, resource=response
+            )
+        except Exception as error:
+            return ResourceResult(
+                identity=self.identity, outcome=Outcome.FAILED, error=str(error)
+            )
 
     def delete(
         self,
-        client: Any,
+        client: Client,
         *,
         context: RequestContext | None = None,
         readiness_attempts: int = 50,
         readiness_interval: float = 6,
     ) -> ResourceResult:
         """Delete this resource, respecting the retain label."""
-        return self._execute_operation(
-            client,
-            "delete",
-            context=context,
-            readiness_attempts=readiness_attempts,
-            readiness_interval=readiness_interval,
+        resource = self._prepare_operation(
+            client, "delete", context, readiness_attempts, readiness_interval
         )
+        if (resource.metadata.labels or {}).get("rapyuta.io/deletionPolicy") == "retain":
+            return ResourceResult(identity=self.identity, outcome=Outcome.RETAINED)
+        try:
+            resource._delete(client, context=context)
+            return ResourceResult(identity=self.identity, outcome=Outcome.DELETED)
+        except HttpNotFoundError:
+            return ResourceResult(identity=self.identity, outcome=Outcome.NOT_FOUND)
+        except Exception as error:
+            return ResourceResult(
+                identity=self.identity, outcome=Outcome.FAILED, error=str(error)
+            )
 
     async def delete_async(
         self,
-        client: Any,
+        client: AsyncClient,
         *,
         context: RequestContext | None = None,
         readiness_attempts: int = 50,
         readiness_interval: float = 6,
     ) -> ResourceResult:
-        """Delete using only the supplied asynchronous client."""
-        return await self._execute_operation_async(
-            client,
-            "delete",
-            context=context,
-            readiness_attempts=readiness_attempts,
-            readiness_interval=readiness_interval,
+        """Delete through explicit asynchronous model methods."""
+        resource = self._prepare_operation(
+            client, "delete", context, readiness_attempts, readiness_interval
         )
+        if (resource.metadata.labels or {}).get("rapyuta.io/deletionPolicy") == "retain":
+            return ResourceResult(identity=self.identity, outcome=Outcome.RETAINED)
+        try:
+            await resource._delete_async(client, context=context)
+            return ResourceResult(identity=self.identity, outcome=Outcome.DELETED)
+        except HttpNotFoundError:
+            return ResourceResult(identity=self.identity, outcome=Outcome.NOT_FOUND)
+        except Exception as error:
+            return ResourceResult(
+                identity=self.identity, outcome=Outcome.FAILED, error=str(error)
+            )

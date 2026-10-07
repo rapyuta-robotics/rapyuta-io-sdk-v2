@@ -36,12 +36,12 @@ This is a Python SDK for the rapyuta.io platform v2 API (Python 3.13+, managed w
 `rapyuta_io_sdk_v2/models/` — Pydantic models following Kubernetes conventions with `kind`, `metadata`, `spec`, `status` fields. Key base classes:
 
 - `SDKModel` — accepts snake_case Python fields and explicit API aliases
-- `ResourceModel` — shared sync/async operations, feature checks, identity, dependencies and resource workflow execution
+- `ResourceModel` — shared apply/delete policy, feature checks and validation; concrete models make explicit sync/async client calls
 - `BaseObject` — adds `api_version` (wire alias `apiVersion`)
 - `BaseMetadata` — adds `name`, `guid`, `labels`, timestamps, creator, organization/project refs
 - `BaseList[T]` — generic paginated list with `metadata.continue_` cursor token
 
-Resource models inherit from these bases. Field aliases handle snake_case Python ↔ camelCase API translation. Resource-specific workflows live on the models; clients are passed to operations explicitly and are never model fields. Direct operations require the Apply feature flag and use core dependencies.
+Resource models inherit from these bases. Field aliases handle snake_case Python ↔ camelCase API translation. Models declare their resource kind, identity, dependencies, GUID aliases and operation-specific schemas. Clients are passed explicitly and are never model fields. Apply/delete orchestration requires the Apply feature flag and uses core dependencies; primitive create/update methods directly return typed API responses.
 
 ### Configuration
 

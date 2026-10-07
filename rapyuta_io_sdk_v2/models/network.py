@@ -8,7 +8,10 @@ incorrect fields.
 
 from __future__ import annotations
 
-from typing import ClassVar, Literal
+import asyncio
+import time
+
+from typing import TYPE_CHECKING, ClassVar, Literal
 
 from pydantic import AliasChoices, ConfigDict, Field, field_validator
 
@@ -21,9 +24,15 @@ from rapyuta_io_sdk_v2.models.utils import (
     SDKModel,
     resource_key,
 )
-from rapyuta_io_sdk_v2.resource_operations import Pause, ReadinessError, Request
+from rapyuta_io_sdk_v2.resource_operations import ReadinessError
 
 from .resource import ResourceModel
+
+
+if TYPE_CHECKING:
+    from rapyuta_io_sdk_v2.client import Client
+    from rapyuta_io_sdk_v2.async_client import AsyncClient
+    from rapyuta_io_sdk_v2.context import RequestContext
 
 
 class RabbitMQCreds(SDKModel):
@@ -90,31 +99,68 @@ class Network(ResourceModel):
     spec: NetworkSpec | None = None
     status: NetworkStatus | None = None
 
-    def list_dependencies(self) -> list[str]:
+    def dependencies(self) -> list[str]:
         dependencies: list[str] = []
 
         if self.spec and self.spec.runtime == "device" and self.spec.depends:
             dependencies.append(resource_key("device", self.spec.depends.name_or_guid))
 
-        if dependencies == []:
-            return None
-
         return dependencies
 
     resource_kind: ClassVar[str] = "Network"
 
-    endpoint: ClassVar[str] = "network"
+    def create(self, client: Client, *, context: RequestContext | None = None):
+        return client.create_network(self, context=context)
 
-    def _wait(self, attempts: int, interval: float):
+    async def create_async(
+        self, client: AsyncClient, *, context: RequestContext | None = None
+    ):
+        return await client.create_network(self, context=context)
+
+    def _delete(self, client: Client, *, context: RequestContext | None = None) -> None:
+        client.delete_network(self.metadata.name, context=context)
+
+    async def _delete_async(
+        self, client: AsyncClient, *, context: RequestContext | None = None
+    ) -> None:
+        await client.delete_network(self.metadata.name, context=context)
+
+    def wait(
+        self,
+        client: Client,
+        attempts: int,
+        interval: float,
+        *,
+        context: RequestContext | None = None,
+    ) -> None:
         for attempt in range(attempts):
-            resource = yield Request("get_network", (self.metadata.name,))
-            phase = getattr(resource.status, "phase", None)
+            resource = client.get_network(self.metadata.name, context=context)
+            phase = resource.status.phase if resource.status is not None else None
             if phase == "Succeeded":
                 return
             if phase in ("Stopped", "FailedToStart", "FailedToUpdate"):
                 raise ReadinessError(f"{self.identity} entered {phase}")
             if attempt + 1 < attempts:
-                yield Pause(interval)
+                time.sleep(interval)
+        raise ReadinessError(f"{self.identity} readiness timed out")
+
+    async def wait_async(
+        self,
+        client: AsyncClient,
+        attempts: int,
+        interval: float,
+        *,
+        context: RequestContext | None = None,
+    ) -> None:
+        for attempt in range(attempts):
+            resource = await client.get_network(self.metadata.name, context=context)
+            phase = resource.status.phase if resource.status is not None else None
+            if phase == "Succeeded":
+                return
+            if phase in ("Stopped", "FailedToStart", "FailedToUpdate"):
+                raise ReadinessError(f"{self.identity} entered {phase}")
+            if attempt + 1 < attempts:
+                await asyncio.sleep(interval)
         raise ReadinessError(f"{self.identity} readiness timed out")
 
 

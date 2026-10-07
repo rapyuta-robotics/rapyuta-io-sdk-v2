@@ -8,7 +8,9 @@ incorrect fields.
 
 from __future__ import annotations
 
-from typing import ClassVar, Literal
+from rapyuta_io_sdk_v2.resource_operations import ApplyError
+
+from typing import TYPE_CHECKING, ClassVar, Literal
 
 from pydantic import Field, field_validator, model_validator
 
@@ -23,7 +25,6 @@ from rapyuta_io_sdk_v2.models.utils import (
     ValueFrom,
     resource_key,
 )
-from rapyuta_io_sdk_v2.resource_operations import Request
 
 from .resource import ResourceModel
 
@@ -38,6 +39,12 @@ EndpointProto = Literal[
     "internal-udp",
     "internal-udp-range",
 ]
+
+
+if TYPE_CHECKING:
+    from rapyuta_io_sdk_v2.client import Client
+    from rapyuta_io_sdk_v2.async_client import AsyncClient
+    from rapyuta_io_sdk_v2.context import RequestContext
 
 
 class StringMap(dict[str, str]):
@@ -226,32 +233,59 @@ class Package(ResourceModel):
     metadata: PackageMetadata
     spec: PackageSpec
 
-    def list_dependencies(self) -> list[str] | None:
+    def dependencies(self) -> list[str]:
         dependencies: list[str] = []
 
         if self.spec.executables:
             for exec in self.spec.executables:
                 if exec.docker and exec.docker.pull_secret:
-                    secret = getattr(
-                        exec.docker.pull_secret.depends, "name_or_guid", None
-                    )
+                    reference = exec.docker.pull_secret.depends
+                    secret = reference.name_or_guid if reference is not None else None
                     if secret is not None:
                         dependencies.append(resource_key("secret", secret))
 
-        if dependencies == []:
-            return None
-
-        return dependencies
+        for variable in self.spec.environment_vars or []:
+            if variable.value_from is not None:
+                reference = variable.value_from.secret_key_ref
+                if reference is not None and reference.name:
+                    dependencies.append(resource_key("Secret", reference.name))
+        return list(dict.fromkeys(dependencies))
 
     resource_kind: ClassVar[str] = "Package"
 
-    endpoint: ClassVar[str] = "package"
+    def create(self, client: Client, *, context: RequestContext | None = None):
+        return client.create_package(self, context=context)
 
-    def _delete(self):
-        yield Request(
-            "delete_package",
-            (self.metadata.name, self.metadata.version),
+    async def create_async(
+        self, client: AsyncClient, *, context: RequestContext | None = None
+    ):
+        return await client.create_package(self, context=context)
+
+    def _delete(self, client: Client, *, context: RequestContext | None = None) -> None:
+        client.delete_package(self.metadata.name, self.metadata.version, context=context)
+
+    async def _delete_async(
+        self, client: AsyncClient, *, context: RequestContext | None = None
+    ) -> None:
+        await client.delete_package(
+            self.metadata.name, self.metadata.version, context=context
         )
+
+    @property
+    def identity(self) -> str:
+        if not self.metadata.name:
+            raise ApplyError("A resource must have a nonempty metadata.name")
+        return (
+            f"{self.resource_kind.lower()}:{self.metadata.name}:{self.metadata.version}"
+        )
+
+    def reference_keys(self) -> list[str]:
+        keys = [self.identity]
+        if self.metadata.guid:
+            keys.append(
+                f"{self.resource_kind.lower()}:{self.metadata.guid}:{self.metadata.version}"
+            )
+        return list(dict.fromkeys(keys))
 
 
 class PackageList(BaseList[Package]):

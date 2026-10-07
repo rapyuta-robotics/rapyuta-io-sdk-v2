@@ -166,7 +166,7 @@ def test_deployment_aliases_and_versioned_dependencies():
     assert wire["spec"]["rosNetworks"][0]["domainID"] == 5
     assert wire["spec"]["features"]["params"]["blockUntilSynced"] is True
     assert wire["spec"]["networkInterface"] == "eth0"
-    assert resource_key("Package", "pkg", "v2") in deployment.list_dependencies()
+    assert resource_key("Package", "pkg", "v2") in deployment.dependencies()
     assert resource_key("Package", "pkg", "v1") != resource_key("Package", "pkg", "v2")
     with pytest.raises(ValueError, match="version"):
         resource_key("Package", "pkg")
