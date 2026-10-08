@@ -130,7 +130,11 @@ class Executable(BaseModel):
 
         command: list[str] = []
 
-        if self.run_as_bash:
+        # A custom entrypoint already controls how `command` is interpreted
+        # (e.g. passed to `sh -c`); wrapping it in another `bash -c` on top
+        # would just pass "/bin/bash" as the entrypoint's script with the
+        # real command sitting unused in $1/$2, so skip it here.
+        if self.run_as_bash and self.entrypoint is None:
             command = ["/bin/bash", "-c"]
 
         if isinstance(self.command, str):
