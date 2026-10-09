@@ -27,3 +27,10 @@ def test_command_unwrapped_without_run_as_bash():
         command=["echo", "hello"],
     )
     assert executable.command == ["echo", "hello"]
+
+
+def test_empty_entrypoint_is_unset_and_keeps_run_as_bash():
+    for empty in ([], ""):
+        executable = Executable(entrypoint=empty, command="echo hello", runAsBash=True)
+        assert executable.entrypoint is None
+        assert executable.command == ["/bin/bash", "-c", "echo hello"]

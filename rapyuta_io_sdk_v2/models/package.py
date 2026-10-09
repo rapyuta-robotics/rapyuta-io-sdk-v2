@@ -118,7 +118,11 @@ class Executable(BaseModel):
 
     @model_validator(mode="after")
     def normalize_entrypoint(self):
-        if isinstance(self.entrypoint, str):
+        # The server ignores an empty entrypoint, so treat it as unset here too;
+        # otherwise it would still suppress the runAsBash wrap below.
+        if not self.entrypoint:
+            self.entrypoint = None
+        elif isinstance(self.entrypoint, str):
             self.entrypoint = [self.entrypoint]
 
         return self
