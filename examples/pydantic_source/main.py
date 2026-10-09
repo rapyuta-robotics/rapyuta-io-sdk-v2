@@ -1,11 +1,27 @@
-from fastapi import FastAPI
+# Copyright 2026 Rapyuta Robotics
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""Serve configuration tree settings with FastAPI."""
+
 from typing import Any
 
-from pydantic import Field, BaseModel
+from fastapi import FastAPI
+from pydantic import BaseModel, Field
 from pydantic_settings import (
     BaseSettings,
-    SettingsConfigDict,
     PydanticBaseSettingsSource,
+    SettingsConfigDict,
 )
 
 from rapyuta_io_sdk_v2 import Configuration
@@ -20,7 +36,9 @@ LOCAL_FILE = "default.json"
 
 # Provider implementation
 class AuthConfig(BaseSettings):
-    # Before starting the application, you need to set the environment variables in .env.sample file and rename it to .env
+    # Copy .env.sample to .env and supply the authentication settings.
+    """Authentication settings read from the application environment."""
+
     model_config = SettingsConfigDict(env_file=".env")
 
     env: str
@@ -28,7 +46,13 @@ class AuthConfig(BaseSettings):
     organization_guid: str = Field(alias="RIO_ORGANIZATION_ID")
     project_guid: str = Field(alias="RIO_PROJECT_ID")
 
-    def __new__(cls, *args, **kwargs):
+    def __new__(cls, *args: object, **kwargs: object) -> Configuration:
+        """Build an SDK configuration from environment settings.
+
+        Args:
+            *args: Positional settings arguments forwarded to BaseSettings.
+            **kwargs: Keyword settings values forwarded to BaseSettings.
+        """
         instance = super().__new__(cls)
         cls.__init__(instance, *args, **kwargs)
 
@@ -41,19 +65,14 @@ class AuthConfig(BaseSettings):
 
 
 class NestedTree(BaseModel):
+    """Default values for the API services and host settings."""
+
     services: Any = "default-api-services"
     host: Any = "default-api-host"
 
 
 class RRTreeSource(BaseSettings):
-    """
-    This method fetches the configuration tree from an external API and extracts the 'apis' and 'common' sections from the config tree if they are present.
-    You can specify which sections to extract from the config tree in the model_config by providing the section name as a key and the default value as the value.
-    If the section is not present in the config tree, the default value will be used.
-
-    For example, if you want to extract the 'oks' section from the config tree and the default value is "default-oks", you can define it as shown below:
-    oks: Any = Field(default="default-oks")
-    """
+    """Load named settings sections from a remote configuration tree."""
 
     model_config = (
         SettingsConfigDict()
@@ -62,8 +81,9 @@ class RRTreeSource(BaseSettings):
     apis: Any = Field(default="default-rr_services")
     common: Any = Field(default="default-common")
 
+    # Pydantic requires this positional hook signature.
     @classmethod
-    def settings_customise_sources(
+    def settings_customise_sources(  # noqa: PLR0917
         cls,
         settings_cls: type[BaseSettings],
         init_settings: PydanticBaseSettingsSource,
@@ -71,6 +91,15 @@ class RRTreeSource(BaseSettings):
         dotenv_settings: PydanticBaseSettingsSource,
         file_secret_settings: PydanticBaseSettingsSource,
     ) -> tuple[PydanticBaseSettingsSource, ...]:
+        """Load the configuration tree before environment and file settings.
+
+        Args:
+            settings_cls: Settings cls.
+            init_settings: Init settings.
+            env_settings: Env settings.
+            dotenv_settings: Dotenv settings.
+            file_secret_settings: File secret settings.
+        """
         return (
             init_settings,
             ConfigTreeSource(
@@ -79,7 +108,6 @@ class RRTreeSource(BaseSettings):
                 key_prefix=KEY_PREFIX,
                 tree_name=TREE_NAME,
                 local_file="",
-                # api_with_project=False,
             ),
             env_settings,
             dotenv_settings,
@@ -88,38 +116,16 @@ class RRTreeSource(BaseSettings):
 
 
 class RRTreeSourceWithPrefix(BaseSettings):
-    """
-    This method also fetches the configuration tree from an external API and extracts the 'apis' and 'common' sections from the config tree if they are present.
-    But here we define key_prefix which ignores the prefix in the config tree and extracts the 'apis' and 'common' sections directly.
-    For example, if the config tree has the following structure:
-    {
-        "default": {
-            "apis": {
-                "services": "temp_services"
-            },
-            "common": "common"
-        }
-    }
-    Here we will define key_prefix as "default".
-    The model will come out as:
-    {
-        "apis": {
-            "services": "temp_services"
-            "host": "default-api-host"
-        },
-        "common": "common"
-    }
-
-    Note: Here api_host has default value because any value was not provided in the config tree.
-    """
+    """Load settings from a tree after removing its top-level key prefix."""
 
     model_config = SettingsConfigDict()
 
     apis: NestedTree = NestedTree()
     common: Any = Field(default="default-common")
 
+    # Pydantic requires this positional hook signature.
     @classmethod
-    def settings_customise_sources(
+    def settings_customise_sources(  # noqa: PLR0917
         cls,
         settings_cls: type[BaseSettings],
         init_settings: PydanticBaseSettingsSource,
@@ -127,6 +133,15 @@ class RRTreeSourceWithPrefix(BaseSettings):
         dotenv_settings: PydanticBaseSettingsSource,
         file_secret_settings: PydanticBaseSettingsSource,
     ) -> tuple[PydanticBaseSettingsSource, ...]:
+        """Load the configuration tree before environment and file settings.
+
+        Args:
+            settings_cls: Settings cls.
+            init_settings: Init settings.
+            env_settings: Env settings.
+            dotenv_settings: Dotenv settings.
+            file_secret_settings: File secret settings.
+        """
         return (
             init_settings,
             ConfigTreeSource(
@@ -135,7 +150,6 @@ class RRTreeSourceWithPrefix(BaseSettings):
                 key_prefix=KEY_PREFIX,
                 tree_name=TREE_NAME,
                 local_file="",
-                # api_with_project=False,
             ),
             env_settings,
             dotenv_settings,
@@ -144,56 +158,20 @@ class RRTreeSourceWithPrefix(BaseSettings):
 
 
 class ApisNestedModel(BaseModel):
+    """Default service setting within a local API configuration section."""
+
     services: Any = Field(default="default-services")
 
 
 class NestedModel(BaseModel):
+    """Local API and common configuration defaults."""
+
     apis: ApisNestedModel = ApisNestedModel()
     common: Any = Field(default="default_nested_common")
 
 
 class RRTreeSourceLocal(BaseSettings):
-    """
-    This method reads the configuration tree from a local file and extracts the 'apis' and 'common' sections if they exist.
-    You can specify which sections to extract by providing the section name and a default value in the model_config.
-    If a section is missing in the config tree, the default value will be used.
-
-    For example, if your local file (default.json) has this structure:
-    {
-        "default": {
-            "apis": {
-                "rr_services": "rr_services"
-            },
-            "common": "common"
-        }
-    }
-
-    Without a key prefix, the model will look like this:
-    {
-    "default": {
-        "apis": {
-        "services": "services inside the local file"
-        },
-        "common": "common in local file"
-    },
-    "apis": "default_apis",
-    "common": "default_common"
-    }
-
-    With a key prefix ("default"), the model will look like this:
-    {
-    "default": {
-        "apis": {
-        "services": "default-services"
-        },
-        "common": "default_nested_common"
-    },
-    "apis": {
-        "services": "services inside the local file"
-    },
-    "common": "common in local file"
-    }
-    """
+    """Load settings sections from the local configuration tree file."""
 
     model_config = SettingsConfigDict()
 
@@ -201,8 +179,9 @@ class RRTreeSourceLocal(BaseSettings):
     apis: Any = Field(default="default_apis")
     common: Any = Field(default="default_common")
 
+    # Pydantic requires this positional hook signature.
     @classmethod
-    def settings_customise_sources(
+    def settings_customise_sources(  # noqa: PLR0917
         cls,
         settings_cls: type[BaseSettings],
         init_settings: PydanticBaseSettingsSource,
@@ -210,6 +189,15 @@ class RRTreeSourceLocal(BaseSettings):
         dotenv_settings: PydanticBaseSettingsSource,
         file_secret_settings: PydanticBaseSettingsSource,
     ) -> tuple[PydanticBaseSettingsSource, ...]:
+        """Load the configuration tree before environment and file settings.
+
+        Args:
+            settings_cls: Settings cls.
+            init_settings: Init settings.
+            env_settings: Env settings.
+            dotenv_settings: Dotenv settings.
+            file_secret_settings: File secret settings.
+        """
         return (
             init_settings,
             ConfigTreeSource(
@@ -232,18 +220,20 @@ config_tree_with_file = RRTreeSourceLocal()
 
 
 @app.get("/configtrees")
-async def get_full_configtree():
-    """Retrieve the full configuration tree"""
+async def get_full_configtree() -> dict[str, Any]:
+    """Retrieve the full configuration tree."""
     return config_tree.model_dump()
 
 
 @app.get("/configtrees1")
-def get_configtree1():
+def get_configtree1() -> dict[str, Any]:
+    """Get configtree1."""
     return config_tree_with_prefix.model_dump()
 
 
 @app.get("/configtrees_local")
-def get_configtrees_local():
+def get_configtrees_local() -> dict[str, Any]:
+    """Get configtrees local."""
     return config_tree_with_file.model_dump()
 
 
@@ -251,4 +241,4 @@ def get_configtrees_local():
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="127.0.0.1", port=8000)

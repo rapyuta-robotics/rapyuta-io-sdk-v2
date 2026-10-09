@@ -1,21 +1,41 @@
+# Copyright 2026 Rapyuta Robotics
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
 import httpx
 import pytest
-from pytest_mock import MockFixture
 
-# ruff: noqa: F811, F401
-from rapyuta_io_sdk_v2.models import ProjectList, Project
-from tests.utils.fixtures import async_client
-from tests.data import (
-    project_body,
-    project_model_mock,
-    projectlist_model_mock,
-)
+from rapyuta_io_sdk_v2.exceptions import HttpNotFoundError, UnauthorizedAccessError
+from rapyuta_io_sdk_v2.models import Project, ProjectList
+
+if TYPE_CHECKING:
+    from pytest_mock import MockFixture
+
+    from rapyuta_io_sdk_v2 import AsyncClient
 
 
 @pytest.mark.asyncio
 async def test_list_projects_success(
-    async_client, projectlist_model_mock, mocker: MockFixture
-):
+    *,
+    async_client: AsyncClient,
+    projectlist_model_mock: dict[str, Any],
+    mocker: MockFixture,
+) -> None:
     mock_get = mocker.patch("httpx.AsyncClient.get")
     mock_get.return_value = httpx.Response(
         status_code=200,
@@ -30,7 +50,12 @@ async def test_list_projects_success(
 
 
 @pytest.mark.asyncio
-async def test_get_project_success(async_client, project_model_mock, mocker: MockFixture):
+async def test_get_project_success(
+    *,
+    async_client: AsyncClient,
+    project_model_mock: dict[str, Any],
+    mocker: MockFixture,
+) -> None:
     mock_get = mocker.patch("httpx.AsyncClient.get")
     mock_get.return_value = httpx.Response(
         status_code=200,
@@ -42,14 +67,16 @@ async def test_get_project_success(async_client, project_model_mock, mocker: Moc
 
 
 @pytest.mark.asyncio
-async def test_get_project_not_found(async_client, mocker: MockFixture):
+async def test_get_project_not_found(
+    *, async_client: AsyncClient, mocker: MockFixture
+) -> None:
     mock_get = mocker.patch("httpx.AsyncClient.get")
     mock_get.return_value = httpx.Response(
         status_code=404,
         json={"error": "project not found"},
     )
 
-    with pytest.raises(Exception) as exc:
+    with pytest.raises(HttpNotFoundError) as exc:
         await async_client.get_project(project_guid="notfound")
 
     assert str(exc.value) == "project not found"
@@ -57,15 +84,15 @@ async def test_get_project_not_found(async_client, mocker: MockFixture):
 
 @pytest.mark.asyncio
 async def test_create_project_unauthorized(
-    async_client, project_body, mocker: MockFixture
-):
+    *, async_client: AsyncClient, project_body: dict[str, Any], mocker: MockFixture
+) -> None:
     mock_post = mocker.patch("httpx.AsyncClient.post")
     mock_post.return_value = httpx.Response(
         status_code=401,
         json={"error": "unauthorized"},
     )
 
-    with pytest.raises(Exception) as exc:
+    with pytest.raises(UnauthorizedAccessError) as exc:
         await async_client.create_project(body=project_body)
 
     assert str(exc.value) == "unauthorized"
@@ -73,8 +100,12 @@ async def test_create_project_unauthorized(
 
 @pytest.mark.asyncio
 async def test_update_project_success(
-    async_client, project_body, project_model_mock, mocker: MockFixture
-):
+    *,
+    async_client: AsyncClient,
+    project_body: dict[str, Any],
+    project_model_mock: dict[str, Any],
+    mocker: MockFixture,
+) -> None:
     mock_put = mocker.patch("httpx.AsyncClient.put")
     mock_put.return_value = httpx.Response(
         status_code=200,
@@ -90,10 +121,33 @@ async def test_update_project_success(
 
 
 @pytest.mark.asyncio
-async def test_delete_project_success(async_client, mocker: MockFixture):
+async def test_delete_project_success(
+    *, async_client: AsyncClient, mocker: MockFixture
+) -> None:
     mock_delete = mocker.patch("httpx.AsyncClient.delete")
     mock_delete.return_value = httpx.Response(status_code=204, json={"success": True})
 
     response = await async_client.delete_project(project_guid="test-project")
 
     assert response is None
+
+
+@pytest.mark.asyncio
+async def test_update_project_owner_returns_json(
+    *, async_client: AsyncClient, mocker: MockFixture
+) -> None:
+    payload = {"updated": True}
+
+    def handle_request(request: httpx.Request) -> httpx.Response:
+        assert request.url.path == "/v2/projects/project-guid/owner/"
+        return httpx.Response(httpx.codes.OK, json=payload)
+
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(handle_request)
+    ) as connection:
+        mocker.patch.object(async_client, "c", connection)
+        result = await async_client.update_project_owner(
+            body={"ownerGUID": "new-owner"}, project_guid="project-guid"
+        )
+
+    assert result == payload

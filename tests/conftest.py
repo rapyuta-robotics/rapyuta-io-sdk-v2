@@ -12,13 +12,5 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Resource validation models for oauth2."""
 
-from pydantic import BaseModel, Field
-
-
-class OAuth2UpdateURI(BaseModel):
-    """Redirect and logout URI updates for an OAuth2 client."""
-
-    redirect_uris: list[str] | None = Field(alias="redirectURIs")
-    post_logout_redirect_uris: list[str] | None = Field(alias="postLogoutRedirectURIs")
+pytest_plugins = ("tests.data.mock_data", "tests.utils.fixtures")
