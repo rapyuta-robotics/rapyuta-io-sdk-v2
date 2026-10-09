@@ -108,13 +108,24 @@ class Executable(BaseModel):
     name: str | None = None
     type: Literal["docker", "preInstalled"] = Field(default="docker")
     docker: DockerSpec | None = None
+    entrypoint: str | list[str] | None = None
     command: str | list[str] | None = None
     run_as_bash: bool = Field(default=False, alias="runAsBash")
-    args: list[str] | None = None
     limits: Limits | None = None
     livenessProbe: LivenessProbe | None = None
     uid: int | None = None
     gid: int | None = None
+
+    @model_validator(mode="after")
+    def normalize_entrypoint(self):
+        # The server ignores an empty entrypoint, so treat it as unset here too;
+        # otherwise it would still suppress the runAsBash wrap below.
+        if not self.entrypoint:
+            self.entrypoint = None
+        elif isinstance(self.entrypoint, str):
+            self.entrypoint = [self.entrypoint]
+
+        return self
 
     @model_validator(mode="after")
     def prepend_bash_to_command(self):
@@ -123,7 +134,9 @@ class Executable(BaseModel):
 
         command: list[str] = []
 
-        if self.run_as_bash:
+        # With an entrypoint like ["/bin/sh", "-c"], a bash wrap would make
+        # "/bin/bash" the -c script and leave the real command unused in $1.
+        if self.run_as_bash and self.entrypoint is None:
             command = ["/bin/bash", "-c"]
 
         if isinstance(self.command, str):
