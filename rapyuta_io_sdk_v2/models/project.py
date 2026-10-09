@@ -23,12 +23,13 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import ConfigDict, Field, model_validator
 
+from rapyuta_io_sdk_v2.models.base import SDKModel
 from rapyuta_io_sdk_v2.models.utils import BaseList, BaseMetadata, BaseObject, Subject
 
 
-class ProjectMember(BaseModel):
+class ProjectMember(SDKModel):
     """Project subject with assigned and inherited roles."""
 
     subject: Subject
@@ -38,20 +39,20 @@ class ProjectMember(BaseModel):
     )
 
 
-class FeaturesVPN(BaseModel):
+class FeaturesVPN(SDKModel):
     """Project VPN enablement and allowed subnets."""
 
     enabled: bool = Field(default=False)
     subnets: list[str] | None = None
 
 
-class FeaturesTracing(BaseModel):
+class FeaturesTracing(SDKModel):
     """Project tracing enablement."""
 
     enabled: bool = Field(default=False)
 
 
-class FeaturesDockerCache(BaseModel):
+class FeaturesDockerCache(SDKModel):
     """Docker cache proxy, registry credentials, and storage settings."""
 
     enabled: bool = Field(default=False)
@@ -93,7 +94,7 @@ class FeaturesDockerCache(BaseModel):
         return self
 
 
-class Features(BaseModel):
+class Features(SDKModel):
     """Optional networking, tracing, and image cache features for a project."""
 
     vpn: FeaturesVPN = Field(default_factory=FeaturesVPN)
@@ -103,14 +104,14 @@ class Features(BaseModel):
     )
 
 
-class ProjectSpec(BaseModel):
+class ProjectSpec(SDKModel):
     """Project memberships and feature configuration."""
 
     members: list[ProjectMember] | None = None
     features: Features = Field(default_factory=Features)
 
 
-class ProjectStatus(BaseModel):
+class ProjectStatus(SDKModel):
     """Project lifecycle and feature provisioning results."""
 
     status: Literal["Pending", "Error", "Success", "Deleting", "Unknown"]

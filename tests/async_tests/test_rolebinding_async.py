@@ -20,6 +20,8 @@ from typing import TYPE_CHECKING
 import httpx
 import pytest
 
+from rapyuta_io_sdk_v2.models import BulkRoleBindingUpdate
+
 if TYPE_CHECKING:
     from pytest_mock import MockFixture
 
@@ -46,11 +48,15 @@ async def test_update_role_binding_returns_bulk_response(
     mocker: MockFixture,
 ) -> None:
     request = mocker.patch("httpx.AsyncClient.put")
-    request.return_value = httpx.Response(httpx.codes.OK, json={"updated": True})
-    response = await async_client.update_role_binding(
-        {"newBindings": [], "oldBindings": []}
+    request.return_value = httpx.Response(
+        httpx.codes.OK, json={"newBindings": [], "oldBindings": []}
     )
-    assert response == {"updated": True}
+    response = await async_client.update_role_binding(
+        BulkRoleBindingUpdate.model_validate({"newBindings": [], "oldBindings": []})
+    )
+    assert isinstance(response, BulkRoleBindingUpdate)
+    assert response.new_bindings == []
+    assert response.old_bindings == []
 
 
 @pytest.mark.asyncio
@@ -60,10 +66,14 @@ async def test_update_role_binding_propagates_unexpected_model_error(
     mocker: MockFixture,
 ) -> None:
     request = mocker.patch("httpx.AsyncClient.put")
-    request.return_value = httpx.Response(httpx.codes.OK, json={"updated": True})
+    request.return_value = httpx.Response(
+        httpx.codes.OK, json={"newBindings": [], "oldBindings": []}
+    )
     mocker.patch(
-        "rapyuta_io_sdk_v2.async_client.RoleBinding",
+        "rapyuta_io_sdk_v2.async_client.BulkRoleBindingUpdate",
         side_effect=RuntimeError("unexpected model error"),
     )
     with pytest.raises(RuntimeError, match=r"^unexpected model error$"):
-        await async_client.update_role_binding({"newBindings": [], "oldBindings": []})
+        await async_client.update_role_binding(
+            BulkRoleBindingUpdate.model_validate({"newBindings": [], "oldBindings": []})
+        )

@@ -21,8 +21,9 @@ incorrect fields.
 
 from typing import Literal
 
-from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
+from pydantic import AliasChoices, ConfigDict, Field, field_validator
 
+from rapyuta_io_sdk_v2.models.base import SDKModel
 from rapyuta_io_sdk_v2.models.utils import (
     Architecture,
     BaseList,
@@ -32,22 +33,21 @@ from rapyuta_io_sdk_v2.models.utils import (
 )
 
 
-# CamelCase attributes preserve the public model API and serialized field names.
-class RabbitMQCreds(BaseModel):
+class RabbitMQCreds(SDKModel):
     """Credentials for the network RabbitMQ instance."""
 
-    defaultUser: str  # noqa: N815
-    defaultPassword: str  # noqa: N815
+    default_user: str = Field(alias="defaultUser")
+    default_password: str = Field(alias="defaultPassword")
 
 
-class ResourceLimits(BaseModel):
+class ResourceLimits(SDKModel):
     """CPU and memory limits for a network service."""
 
     cpu: float = Field(..., multiple_of=0.025)
     memory: int = Field(..., multiple_of=128)
 
 
-class Depends(BaseModel):
+class Depends(SDKModel):
     """Resource reference identified by name or GUID."""
 
     kind: Literal["Device"] | None = Field(default="Device")
@@ -57,26 +57,30 @@ class Depends(BaseModel):
     )
 
 
-class DiscoveryServerData(BaseModel):
+class DiscoveryServerData(SDKModel):
     """ROS discovery server identifier and listening port."""
 
-    serverID: int | None = None  # noqa: N815
-    serverPort: int | None = None  # noqa: N815
+    server_id: int | None = Field(default=None, alias="serverID")
+    server_port: int | None = Field(default=None, alias="serverPort")
 
 
-class NetworkSpec(BaseModel):
+class NetworkSpec(SDKModel):
     """ROS networking, runtime, discovery, and service configuration."""
 
     type: Literal["routed", "native"]
-    rosDistro: Literal["melodic", "kinetic", "noetic", "foxy"]  # noqa: N815
+    ros_distro: Literal["melodic", "kinetic", "noetic", "foxy"] = Field(
+        alias="rosDistro"
+    )
     runtime: Runtime
-    discoveryServer: DiscoveryServerData | None = None  # noqa: N815
-    resourceLimits: ResourceLimits | None = None  # noqa: N815
+    discovery_server: DiscoveryServerData | None = Field(
+        default=None, alias="discoveryServer"
+    )
+    resource_limits: ResourceLimits | None = Field(default=None, alias="resourceLimits")
     depends: Depends | None = Field(default=None)
-    networkInterface: str | None = None  # noqa: N815
-    restartPolicy: RestartPolicy | None = None  # noqa: N815
+    network_interface: str | None = Field(default=None, alias="networkInterface")
+    restart_policy: RestartPolicy | None = Field(default=None, alias="restartPolicy")
     architecture: Architecture | None = None
-    rabbitMQCreds: RabbitMQCreds | None = None  # noqa: N815
+    rabbit_mq_creds: RabbitMQCreds | None = Field(default=None, alias="rabbitMQCreds")
 
     # Needed as sometimes in result json depends comes as empty JSON
     # For e.g., depends: {}
@@ -93,20 +97,20 @@ class NetworkSpec(BaseModel):
         return v
 
 
-class NetworkStatus(BaseModel):
+class NetworkStatus(SDKModel):
     """Network lifecycle and provisioning errors."""
 
     phase: str
     status: str
-    errorCodes: list[str] | None = None  # noqa: N815
+    error_codes: list[str] | None = Field(default=None, alias="errorCodes")
 
 
-class Network(BaseModel):
+class Network(SDKModel):
     """Network model."""
 
     model_config = ConfigDict(extra="forbid")
 
-    apiVersion: str | None = None  # noqa: N815
+    api_version: str | None = Field(default=None, alias="apiVersion")
     kind: str | None = None
     metadata: BaseMetadata | None = None
     spec: NetworkSpec | None = None

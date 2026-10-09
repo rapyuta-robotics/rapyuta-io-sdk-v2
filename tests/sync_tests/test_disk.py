@@ -21,7 +21,10 @@ import httpx
 import pytest
 
 from rapyuta_io_sdk_v2.exceptions import HttpNotFoundError
-from rapyuta_io_sdk_v2.models import Disk, DiskList
+from rapyuta_io_sdk_v2.models import (
+    Disk,
+    DiskList,
+)
 
 if TYPE_CHECKING:
     from pytest_mock import MockFixture
@@ -122,7 +125,9 @@ def test_create_disk_success(
         json=disk_model_mock,
     )
 
-    response = client.create_disk(body=disk_body, project_guid="mock_project_guid")
+    response = client.create_disk(
+        body=Disk.model_validate(disk_body), project_guid="mock_project_guid"
+    )
 
     assert isinstance(response, Disk)
     assert response.metadata.guid == "disk-mockdisk123456789101"
