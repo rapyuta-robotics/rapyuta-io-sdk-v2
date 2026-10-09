@@ -1550,7 +1550,7 @@ def database_model_mock() -> dict[str, Any]:
 
 
 @pytest.fixture
-def databaselist_model_mock(database_model_mock) -> dict[str, Any]:
+def databaselist_model_mock(database_model_mock: dict[str, Any]) -> dict[str, Any]:
     return {
         "metadata": {
             "continue": 1,
@@ -1621,7 +1621,7 @@ def backup_model_mock() -> dict[str, Any]:
 
 
 @pytest.fixture
-def backuplist_model_mock(backup_model_mock) -> dict[str, Any]:
+def backuplist_model_mock(backup_model_mock: dict[str, Any]) -> dict[str, Any]:
     return {
         "metadata": {
             "continue": 1,
@@ -1717,7 +1717,7 @@ def restore_model_mock() -> dict[str, Any]:
 
 
 @pytest.fixture
-def restorelist_model_mock(restore_model_mock) -> dict[str, Any]:
+def restorelist_model_mock(restore_model_mock: dict[str, Any]) -> dict[str, Any]:
     return {
         "metadata": {
             "continue": 1,

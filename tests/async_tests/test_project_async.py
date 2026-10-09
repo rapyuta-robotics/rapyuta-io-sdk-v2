@@ -130,3 +130,24 @@ async def test_delete_project_success(
     response = await async_client.delete_project(project_guid="test-project")
 
     assert response is None
+
+
+@pytest.mark.asyncio
+async def test_update_project_owner_returns_json(
+    *, async_client: AsyncClient, mocker: MockFixture
+) -> None:
+    payload = {"updated": True}
+
+    def handle_request(request: httpx.Request) -> httpx.Response:
+        assert request.url.path == "/v2/projects/project-guid/owner/"
+        return httpx.Response(httpx.codes.OK, json=payload)
+
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(handle_request)
+    ) as connection:
+        mocker.patch.object(async_client, "c", connection)
+        result = await async_client.update_project_owner(
+            body={"ownerGUID": "new-owner"}, project_guid="project-guid"
+        )
+
+    assert result == payload

@@ -16,7 +16,11 @@
 from types import SimpleNamespace
 from typing import Any
 
-from rapyuta_io_sdk_v2 import walk_pages
+import httpx
+import pytest
+
+from rapyuta_io_sdk_v2 import exceptions, walk_pages
+from rapyuta_io_sdk_v2.utils import handle_server_errors
 
 
 def _make_sdk_model(items: list[Any], continue_: int | None = None) -> SimpleNamespace:
@@ -183,3 +187,51 @@ class TestWalkPagesWithSdkModelResponse:
 
         pages = list(walk_pages(list_func))
         assert pages == []
+
+
+@pytest.mark.parametrize(
+    ("status", "error_type"),
+    [
+        (httpx.codes.BAD_REQUEST, exceptions.MethodNotAllowedError),
+        (httpx.codes.FORBIDDEN, exceptions.MethodNotAllowedError),
+        (httpx.codes.NOT_FOUND, exceptions.HttpNotFoundError),
+        (httpx.codes.METHOD_NOT_ALLOWED, exceptions.MethodNotAllowedError),
+        (httpx.codes.CONFLICT, exceptions.HttpAlreadyExistsError),
+        (httpx.codes.INTERNAL_SERVER_ERROR, exceptions.InternalServerError),
+        (httpx.codes.NOT_IMPLEMENTED, exceptions.NotImplementedError),
+        (httpx.codes.BAD_GATEWAY, exceptions.BadGatewayError),
+        (httpx.codes.SERVICE_UNAVAILABLE, exceptions.ServiceUnavailableError),
+        (httpx.codes.GATEWAY_TIMEOUT, exceptions.GatewayTimeoutError),
+        (httpx.codes.UNAUTHORIZED, exceptions.UnauthorizedAccessError),
+        (httpx.codes.IM_A_TEAPOT, exceptions.UnknownError),
+    ],
+)
+def test_handle_server_errors_maps_status_to_exception(
+    *, status: int, error_type: type[Exception]
+) -> None:
+    response = httpx.Response(status, json={"error": "server rejected the request"})
+    with pytest.raises(error_type, match=r"^server rejected the request$"):
+        handle_server_errors(response)
+
+
+@pytest.mark.parametrize("body", [{}, {"error": None}, {"error": ""}])
+def test_handle_server_errors_uses_fallback_for_empty_error(
+    *, body: dict[str, str | None]
+) -> None:
+    response = httpx.Response(httpx.codes.NOT_FOUND, json=body)
+    with pytest.raises(exceptions.HttpNotFoundError) as error:
+        handle_server_errors(response)
+    assert str(error.value) == (
+        f"HttpNotFoundError (status_code={httpx.codes.NOT_FOUND})"
+    )
+
+
+def test_handle_server_errors_preserves_plain_text_error() -> None:
+    response = httpx.Response(httpx.codes.BAD_GATEWAY, text="upstream unavailable")
+    with pytest.raises(exceptions.BadGatewayError, match=r"^upstream unavailable$"):
+        handle_server_errors(response)
+
+
+def test_handle_server_errors_skips_success_response_body() -> None:
+    response = httpx.Response(httpx.codes.NO_CONTENT)
+    handle_server_errors(response)

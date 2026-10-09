@@ -15,12 +15,14 @@
 
 from __future__ import annotations
 
+import json
 from typing import TYPE_CHECKING, Any
 
 import httpx
 import pytest
 
 from rapyuta_io_sdk_v2.exceptions import UnauthorizedAccessError
+from rapyuta_io_sdk_v2.models import User
 
 if TYPE_CHECKING:
     from pytest_mock import MockFixture
@@ -204,3 +206,41 @@ async def test_get_user_permissions_unauthorized(
             organization_guid="org-testorg123456789abcdef",
         )
     assert "user cannot be authenticated" in str(exc.value)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("input_type", ["dict", "model"])
+async def test_add_user_sends_json_and_returns_user(
+    *, async_client: AsyncClient, mocker: MockFixture, input_type: str
+) -> None:
+    user = User.model_validate(
+        {
+            "metadata": {"name": "operator"},
+            "spec": {"emailID": "operator@example.com", "firstName": "Operator"},
+        }
+    )
+    payload = user.model_dump(by_alias=True)
+
+    def handle_request(request: httpx.Request) -> httpx.Response:
+        assert request.method == "POST"
+        assert request.url.path == "/v2/users/"
+        assert json.loads(request.content) == payload
+        assert request.headers["Content-Type"] == "application/json"
+        assert request.headers["X-Checksum"] == "checksum"
+        assert request.headers["organizationguid"] == "override-org"
+        assert "project" not in request.headers
+        return httpx.Response(httpx.codes.CREATED, json=payload)
+
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(handle_request)
+    ) as connection:
+        mocker.patch.object(async_client, "c", connection)
+        result = await async_client.add_user(
+            payload if input_type == "dict" else user,
+            content_type="application/json",
+            x_checksum="checksum",
+            organization_guid="override-org",
+        )
+
+    assert isinstance(result, User)
+    assert result == user

@@ -291,8 +291,8 @@ def test_environment_spec_plain_and_valuefrom_coexist() -> None:
 
 
 def test_create_package_sends_entrypoint(
-    client, cloud_package_model_mock, mocker: MockFixture
-):
+    *, client: Client, cloud_package_model_mock: dict[str, Any], mocker: MockFixture
+) -> None:
     mock_post = mocker.patch("httpx.Client.post")
     mock_post.return_value = httpx.Response(
         status_code=201,
@@ -300,22 +300,63 @@ def test_create_package_sends_entrypoint(
     )
 
     client.create_package(
-        body={
-            "metadata": {"name": "ep", "version": "v1.0.0"},
-            "spec": {
-                "runtime": "cloud",
-                "executables": [
-                    {
-                        "name": "exec",
-                        "entrypoint": ["/bin/sh", "-c"],
-                        "command": "echo hi",
-                        "runAsBash": True,
-                    }
-                ],
-            },
-        }
+        body=Package.model_validate(
+            {
+                "metadata": {"name": "ep", "version": "v1.0.0"},
+                "spec": {
+                    "runtime": "cloud",
+                    "executables": [
+                        {
+                            "name": "exec",
+                            "entrypoint": ["/bin/sh", "-c"],
+                            "command": "echo hi",
+                            "runAsBash": True,
+                        }
+                    ],
+                },
+            }
+        )
     )
 
     sent = mock_post.call_args.kwargs["json"]["spec"]["executables"][0]
     assert sent["entrypoint"] == ["/bin/sh", "-c"]
     assert sent["command"] == ["echo hi"]
+
+
+@pytest.mark.parametrize(
+    ("payload", "expected"),
+    [
+        (
+            {
+                "metadata": {"name": "pkg", "version": "1"},
+                "spec": {
+                    "runtime": "cloud",
+                    "executables": [
+                        {
+                            "docker": {
+                                "image": "app:1",
+                                "pullSecret": {"depends": {"nameOrGUID": "registry"}},
+                            }
+                        },
+                        {
+                            "docker": {
+                                "image": "worker:1",
+                                "pullSecret": {"depends": {"nameOrGUID": "registry"}},
+                            }
+                        },
+                    ],
+                },
+            },
+            ["secret:registry", "secret:registry"],
+        ),
+        (
+            {"metadata": {"name": "pkg", "version": "1"}, "spec": {"runtime": "cloud"}},
+            None,
+        ),
+    ],
+)
+def test_package_list_dependencies_preserves_duplicates_and_empty_results(
+    *, payload: dict[str, Any], expected: list[str] | None
+) -> None:
+    resource = Package.model_validate(payload)
+    assert resource.list_dependencies() == expected

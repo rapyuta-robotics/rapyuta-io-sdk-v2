@@ -1,4 +1,18 @@
-# ruff: noqa: F811, F401
+# Copyright 2026 Rapyuta Robotics
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
 """Database CRUD and standby-topology tests.
 
 Standby is a facet of the Database resource (spec.postgres.standby); the
@@ -7,18 +21,20 @@ parses a server-shaped (camelCase) payload, survives a dump/reload, and that the
 client sends the right routes and bodies.
 """
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
 import httpx
 import pytest
-from pytest_mock import MockFixture
+
+if TYPE_CHECKING:
+    from pytest_mock import MockFixture
+
+    from rapyuta_io_sdk_v2 import Client
 
 from rapyuta_io_sdk_v2.models import Database, DatabaseList
 from rapyuta_io_sdk_v2.models.database import StandbySpec, StandbyStatus
-from tests.data import (
-    database_body,
-    database_model_mock,
-    databaselist_model_mock,
-)
-from tests.utils.fixtures import client
 
 
 def _database_with_standby() -> dict:
@@ -83,7 +99,7 @@ def _database_with_standby() -> dict:
     }
 
 
-def test_standby_spec_parses_from_server_payload():
+def test_standby_spec_parses_from_server_payload() -> None:
     db = Database.model_validate(_database_with_standby())
 
     sb = db.spec.postgres.standby
@@ -105,24 +121,28 @@ def test_standby_spec_parses_from_server_payload():
     assert st[0].phase == "running"
 
 
-def test_standby_round_trip_survives_dump_reload():
+def test_standby_round_trip_survives_dump_reload() -> None:
     db = Database.model_validate(_database_with_standby())
     reloaded = Database.model_validate(db.model_dump(by_alias=True, exclude_none=True))
 
     assert reloaded.spec.postgres.standby.primary_host == "10.1.2.3"
     assert reloaded.spec.postgres.standby.devices[0].device_name == "standby-dev"
-    assert reloaded.spec.postgres.users.replication.username.key == "replication_username"
+    assert (
+        reloaded.spec.postgres.users.replication.username.key == "replication_username"
+    )
     assert reloaded.status.postgres.standby[0].device_name == "standby-dev"
 
 
-def test_standby_omitted_when_absent():
+def test_standby_omitted_when_absent() -> None:
     payload = _database_with_standby()
     del payload["spec"]["postgres"]["standby"]
     db = Database.model_validate(payload)
     assert db.spec.postgres.standby is None
 
 
-def test_list_databases_success(client, databaselist_model_mock, mocker: MockFixture):
+def test_list_databases_success(
+    *, client: Client, databaselist_model_mock: dict[str, Any], mocker: MockFixture
+) -> None:
     mock_get = mocker.patch("httpx.Client.get")
     mock_get.return_value = httpx.Response(
         status_code=200,
@@ -139,10 +159,12 @@ def test_list_databases_success(client, databaselist_model_mock, mocker: MockFix
     db = response.items[0]
     assert db.metadata.name == "orders-db"
     assert db.spec.postgres.standby.primary_host == "10.1.2.3"
-    assert len(db.status.postgres.standby) == 2
+    assert len(db.status.postgres.standby) == 2  # noqa: PLR2004 - fixture value
 
 
-def test_get_database_success(client, database_model_mock, mocker: MockFixture):
+def test_get_database_success(
+    *, client: Client, database_model_mock: dict[str, Any], mocker: MockFixture
+) -> None:
     mock_get = mocker.patch("httpx.Client.get")
     mock_get.return_value = httpx.Response(
         status_code=200,
@@ -160,25 +182,29 @@ def test_get_database_success(client, database_model_mock, mocker: MockFixture):
     assert (healthy.device_name, healthy.phase) == ("edge-node-02", "running")
     assert (degraded.device_name, degraded.phase) == ("edge-node-03", "failed")
     assert degraded.state.status == "waiting"
-    assert degraded.restart_count == 3
+    assert degraded.restart_count == 3  # noqa: PLR2004 - fixture value
 
 
-def test_get_database_not_found(client, mocker: MockFixture):
+def test_get_database_not_found(*, client: Client, mocker: MockFixture) -> None:
     mock_get = mocker.patch("httpx.Client.get")
     mock_get.return_value = httpx.Response(
         status_code=404,
         json={"error": "database not found"},
     )
 
-    with pytest.raises(Exception) as exc:
+    with pytest.raises(Exception, match=r".+") as exc:
         client.get_database(name="notfound")
 
     assert str(exc.value) == "database not found"
 
 
 def test_create_database_success(
-    client, database_body, database_model_mock, mocker: MockFixture
-):
+    *,
+    client: Client,
+    database_body: dict[str, Any],
+    database_model_mock: dict[str, Any],
+    mocker: MockFixture,
+) -> None:
     mock_post = mocker.patch("httpx.Client.post")
     mock_post.return_value = httpx.Response(
         status_code=202,
@@ -201,22 +227,28 @@ def test_create_database_success(
     assert sent["parameters"] == {"max_connections": "200", "shared_buffers": "512MB"}
 
 
-def test_create_database_unauthorized(client, database_body, mocker: MockFixture):
+def test_create_database_unauthorized(
+    *, client: Client, database_body: dict[str, Any], mocker: MockFixture
+) -> None:
     mock_post = mocker.patch("httpx.Client.post")
     mock_post.return_value = httpx.Response(
         status_code=401,
         json={"error": "unauthorized"},
     )
 
-    with pytest.raises(Exception) as exc:
+    with pytest.raises(Exception, match=r".+") as exc:
         client.create_database(body=database_body)
 
     assert str(exc.value) == "unauthorized"
 
 
 def test_update_database_success(
-    client, database_body, database_model_mock, mocker: MockFixture
-):
+    *,
+    client: Client,
+    database_body: dict[str, Any],
+    database_model_mock: dict[str, Any],
+    mocker: MockFixture,
+) -> None:
     mock_put = mocker.patch("httpx.Client.put")
     mock_put.return_value = httpx.Response(
         status_code=202,
@@ -230,8 +262,12 @@ def test_update_database_success(
 
 
 def test_update_with_empty_devices_removes_every_standby(
-    client, database_body, database_model_mock, mocker: MockFixture
-):
+    *,
+    client: Client,
+    database_body: dict[str, Any],
+    database_model_mock: dict[str, Any],
+    mocker: MockFixture,
+) -> None:
     # nil vs empty is load-bearing on the server: an absent standby block keeps
     # the stored topology, a stated-but-empty one removes every standby. The
     # empty list must therefore survive serialization instead of being dropped.
@@ -246,7 +282,7 @@ def test_update_with_empty_devices_removes_every_standby(
     assert sent["standby"]["devices"] == []
 
 
-def test_delete_database_success(client, mocker: MockFixture):
+def test_delete_database_success(*, client: Client, mocker: MockFixture) -> None:
     mock_delete = mocker.patch("httpx.Client.delete")
     mock_delete.return_value = httpx.Response(
         status_code=202,
@@ -260,7 +296,7 @@ def test_delete_database_success(client, mocker: MockFixture):
     assert mock_delete.call_args.kwargs["params"] is None
 
 
-def test_delete_database_force(client, mocker: MockFixture):
+def test_delete_database_force(*, client: Client, mocker: MockFixture) -> None:
     mock_delete = mocker.patch("httpx.Client.delete")
     mock_delete.return_value = httpx.Response(status_code=204)
 

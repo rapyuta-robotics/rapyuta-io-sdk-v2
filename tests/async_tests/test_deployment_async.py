@@ -337,3 +337,43 @@ def test_env_args_spec_plain_and_valuefrom_coexist() -> None:
     )
     assert arg.value == "fallback"
     assert arg.valueFrom.secret_key_ref.value == "injected"
+
+
+@pytest.mark.asyncio
+async def test_get_deployment_graph_returns_json(
+    *, async_client: AsyncClient, mocker: MockFixture
+) -> None:
+    payload = {"updated": True}
+
+    def handle_request(request: httpx.Request) -> httpx.Response:
+        assert request.url.path == "/v2/deployments/app/graph/"
+        return httpx.Response(httpx.codes.OK, json=payload)
+
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(handle_request)
+    ) as connection:
+        mocker.patch.object(async_client, "c", connection)
+        result = await async_client.get_deployment_graph(name="app")
+
+    assert result == payload
+
+
+@pytest.mark.asyncio
+async def test_get_deployment_history_returns_json(
+    *, async_client: AsyncClient, mocker: MockFixture
+) -> None:
+    payload = {"updated": True}
+
+    def handle_request(request: httpx.Request) -> httpx.Response:
+        assert request.url.path == "/v2/deployments/app/history/"
+        return httpx.Response(httpx.codes.OK, json=payload)
+
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(handle_request)
+    ) as connection:
+        mocker.patch.object(async_client, "c", connection)
+        result = await async_client.get_deployment_history(
+            name="app", guid="deployment-guid"
+        )
+
+    assert result == payload
