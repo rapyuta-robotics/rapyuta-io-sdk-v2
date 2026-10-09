@@ -1,16 +1,37 @@
+# Copyright 2026 Rapyuta Robotics
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
 import httpx
 import pytest
-from pytest_mock import MockFixture
 
-# ruff: noqa: F811, F401
+from rapyuta_io_sdk_v2.exceptions import UnauthorizedAccessError
 from rapyuta_io_sdk_v2.models.organization import Organization
-from tests.data.mock_data import mock_response_organization, organization_body
-from tests.utils.fixtures import client
+
+if TYPE_CHECKING:
+    from pytest_mock import MockFixture
+
+    from rapyuta_io_sdk_v2 import Client
 
 
 def test_get_organization_success(
-    client, mock_response_organization, mocker: MockFixture
-):
+    *, client: Client, mock_response_organization: dict[str, Any], mocker: MockFixture
+) -> None:
     mock_get = mocker.patch("httpx.Client.get")
 
     # Use mock_response_organization fixture for GET response
@@ -25,7 +46,9 @@ def test_get_organization_success(
     assert isinstance(response, Organization)
     assert response.metadata.name == "test-org"
     assert response.metadata.guid == "org-testorg123456789abcdef"
-    assert len(response.spec.members) == 4
+    assert len(response.spec.members) == len(
+        mock_response_organization["spec"]["members"]
+    )
     # Check first member (ServiceAccount)
     assert response.spec.members[0].subject.kind == "ServiceAccount"
     assert response.spec.members[0].subject.name == "test-project-builtin-paramsync-sa"
@@ -40,7 +63,7 @@ def test_get_organization_success(
     assert response.spec.members[2].roleNames == ["rio-org_member"]
 
 
-def test_get_organization_unauthorized(client, mocker: MockFixture):
+def test_get_organization_unauthorized(*, client: Client, mocker: MockFixture) -> None:
     mock_get = mocker.patch("httpx.Client.get")
 
     mock_get.return_value = httpx.Response(
@@ -48,18 +71,19 @@ def test_get_organization_unauthorized(client, mocker: MockFixture):
         json={"error": "user is not part of organization"},
     )
 
-    with pytest.raises(Exception) as exc:
+    with pytest.raises(UnauthorizedAccessError) as exc:
         client.get_organization()
 
     assert str(exc.value) == "user is not part of organization"
 
 
 def test_update_organization_success(
-    client,
-    mock_response_organization,
-    organization_body,
+    *,
+    client: Client,
+    mock_response_organization: dict[str, Any],
+    organization_body: dict[str, Any],
     mocker: MockFixture,
-):
+) -> None:
     mock_put = mocker.patch("httpx.Client.put")
 
     mock_put.return_value = httpx.Response(
@@ -76,7 +100,9 @@ def test_update_organization_success(
     assert isinstance(response, Organization)
     assert response.metadata.name == "test-org"
     assert response.metadata.guid == "org-testorg123456789abcdef"
-    assert len(response.spec.members) == 4
+    assert len(response.spec.members) == len(
+        mock_response_organization["spec"]["members"]
+    )
     # Verify admin member
     assert response.spec.members[1].roleNames == ["rio-org_admin", "rio-org_member"]
     # Verify regular member

@@ -1,18 +1,40 @@
+# Copyright 2026 Rapyuta Robotics
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
 import httpx
 import pytest
 
-# ruff: noqa: F811, F401
 from rapyuta_io_sdk_v2.exceptions import UnauthorizedAccessError
-from tests.data.mock_data import (
-    mock_response_user as mock_response_user,
-    user_body,
-    user_permissions_mock,
-)
-from tests.utils.fixtures import async_client
+
+if TYPE_CHECKING:
+    from pytest_mock import MockFixture
+
+    from rapyuta_io_sdk_v2 import AsyncClient
 
 
 @pytest.mark.asyncio
-async def test_get_user_success(async_client, mock_response_user, mocker):
+async def test_get_user_success(
+    *,
+    async_client: AsyncClient,
+    mock_response_user: dict[str, Any],
+    mocker: MockFixture,
+) -> None:
     mock_get = mocker.patch("httpx.AsyncClient.get")
 
     mock_get.return_value = httpx.Response(
@@ -26,7 +48,7 @@ async def test_get_user_success(async_client, mock_response_user, mocker):
     assert response.spec.email_id == "test.user@example.com"
     assert response.spec.first_name == "Test"
     assert response.spec.last_name == "User"
-    assert len(response.spec.projects) == 2
+    assert len(response.spec.projects) == len(mock_response_user["spec"]["projects"])
     assert response.spec.projects[0].name == "test-project1"
     assert response.spec.projects[0].role_names == ["project_admin", "project_member"]
     assert len(response.spec.organizations) == 1
@@ -35,7 +57,9 @@ async def test_get_user_success(async_client, mock_response_user, mocker):
 
 
 @pytest.mark.asyncio
-async def test_get_user_unauthorized(async_client, mocker):
+async def test_get_user_unauthorized(
+    *, async_client: AsyncClient, mocker: MockFixture
+) -> None:
     mock_get = mocker.patch("httpx.AsyncClient.get")
 
     mock_get.return_value = httpx.Response(
@@ -49,7 +73,13 @@ async def test_get_user_unauthorized(async_client, mocker):
 
 
 @pytest.mark.asyncio
-async def test_update_user_success(async_client, mock_response_user, user_body, mocker):
+async def test_update_user_success(
+    *,
+    async_client: AsyncClient,
+    user_body: dict[str, Any],
+    mocker: MockFixture,
+    mock_response_user: dict[str, Any],
+) -> None:
     mock_put = mocker.patch("httpx.AsyncClient.put")
     mock_put.return_value = httpx.Response(
         status_code=200,
@@ -67,8 +97,8 @@ async def test_update_user_success(async_client, mock_response_user, user_body, 
 
 @pytest.mark.asyncio
 async def test_update_user_unauthorized(
-    async_client, mock_response_user, user_body, mocker
-):
+    *, async_client: AsyncClient, user_body: dict[str, Any], mocker: MockFixture
+) -> None:
     mock_put = mocker.patch("httpx.AsyncClient.put")
 
     mock_put.return_value = httpx.Response(
@@ -82,7 +112,12 @@ async def test_update_user_unauthorized(
 
 
 @pytest.mark.asyncio
-async def test_get_user_permissions_success(async_client, user_permissions_mock, mocker):
+async def test_get_user_permissions_success(
+    *,
+    async_client: AsyncClient,
+    user_permissions_mock: dict[str, Any],
+    mocker: MockFixture,
+) -> None:
     """Test async get_user_permissions with successful response."""
     mock_get = mocker.patch("httpx.AsyncClient.get")
 
@@ -126,8 +161,11 @@ async def test_get_user_permissions_success(async_client, user_permissions_mock,
 
 @pytest.mark.asyncio
 async def test_get_user_permissions_with_config_org(
-    async_client, user_permissions_mock, mocker
-):
+    *,
+    async_client: AsyncClient,
+    user_permissions_mock: dict[str, Any],
+    mocker: MockFixture,
+) -> None:
     """Test async get_user_permissions using organization_guid from config."""
     mock_get = mocker.patch("httpx.AsyncClient.get")
 
@@ -149,7 +187,9 @@ async def test_get_user_permissions_with_config_org(
 
 
 @pytest.mark.asyncio
-async def test_get_user_permissions_unauthorized(async_client, mocker):
+async def test_get_user_permissions_unauthorized(
+    *, async_client: AsyncClient, mocker: MockFixture
+) -> None:
     """Test async get_user_permissions with unauthorized error."""
     mock_get = mocker.patch("httpx.AsyncClient.get")
 

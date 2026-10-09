@@ -7,7 +7,7 @@ jobs:
     runs-on: aks-spot-4cpu
     strategy:
       matrix:
-        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12', '3.13']
+        python-version: ['3.13', '3.14']
 
     steps:
       - name: Checkout code
@@ -16,7 +16,14 @@ jobs:
       - name: Lint code
         uses: astral-sh/ruff-action@v1
         with:
-          args: "check"
+          version: "0.16.9"
+          args: "check ."
+
+      - name: Check formatting
+        uses: astral-sh/ruff-action@v1
+        with:
+          version: "0.16.9"
+          args: "format --check ."
 
       - name: Setup uv
         uses: astral-sh/setup-uv@v4
@@ -26,7 +33,7 @@ jobs:
 
       - name: Run unit tests
         run: |
-          uv sync --python ${{ matrix.python-version }} --all-extras --dev
+          uv sync --locked --python ${{ matrix.python-version }} --all-extras --dev
           uv run --python ${{ matrix.python-version }} python -c "
           import rapyuta_io_sdk_v2
           from rapyuta_io_sdk_v2 import Client, AsyncClient

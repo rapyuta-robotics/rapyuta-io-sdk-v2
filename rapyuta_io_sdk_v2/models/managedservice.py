@@ -1,6 +1,18 @@
-"""Pydantic models for ManagedService resource."""
+# Copyright 2026 Rapyuta Robotics
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
-from __future__ import annotations
+"""Pydantic models for ManagedService resource."""
 
 from typing import Any, Literal
 
@@ -41,8 +53,8 @@ class ManagedServiceInstanceSpec(BaseModel):
 class ManagedServiceInstanceStatus(BaseModel):
     """Status for ManagedServiceInstance resource."""
 
-    status: Literal["Pending", "Error", "Success", "Deleting", "Unknown"] | None = Field(
-        default=None, description="Current status of the managed service"
+    status: Literal["Pending", "Error", "Success", "Deleting", "Unknown"] | None = (
+        Field(default=None, description="Current status of the managed service")
     )
     error: str | None = Field(
         default=None, description="Error message if any", alias="errorMessage"
@@ -52,10 +64,14 @@ class ManagedServiceInstanceStatus(BaseModel):
     )
 
 
+# CamelCase attributes preserve the public model API and serialized field names.
 class ManagedServiceInstance(BaseModel):
     """Managed service instance model."""
 
-    apiVersion: str | None = Field(default=None, description="API version")
+    apiVersion: str | None = Field(  # noqa: N815
+        default=None,
+        description="API version",
+    )
     kind: str | None = Field(default=None, description="Resource kind")
     metadata: BaseMetadata = Field(description="Resource metadata")
     spec: ManagedServiceInstanceSpec | None = Field(
@@ -74,8 +90,6 @@ class ManagedServiceInstanceListOption(BaseList[ManagedServiceInstance]):
 
 class ManagedServiceInstanceList(BaseList[ManagedServiceInstance]):
     """List of managed service instances."""
-
-    pass
 
 
 # --- ManagedServiceBinding Models ---
@@ -102,14 +116,16 @@ class ManagedServiceBindingSpec(BaseModel):
 class ManagedServiceBindingStatus(BaseModel):
     """Status for ManagedServiceBinding resource."""
 
-    # TODO: Update fields as needed
-    pass
+    # The API currently defines no fields for binding status.
 
 
 class ManagedServiceBinding(BaseModel):
     """Managed service binding model."""
 
-    apiVersion: str | None = Field(default=None, description="API version")
+    apiVersion: str | None = Field(  # noqa: N815
+        default=None,
+        description="API version",
+    )
     kind: str | None = Field(default=None, description="Resource kind")
     metadata: BaseMetadata = Field(description="Resource metadata")
     spec: ManagedServiceBindingSpec = Field(description="Binding specification")
@@ -122,10 +138,7 @@ class ManagedServiceBindingListOption(BaseModel):
     """List options for ManagedServiceBinding."""
 
     # Add specific options as needed
-    pass
 
 
 class ManagedServiceBindingList(BaseList[ManagedServiceBinding]):
     """List of managed service bindings."""
-
-    pass

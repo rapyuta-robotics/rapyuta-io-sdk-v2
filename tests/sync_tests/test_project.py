@@ -1,15 +1,38 @@
+# Copyright 2026 Rapyuta Robotics
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
 import httpx
 import pytest
-from pytest_mock import MockFixture
 
-# ruff: noqa: F811, F401
+from rapyuta_io_sdk_v2.exceptions import HttpNotFoundError, UnauthorizedAccessError
 from rapyuta_io_sdk_v2.models import Project, ProjectList
-from tests.data import project_body, project_model_mock, projectlist_model_mock
-from tests.utils.fixtures import client
+
+if TYPE_CHECKING:
+    from pytest_mock import MockFixture
+
+    from rapyuta_io_sdk_v2 import Client
 
 
 # Test function for list_projects
-def test_list_projects_success(client, projectlist_model_mock, mocker: MockFixture):
+def test_list_projects_success(
+    *, client: Client, projectlist_model_mock: dict[str, Any], mocker: MockFixture
+) -> None:
     # Mock the httpx.Client.get method
     mock_get = mocker.patch("httpx.Client.get")
 
@@ -32,7 +55,7 @@ def test_list_projects_success(client, projectlist_model_mock, mocker: MockFixtu
     assert project.kind == "Project"
 
 
-def test_list_projects_unauthorized(client, mocker: MockFixture):
+def test_list_projects_unauthorized(*, client: Client, mocker: MockFixture) -> None:
     # Mock the httpx.Client.get method
     mock_get = mocker.patch("httpx.Client.get")
 
@@ -43,14 +66,14 @@ def test_list_projects_unauthorized(client, mocker: MockFixture):
     )
 
     # Call the list_projects method
-    with pytest.raises(Exception) as exc:
+    with pytest.raises(UnauthorizedAccessError) as exc:
         client.list_projects()
 
     # Validate the exception message
     assert str(exc.value) == "unauthorized permission access"
 
 
-def test_list_projects_not_found(client, mocker: MockFixture):
+def test_list_projects_not_found(*, client: Client, mocker: MockFixture) -> None:
     # Mock the httpx.Client.get method
     mock_get = mocker.patch("httpx.Client.get")
 
@@ -61,14 +84,16 @@ def test_list_projects_not_found(client, mocker: MockFixture):
     )
 
     # Call the list_projects method
-    with pytest.raises(Exception) as exc:
+    with pytest.raises(HttpNotFoundError) as exc:
         client.list_projects()
 
     # Validate the exception message
     assert str(exc.value) == "not found"
 
 
-def test_get_project_success(client, project_model_mock, mocker: MockFixture):
+def test_get_project_success(
+    *, client: Client, project_model_mock: dict[str, Any], mocker: MockFixture
+) -> None:
     # Mock the httpx.Client.get method
     mock_get = mocker.patch("httpx.Client.get")
 
@@ -87,7 +112,7 @@ def test_get_project_success(client, project_model_mock, mocker: MockFixture):
     assert response.metadata.name == "test-project"
 
 
-def test_get_project_not_found(client, mocker: MockFixture):
+def test_get_project_not_found(*, client: Client, mocker: MockFixture) -> None:
     # Mock the httpx.Client.get method
     mock_get = mocker.patch("httpx.Client.get")
 
@@ -98,7 +123,7 @@ def test_get_project_not_found(client, mocker: MockFixture):
     )
 
     # Call the get_project method
-    with pytest.raises(Exception) as exc:
+    with pytest.raises(HttpNotFoundError) as exc:
         client.get_project(project_guid="mock_project_guid")
 
     # Validate the exception message
@@ -106,8 +131,12 @@ def test_get_project_not_found(client, mocker: MockFixture):
 
 
 def test_create_project_success(
-    client, project_body, project_model_mock, mocker: MockFixture
-):
+    *,
+    client: Client,
+    project_body: dict[str, Any],
+    project_model_mock: dict[str, Any],
+    mocker: MockFixture,
+) -> None:
     # Mock the httpx.Client.post method
     mock_post = mocker.patch("httpx.Client.post")
 
@@ -126,7 +155,9 @@ def test_create_project_success(
     assert response.metadata.name == "test-project"
 
 
-def test_create_project_unauthorized(client, project_body, mocker: MockFixture):
+def test_create_project_unauthorized(
+    *, client: Client, project_body: dict[str, Any], mocker: MockFixture
+) -> None:
     # Mock the httpx.Client.post method
     mock_post = mocker.patch("httpx.Client.post")
 
@@ -137,7 +168,7 @@ def test_create_project_unauthorized(client, project_body, mocker: MockFixture):
     )
 
     # Call the create_project method
-    with pytest.raises(Exception) as exc:
+    with pytest.raises(UnauthorizedAccessError) as exc:
         client.create_project(body=project_body)
 
     # Validate the exception message
@@ -145,8 +176,12 @@ def test_create_project_unauthorized(client, project_body, mocker: MockFixture):
 
 
 def test_update_project_success(
-    client, project_body, project_model_mock, mocker: MockFixture
-):
+    *,
+    client: Client,
+    project_body: dict[str, Any],
+    project_model_mock: dict[str, Any],
+    mocker: MockFixture,
+) -> None:
     # Mock the httpx.Client.put method
     mock_put = mocker.patch("httpx.Client.put")
 
@@ -157,7 +192,9 @@ def test_update_project_success(
     )
 
     # Call the update_project method
-    response = client.update_project(project_guid="mock_project_guid", body=project_body)
+    response = client.update_project(
+        project_guid="mock_project_guid", body=project_body
+    )
 
     # Validate the response
     assert isinstance(response, Project)
@@ -165,7 +202,7 @@ def test_update_project_success(
     assert response.metadata.name == "test-project"
 
 
-def test_delete_project_success(client, mocker: MockFixture):
+def test_delete_project_success(*, client: Client, mocker: MockFixture) -> None:
     # Mock the httpx.Client.delete method
     mock_delete = mocker.patch("httpx.Client.delete")
 

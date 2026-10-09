@@ -1,11 +1,21 @@
-# Deployment and DeploymentList mocks using pydantic models
-from __future__ import annotations
+# Copyright 2026 Rapyuta Robotics
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
+# Deployment and DeploymentList mocks using pydantic models
 from typing import Any
 
-
 import pytest
-
 
 from rapyuta_io_sdk_v2.config import Configuration
 
@@ -18,7 +28,9 @@ def mock_response_project() -> dict[str, Any]:
         "kind": "Project",
         "metadata": {"name": "test-project", "guid": "mock_project_guid"},
         "spec": {
-            "users": [{"userGUID": "mock_user_guid", "emailID": "test.user@example.com"}]
+            "users": [
+                {"userGUID": "mock_user_guid", "emailID": "test.user@example.com"}
+            ]
         },
     }
 
@@ -57,7 +69,7 @@ def project_model_mock() -> dict[str, Any]:
 
 
 @pytest.fixture
-def projectlist_model_mock(project_model_mock) -> dict[str, Any]:
+def projectlist_model_mock(project_model_mock: dict[str, Any]) -> dict[str, Any]:
     return {
         "metadata": {
             "continue": 1,
@@ -183,7 +195,7 @@ def device_package_model_mock() -> dict[str, Any]:
 
 @pytest.fixture
 def packagelist_model_mock(
-    cloud_package_model_mock, device_package_model_mock
+    cloud_package_model_mock: dict[str, Any], device_package_model_mock: dict[str, Any]
 ) -> dict[str, Any]:
     return {
         "metadata": {
@@ -296,7 +308,7 @@ def package_with_valuefrom_mock() -> dict[str, Any]:
 
 @pytest.fixture
 def deployment_body() -> dict[str, Any]:
-    # Updated to match device_deployment_model_mock keys and values, but only using keys present in deployment_body
+    # Use the device deployment fields required by the create request.
     return {
         "apiVersion": "apiextensions.rapyuta.io/v1",
         "kind": "Deployment",
@@ -311,7 +323,9 @@ def deployment_body() -> dict[str, Any]:
         },
         "spec": {
             "runtime": "device",
-            "device": {"depends": {"kind": "device", "nameOrGUID": "device-sample-001"}},
+            "device": {
+                "depends": {"kind": "device", "nameOrGUID": "device-sample-001"}
+            },
             "restart": "always",
             "envArgs": [
                 {"name": "DEVICE_ENV", "value": "true"},
@@ -364,7 +378,10 @@ def cloud_deployment_model_mock() -> dict[str, Any]:
                 {
                     "name": "cloudroute",
                     "url": "cloudroute.example.com",
-                    "depends": {"kind": "staticroute", "nameOrGUID": "cloudroute-sample"},
+                    "depends": {
+                        "kind": "staticroute",
+                        "nameOrGUID": "cloudroute-sample",
+                    },
                 }
             ],
         },
@@ -424,7 +441,9 @@ def device_deployment_model_mock() -> dict[str, Any]:
                 }
             ],
             "features": {},
-            "device": {"depends": {"kind": "device", "nameOrGUID": "device-sample-001"}},
+            "device": {
+                "depends": {"kind": "device", "nameOrGUID": "device-sample-001"}
+            },
         },
         "status": {
             "status": "Running",
@@ -444,7 +463,8 @@ def device_deployment_model_mock() -> dict[str, Any]:
 
 @pytest.fixture
 def deploymentlist_model_mock(
-    cloud_deployment_model_mock, device_deployment_model_mock
+    cloud_deployment_model_mock: dict[str, Any],
+    device_deployment_model_mock: dict[str, Any],
 ) -> dict[str, Any]:
     return {
         "metadata": {
@@ -602,7 +622,6 @@ def cloud_deployment_with_valuefrom_mock() -> dict[str, Any]:
     }
 
 
-
 @pytest.fixture
 def disk_body() -> dict[str, Any]:
     return {
@@ -648,7 +667,7 @@ def disk_model_mock() -> dict[str, Any]:
 
 
 @pytest.fixture
-def disklist_model_mock(disk_model_mock) -> dict[str, Any]:
+def disklist_model_mock(disk_model_mock: dict[str, Any]) -> dict[str, Any]:
     return {
         "metadata": {
             "continue": 1,
@@ -715,7 +734,7 @@ def secret_model_mock() -> dict[str, Any]:
 
 
 @pytest.fixture
-def secretlist_model_mock(secret_model_mock) -> dict[str, Any]:
+def secretlist_model_mock(secret_model_mock: dict[str, Any]) -> dict[str, Any]:
     return {
         "metadata": {
             "continue": 1,
@@ -848,7 +867,9 @@ def staticroute_model_mock() -> dict[str, Any]:
 
 
 @pytest.fixture
-def staticroutelist_model_mock(staticroute_model_mock) -> dict[str, Any]:
+def staticroutelist_model_mock(
+    staticroute_model_mock: dict[str, Any],
+) -> dict[str, Any]:
     return {
         "metadata": {
             "continue": 1,
@@ -916,7 +937,7 @@ def network_model_mock() -> dict[str, Any]:
 
 
 @pytest.fixture
-def networklist_model_mock(network_model_mock) -> dict[str, Any]:
+def networklist_model_mock(network_model_mock: dict[str, Any]) -> dict[str, Any]:
     return {
         "metadata": {
             "continue": 1,
@@ -1129,7 +1150,9 @@ def managedservice_model_mock() -> dict[str, Any]:
 
 
 @pytest.fixture
-def managedservicelist_model_mock(managedservice_model_mock) -> dict[str, Any]:
+def managedservicelist_model_mock(
+    managedservice_model_mock: dict[str, Any],
+) -> dict[str, Any]:
     return {
         "metadata": {
             "continue": 1,
@@ -1140,7 +1163,7 @@ def managedservicelist_model_mock(managedservice_model_mock) -> dict[str, Any]:
 
 @pytest.fixture
 def managedservicebindinglist_model_mock(
-    managedservice_binding_model_mock,
+    managedservice_binding_model_mock: dict[str, Any],
 ) -> dict[str, Any]:
     return {
         "metadata": {
@@ -1218,7 +1241,7 @@ def fileupload_model_mock() -> dict[str, Any]:
 
 
 @pytest.fixture
-def fileuploadlist_model_mock(fileupload_model_mock) -> dict[str, Any]:
+def fileuploadlist_model_mock(fileupload_model_mock: dict[str, Any]) -> dict[str, Any]:
     return {
         "metadata": {
             "continue": 1,
@@ -1260,7 +1283,7 @@ def sharedurl_model_mock() -> dict[str, Any]:
 
 
 @pytest.fixture
-def sharedurllist_model_mock(sharedurl_model_mock) -> dict[str, Any]:
+def sharedurllist_model_mock(sharedurl_model_mock: dict[str, Any]) -> dict[str, Any]:
     return {
         "metadata": {
             "continue": 1,

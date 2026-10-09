@@ -13,81 +13,174 @@
 # limitations under the License.
 
 
+"""Exceptions raised for rapyuta.io HTTP errors."""
+
+
 class AuthenticationError(Exception):
     """Exception raised for errors in the authentication process."""
 
-    def __init__(self, message="Authentication failed"):
+    def __init__(self, message: str = "Authentication failed") -> None:
+        """Initialize the exception with the supplied error message.
+
+        Args:
+            message: Error message reported to the caller.
+        """
         self.message = message
         super().__init__(self.message)
 
 
 class LoggedOutError(Exception):
-    def __init__(self, message="Not Authenticated"):
+    """Authentication credentials are absent or have expired."""
+
+    def __init__(self, message: str = "Not Authenticated") -> None:
+        """Initialize the exception with the supplied error message.
+
+        Args:
+            message: Error message reported to the caller.
+        """
         self.message = message
         super().__init__(self.message)
 
 
 class HttpNotFoundError(Exception):
-    def __init__(self, message="resource not found"):
+    """The requested resource could not be found."""
+
+    def __init__(self, message: str = "resource not found") -> None:
+        """Initialize the exception with the supplied error message.
+
+        Args:
+            message: Error message reported to the caller.
+        """
         self.message = message
         super().__init__(self.message)
 
 
 class HttpAlreadyExistsError(Exception):
-    def __init__(self, message="resource already exists"):
+    """The requested resource conflicts with an existing resource."""
+
+    def __init__(self, message: str = "resource already exists") -> None:
+        """Initialize the exception with the supplied error message.
+
+        Args:
+            message: Error message reported to the caller.
+        """
         self.message = message
         super().__init__(self.message)
 
 
 class ValidationError(Exception):
-    def __init__(self, message=None):
+    """SDK configuration or resource input is invalid."""
+
+    def __init__(self, message: str | None = None) -> None:
+        """Initialize the exception with the supplied error message.
+
+        Args:
+            message: Error message reported to the caller.
+        """
         self.message = message
         super().__init__(self.message)
 
 
 class MethodNotAllowedError(Exception):
-    def __init__(self, message="method not allowed"):
+    """The server rejected the request method or operation."""
+
+    def __init__(self, message: str = "method not allowed") -> None:
+        """Initialize the exception with the supplied error message.
+
+        Args:
+            message: Error message reported to the caller.
+        """
         self.message = message
         super().__init__(self.message)
 
 
 class InternalServerError(Exception):
-    def __init__(self, message="internal server error"):
+    """The server encountered an internal error."""
+
+    def __init__(self, message: str = "internal server error") -> None:
+        """Initialize the exception with the supplied error message.
+
+        Args:
+            message: Error message reported to the caller.
+        """
         self.message = message
         super().__init__(self.message)
 
 
-class NotImplementedError(Exception):
-    def __init__(self, message="not implemented"):
+# Retain the exported SDK exception name for backwards compatibility.
+class NotImplementedError(Exception):  # noqa: A001
+    """The server does not implement the requested operation."""
+
+    def __init__(self, message: str = "not implemented") -> None:
+        """Initialize the exception with the supplied error message.
+
+        Args:
+            message: Error message reported to the caller.
+        """
         self.message = message
         super().__init__(self.message)
 
 
 class BadGatewayError(Exception):
-    def __init__(self, message="bad gateway"):
+    """An upstream gateway returned an invalid response."""
+
+    def __init__(self, message: str = "bad gateway") -> None:
+        """Initialize the exception with the supplied error message.
+
+        Args:
+            message: Error message reported to the caller.
+        """
         self.message = message
         super().__init__(self.message)
 
 
 class UnauthorizedAccessError(Exception):
-    def __init__(self, message="unauthorized permission access"):
+    """The caller lacks permission to access the resource."""
+
+    def __init__(self, message: str = "unauthorized permission access") -> None:
+        """Initialize the exception with the supplied error message.
+
+        Args:
+            message: Error message reported to the caller.
+        """
         self.message = message
         super().__init__(self.message)
 
 
 class GatewayTimeoutError(Exception):
-    def __init__(self, message="gateway timeout"):
+    """The gateway timed out while contacting an upstream service."""
+
+    def __init__(self, message: str = "gateway timeout") -> None:
+        """Initialize the exception with the supplied error message.
+
+        Args:
+            message: Error message reported to the caller.
+        """
         self.message = message
         super().__init__(self.message)
 
 
 class ServiceUnavailableError(Exception):
-    def __init__(self, message="service unavailable"):
+    """The service is temporarily unavailable."""
+
+    def __init__(self, message: str = "service unavailable") -> None:
+        """Initialize the exception with the supplied error message.
+
+        Args:
+            message: Error message reported to the caller.
+        """
         self.message = message
         super().__init__(self.message)
 
 
 class UnknownError(Exception):
-    def __init__(self, message="unknown error"):
+    """The server returned an unmapped HTTP error status."""
+
+    def __init__(self, message: str = "unknown error") -> None:
+        """Initialize the exception with the supplied error message.
+
+        Args:
+            message: Error message reported to the caller.
+        """
         self.message = message
         super().__init__(self.message)

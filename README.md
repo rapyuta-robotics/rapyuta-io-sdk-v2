@@ -11,6 +11,8 @@ rapyuta.io SDK v2 provides a comprehensive set of tools and functionalities to i
 
 ## Installation
 
+Requires Python 3.13 or newer.
+
 ```bash
 pip install rapyuta-io-sdk-v2
 ```
