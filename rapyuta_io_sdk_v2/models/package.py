@@ -125,12 +125,6 @@ class Executable(BaseModel):
         elif isinstance(self.entrypoint, str):
             self.entrypoint = [self.entrypoint]
 
-        if self.entrypoint and any(c.isspace() for c in self.entrypoint[0]):
-            raise ValueError(
-                "entrypoint must be a list with the executable path first, "
-                'e.g. ["/bin/sh", "-c"]'
-            )
-
         return self
 
     @model_validator(mode="after")

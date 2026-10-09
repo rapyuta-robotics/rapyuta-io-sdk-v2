@@ -1,6 +1,3 @@
-import pytest
-from pydantic import ValidationError
-
 from rapyuta_io_sdk_v2.models.package import Executable
 
 
@@ -37,9 +34,3 @@ def test_empty_entrypoint_is_unset_and_keeps_run_as_bash():
         executable = Executable(entrypoint=empty, command="echo hello", runAsBash=True)
         assert executable.entrypoint is None
         assert executable.command == ["/bin/bash", "-c", "echo hello"]
-
-
-@pytest.mark.parametrize("entrypoint", ["/bin/sh -c", ["/bin/sh -c"]])
-def test_entrypoint_with_spaces_in_path_is_rejected(entrypoint):
-    with pytest.raises(ValidationError, match="executable path first"):
-        Executable(entrypoint=entrypoint, command="echo hello")
