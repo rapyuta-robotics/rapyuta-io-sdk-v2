@@ -288,3 +288,42 @@ def test_environment_spec_plain_and_valuefrom_coexist() -> None:
     )
     assert env.default == "fallback"
     assert env.valueFrom.secret_key_ref.value == "injected"
+
+
+@pytest.mark.parametrize(
+    ("payload", "expected"),
+    [
+        (
+            {
+                "metadata": {"name": "pkg", "version": "1"},
+                "spec": {
+                    "runtime": "cloud",
+                    "executables": [
+                        {
+                            "docker": {
+                                "image": "app:1",
+                                "pullSecret": {"depends": {"nameOrGUID": "registry"}},
+                            }
+                        },
+                        {
+                            "docker": {
+                                "image": "worker:1",
+                                "pullSecret": {"depends": {"nameOrGUID": "registry"}},
+                            }
+                        },
+                    ],
+                },
+            },
+            ["secret:registry", "secret:registry"],
+        ),
+        (
+            {"metadata": {"name": "pkg", "version": "1"}, "spec": {"runtime": "cloud"}},
+            None,
+        ),
+    ],
+)
+def test_package_list_dependencies_preserves_duplicates_and_empty_results(
+    *, payload: dict[str, Any], expected: list[str] | None
+) -> None:
+    resource = Package.model_validate(payload)
+    assert resource.list_dependencies() == expected

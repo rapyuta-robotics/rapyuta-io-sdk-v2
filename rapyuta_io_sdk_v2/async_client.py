@@ -14,8 +14,10 @@
 
 """Asynchronous client for rapyuta.io v2 resource APIs."""
 
+from __future__ import annotations
+
 import platform
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, Unpack
 
 import httpx
 from pydantic import ValidationError as PydanticValidationError
@@ -74,11 +76,27 @@ from rapyuta_io_sdk_v2.models.sshkey import (
 )
 from rapyuta_io_sdk_v2.utils import handle_server_errors
 
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterable, AsyncIterator, Iterable
+
+    from rapyuta_io_sdk_v2._client_options import (
+        ClientOptions,
+        GroupHeaderOptions,
+        HeaderOptions,
+        IdentityHeaderOptions,
+        OrganizationHeaderOptions,
+        OrganizationOverrideHeaderOptions,
+        ProjectHeaderOptions,
+        ProjectOverrideHeaderOptions,
+    )
+
 
 class AsyncClient:
     """Make asynchronous requests to rapyuta.io v2 resource APIs."""
 
-    def __init__(self, config: Configuration | None = None, **kwargs: object) -> None:
+    def __init__(
+        self, config: Configuration | None = None, **kwargs: Unpack[ClientOptions]
+    ) -> None:
         """Initialize the instance with the supplied configuration.
 
         Args:
@@ -86,7 +104,7 @@ class AsyncClient:
             **kwargs: Client options; timeout sets the HTTP request timeout.
         """
         self.config: Configuration = config or Configuration()
-        timeout: float = float(cast("float", kwargs.get("timeout", 10)))
+        timeout = kwargs.get("timeout", 10)
         self.c: httpx.AsyncClient = httpx.AsyncClient(
             timeout=timeout,
             limits=httpx.Limits(
@@ -216,7 +234,9 @@ class AsyncClient:
 
     # -----------------Organization----------------
     async def get_organization(
-        self, organization_guid: str | None = None, **kwargs: object
+        self,
+        organization_guid: str | None = None,
+        **kwargs: Unpack[OrganizationOverrideHeaderOptions],
     ) -> Organization:
         """Get an organization by its GUID.
 
@@ -245,7 +265,7 @@ class AsyncClient:
         self,
         body: Organization | dict[str, Any],
         organization_guid: str | None = None,
-        **kwargs: object,
+        **kwargs: Unpack[OrganizationOverrideHeaderOptions],
     ) -> Organization:
         """Update an organization by its GUID.
 
@@ -280,7 +300,7 @@ class AsyncClient:
         limit: int = 50,
         organization_guid: str | None = None,
         guid: str | None = None,
-        **kwargs: object,
+        **kwargs: Unpack[OrganizationOverrideHeaderOptions],
     ) -> UserList:
         """List users.
 
@@ -311,7 +331,9 @@ class AsyncClient:
 
         return UserList(**result.json())
 
-    async def add_user(self, user: User | dict, **kwargs: object) -> User:
+    async def add_user(
+        self, user: User | dict, **kwargs: Unpack[ProjectHeaderOptions]
+    ) -> User:
         """Add a User in Organization.
 
         Args:
@@ -327,14 +349,14 @@ class AsyncClient:
         result = await self.c.post(
             url=f"{self.v2api_host}/v2/users/",
             headers=self.config.get_headers(with_project=False, **kwargs),
-            body=user.model_dump(by_alias=True),
+            json=user.model_dump(by_alias=True),
         )
 
         handle_server_errors(result)
 
-        return UserList(**result.json())
+        return User(**result.json())
 
-    async def get_myself(self, **kwargs: object) -> User:
+    async def get_myself(self, **kwargs: Unpack[IdentityHeaderOptions]) -> User:
         """Get my User details.
 
         Args:
@@ -354,7 +376,7 @@ class AsyncClient:
         return User(**result.json())
 
     async def update_myself(
-        self, body: User | dict[str, Any], **kwargs: object
+        self, body: User | dict[str, Any], **kwargs: Unpack[IdentityHeaderOptions]
     ) -> User:
         """Update my user details.
 
@@ -380,7 +402,9 @@ class AsyncClient:
         handle_server_errors(result)
         return User(**result.json())
 
-    async def get_user(self, email_id: str, **kwargs: object) -> User:
+    async def get_user(
+        self, email_id: str, **kwargs: Unpack[ProjectHeaderOptions]
+    ) -> User:
         """Get User details.
 
         Args:
@@ -399,7 +423,10 @@ class AsyncClient:
         return User(**result.json())
 
     async def update_user(
-        self, email_id: str, body: User | dict[str, Any], **kwargs: object
+        self,
+        email_id: str,
+        body: User | dict[str, Any],
+        **kwargs: Unpack[ProjectHeaderOptions],
     ) -> User:
         """Update the user details.
 
@@ -424,7 +451,9 @@ class AsyncClient:
         handle_server_errors(result)
         return User(**result.json())
 
-    async def delete_user(self, email_id: str, **kwargs: object) -> None:
+    async def delete_user(
+        self, email_id: str, **kwargs: Unpack[ProjectHeaderOptions]
+    ) -> None:
         """Delete the User.
 
         Args:
@@ -442,7 +471,7 @@ class AsyncClient:
         self,
         user_guid: str,
         organization_guid: str | None = None,
-        **kwargs: object,
+        **kwargs: Unpack[OrganizationOverrideHeaderOptions],
     ) -> UserPermissions:
         """Get user permissions for an organization.
 
@@ -481,7 +510,7 @@ class AsyncClient:
         status: list[str] | None = None,
         organizations: list[str] | None = None,
         name: str | None = None,
-        **kwargs: object,
+        **kwargs: Unpack[ProjectHeaderOptions],
     ) -> ProjectList:
         """List all projects in an organization.
 
@@ -526,7 +555,9 @@ class AsyncClient:
         return ProjectList(**result.json())
 
     async def get_project(
-        self, project_guid: str | None = None, **kwargs: object
+        self,
+        project_guid: str | None = None,
+        **kwargs: Unpack[OrganizationHeaderOptions],
     ) -> Project:
         """Get a project by its GUID.
 
@@ -559,7 +590,9 @@ class AsyncClient:
         return Project(**result.json())
 
     async def create_project(
-        self, body: Project | dict[str, Any], **kwargs: object
+        self,
+        body: Project | dict[str, Any],
+        **kwargs: Unpack[OrganizationOverrideHeaderOptions],
     ) -> Project:
         """Create a new project.
 
@@ -591,7 +624,7 @@ class AsyncClient:
         self,
         body: Project | dict[str, Any],
         project_guid: str | None = None,
-        **kwargs: object,
+        **kwargs: Unpack[OrganizationHeaderOptions],
     ) -> Project:
         """Update a project by its GUID.
 
@@ -616,7 +649,9 @@ class AsyncClient:
         handle_server_errors(result)
         return Project(**result.json())
 
-    async def delete_project(self, project_guid: str, **kwargs: object) -> None:
+    async def delete_project(
+        self, project_guid: str, **kwargs: Unpack[OrganizationHeaderOptions]
+    ) -> None:
         """Delete a project by its GUID.
 
         Args:
@@ -635,7 +670,10 @@ class AsyncClient:
         handle_server_errors(result)
 
     async def update_project_owner(
-        self, body: dict, project_guid: str | None = None, **kwargs: object
+        self,
+        body: dict,
+        project_guid: str | None = None,
+        **kwargs: Unpack[ProjectOverrideHeaderOptions],
     ) -> dict[str, Any]:
         """Update the owner of a project by its GUID.
 
@@ -656,7 +694,7 @@ class AsyncClient:
             json=body,
         )
         handle_server_errors(result)
-        return result
+        return result.json()
 
     # -------------------Package-------------------
     # Keep the positional signature accepted by existing SDK callers.
@@ -666,7 +704,7 @@ class AsyncClient:
         limit: int = 50,
         label_selector: list[str] | None = None,
         name: str | None = None,
-        **kwargs: object,
+        **kwargs: Unpack[HeaderOptions],
     ) -> PackageList:
         """List all packages in a project.
 
@@ -699,7 +737,7 @@ class AsyncClient:
         return PackageList(**result.json())
 
     async def create_package(
-        self, body: Package | dict[str, Any], **kwargs: object
+        self, body: Package | dict[str, Any], **kwargs: Unpack[HeaderOptions]
     ) -> Package:
         """Create a new package.
 
@@ -728,7 +766,7 @@ class AsyncClient:
         return Package(**result.json())
 
     async def get_package(
-        self, name: str, version: str | None = None, **kwargs: object
+        self, name: str, version: str | None = None, **kwargs: Unpack[HeaderOptions]
     ) -> Package:
         """Get a package by its name.
 
@@ -751,7 +789,9 @@ class AsyncClient:
 
         return Package(**result.json())
 
-    async def delete_package(self, name: str, version: str, **kwargs: object) -> None:
+    async def delete_package(
+        self, name: str, version: str, **kwargs: Unpack[HeaderOptions]
+    ) -> None:
         """Delete a package by its name.
 
         Args:
@@ -786,7 +826,7 @@ class AsyncClient:
         package_version: str | None = None,
         phases: list[str] | None = None,
         regions: list[str] | None = None,
-        **kwargs: object,
+        **kwargs: Unpack[HeaderOptions],
     ) -> DeploymentList:
         """List all deployments in a project.
 
@@ -845,7 +885,7 @@ class AsyncClient:
     # -------------------Deployment-------------------
 
     async def create_deployment(
-        self, body: Deployment | dict[str, Any], **kwargs: object
+        self, body: Deployment | dict[str, Any], **kwargs: Unpack[HeaderOptions]
     ) -> Deployment:
         """Create a new deployment.
 
@@ -871,7 +911,7 @@ class AsyncClient:
         return Deployment(**result.json())
 
     async def get_deployment(
-        self, name: str, guid: str | None = None, **kwargs: object
+        self, name: str, guid: str | None = None, **kwargs: Unpack[HeaderOptions]
     ) -> Deployment:
         """Get a deployment by its name.
 
@@ -896,7 +936,10 @@ class AsyncClient:
         return Deployment(**result.json())
 
     async def update_deployment(
-        self, name: str, body: Deployment | dict[str, Any], **kwargs: object
+        self,
+        name: str,
+        body: Deployment | dict[str, Any],
+        **kwargs: Unpack[HeaderOptions],
     ) -> Deployment:
         """Update a deployment by its name.
 
@@ -921,7 +964,9 @@ class AsyncClient:
         handle_server_errors(result)
         return Deployment(**result.json())
 
-    async def delete_deployment(self, name: str, **kwargs: object) -> None:
+    async def delete_deployment(
+        self, name: str, **kwargs: Unpack[HeaderOptions]
+    ) -> None:
         """Delete a deployment by its name.
 
         Args:
@@ -938,7 +983,9 @@ class AsyncClient:
         )
         handle_server_errors(result)
 
-    async def get_deployment_graph(self, name: str, **kwargs: object) -> dict[str, Any]:
+    async def get_deployment_graph(
+        self, name: str, **kwargs: Unpack[HeaderOptions]
+    ) -> dict[str, Any]:
         """Get a deployment graph by its name. [Experimental].
 
         Args:
@@ -954,10 +1001,10 @@ class AsyncClient:
             headers=self.config.get_headers(**kwargs),
         )
         handle_server_errors(result)
-        return result
+        return result.json()
 
     async def get_deployment_history(
-        self, name: str, guid: str | None = None, **kwargs: object
+        self, name: str, guid: str | None = None, **kwargs: Unpack[HeaderOptions]
     ) -> dict[str, Any]:
         """Get a deployment history by its name.
 
@@ -976,17 +1023,20 @@ class AsyncClient:
             params={"guid": guid},
         )
         handle_server_errors(result)
-        return result
+        return result.json()
 
     async def stream_deployment_logs(
         self, name: str, executable: str, replica: int = 0
-    ) -> None:
+    ) -> AsyncIterator[str]:
         """Asynchronously stream logs for a deployment executable replica.
 
         Args:
             name: Name identifying the resource.
             executable: Executable.
             replica: Replica.
+
+        Yields:
+            Nonempty deployment log lines.
         """
         url = (
             f"{self.v2api_host}/v2/deployments/{name}/logs/"
@@ -1013,7 +1063,7 @@ class AsyncClient:
         names: list[str] | None = None,
         regions: list[str] | None = None,
         status: list[str] | None = None,
-        **kwargs: object,
+        **kwargs: Unpack[HeaderOptions],
     ) -> DiskList:
         """List all disks in a project.
 
@@ -1053,7 +1103,7 @@ class AsyncClient:
         handle_server_errors(response=result)
         return DiskList(**result.json())
 
-    async def get_disk(self, name: str, **kwargs: object) -> Disk:
+    async def get_disk(self, name: str, **kwargs: Unpack[HeaderOptions]) -> Disk:
         """Get a disk by its name.
 
         Args:
@@ -1073,7 +1123,9 @@ class AsyncClient:
 
         return Disk(**result.json())
 
-    async def create_disk(self, body: Disk | dict[str, Any], **kwargs: object) -> Disk:
+    async def create_disk(
+        self, body: Disk | dict[str, Any], **kwargs: Unpack[HeaderOptions]
+    ) -> Disk:
         """Create a new disk.
 
         Args:
@@ -1096,7 +1148,7 @@ class AsyncClient:
         handle_server_errors(result)
         return Disk(**result.json())
 
-    async def delete_disk(self, name: str, **kwargs: object) -> None:
+    async def delete_disk(self, name: str, **kwargs: Unpack[HeaderOptions]) -> None:
         """Delete a disk by its name.
 
         Args:
@@ -1145,7 +1197,7 @@ class AsyncClient:
         label_selector: list[str] | None = None,
         names: list[str] | None = None,
         regions: list[str] | None = None,
-        **kwargs: object,
+        **kwargs: Unpack[HeaderOptions],
     ) -> StaticRouteList:
         """List all static routes in a project.
 
@@ -1184,7 +1236,7 @@ class AsyncClient:
         return StaticRouteList(**result.json())
 
     async def create_staticroute(
-        self, body: StaticRoute | dict[str, Any], **kwargs: object
+        self, body: StaticRoute | dict[str, Any], **kwargs: Unpack[HeaderOptions]
     ) -> StaticRoute:
         """Create a new static route.
 
@@ -1208,7 +1260,9 @@ class AsyncClient:
         handle_server_errors(result)
         return StaticRoute(**result.json())
 
-    async def get_staticroute(self, name: str, **kwargs: object) -> StaticRoute:
+    async def get_staticroute(
+        self, name: str, **kwargs: Unpack[HeaderOptions]
+    ) -> StaticRoute:
         """Get a static route by its name.
 
         Args:
@@ -1229,7 +1283,10 @@ class AsyncClient:
         return StaticRoute(**result.json())
 
     async def update_staticroute(
-        self, name: str, body: StaticRoute | dict[str, Any], **kwargs: object
+        self,
+        name: str,
+        body: StaticRoute | dict[str, Any],
+        **kwargs: Unpack[HeaderOptions],
     ) -> StaticRoute:
         """Update a static route by its name.
 
@@ -1254,7 +1311,9 @@ class AsyncClient:
         handle_server_errors(result)
         return StaticRoute(**result.json())
 
-    async def delete_staticroute(self, name: str, **kwargs: object) -> None:
+    async def delete_staticroute(
+        self, name: str, **kwargs: Unpack[HeaderOptions]
+    ) -> None:
         """Delete a static route by its name.
 
         Args:
@@ -1286,7 +1345,7 @@ class AsyncClient:
         phases: list[str] | None = None,
         regions: list[str] | None = None,
         status: list[str] | None = None,
-        **kwargs: object,
+        **kwargs: Unpack[HeaderOptions],
     ) -> NetworkList:
         """List all networks in a project.
 
@@ -1336,7 +1395,7 @@ class AsyncClient:
         return NetworkList(**result.json())
 
     async def create_network(
-        self, body: Network | dict[str, Any], **kwargs: object
+        self, body: Network | dict[str, Any], **kwargs: Unpack[HeaderOptions]
     ) -> Network:
         """Create a new network.
 
@@ -1360,7 +1419,7 @@ class AsyncClient:
         handle_server_errors(result)
         return Network(**result.json())
 
-    async def get_network(self, name: str, **kwargs: object) -> Network:
+    async def get_network(self, name: str, **kwargs: Unpack[HeaderOptions]) -> Network:
         """Get a network by its name.
 
         Args:
@@ -1380,7 +1439,7 @@ class AsyncClient:
 
         return Network(**result.json())
 
-    async def delete_network(self, name: str, **kwargs: object) -> None:
+    async def delete_network(self, name: str, **kwargs: Unpack[HeaderOptions]) -> None:
         """Delete a network by its name.
 
         Args:
@@ -1408,7 +1467,7 @@ class AsyncClient:
         label_selector: list[str] | None = None,
         names: list[str] | None = None,
         regions: list[str] | None = None,
-        **kwargs: object,
+        **kwargs: Unpack[HeaderOptions],
     ) -> SecretList:
         """List all secrets in a project.
 
@@ -1449,7 +1508,7 @@ class AsyncClient:
         return SecretList(**result.json())
 
     async def create_secret(
-        self, body: SecretCreate | dict[str, Any], **kwargs: object
+        self, body: SecretCreate | dict[str, Any], **kwargs: Unpack[HeaderOptions]
     ) -> Secret:
         """Create a new secret.
 
@@ -1474,7 +1533,7 @@ class AsyncClient:
         handle_server_errors(result)
         return Secret(**result.json())
 
-    async def get_secret(self, name: str, **kwargs: object) -> Secret:
+    async def get_secret(self, name: str, **kwargs: Unpack[HeaderOptions]) -> Secret:
         """Get a secret by its name.
 
         Args:
@@ -1495,7 +1554,7 @@ class AsyncClient:
         return Secret(**result.json())
 
     async def update_secret(
-        self, name: str, body: Secret | dict[str, Any], **kwargs: object
+        self, name: str, body: Secret | dict[str, Any], **kwargs: Unpack[HeaderOptions]
     ) -> Secret:
         """Update a secret by its name.
 
@@ -1520,7 +1579,7 @@ class AsyncClient:
         handle_server_errors(result)
         return Secret(**result.json())
 
-    async def delete_secret(self, name: str, **kwargs: object) -> None:
+    async def delete_secret(self, name: str, **kwargs: Unpack[HeaderOptions]) -> None:
         """Delete a secret by its name.
 
         Args:
@@ -1547,7 +1606,7 @@ class AsyncClient:
         label_selector: list[str] | None = None,
         names: list[str] | None = None,
         regions: list[str] | None = None,
-        **kwargs: object,
+        **kwargs: Unpack[HeaderOptions],
     ) -> dict[str, Any]:
         """List all OAuth2 clients in a project.
 
@@ -1584,7 +1643,7 @@ class AsyncClient:
         return result.json()
 
     async def get_oauth2_client(
-        self, client_id: str, **kwargs: object
+        self, client_id: str, **kwargs: Unpack[HeaderOptions]
     ) -> dict[str, Any]:
         """Get an OAuth2 client by its client_id.
 
@@ -1605,7 +1664,7 @@ class AsyncClient:
         return result.json()
 
     async def create_oauth2_client(
-        self, body: dict, **kwargs: object
+        self, body: dict, **kwargs: Unpack[HeaderOptions]
     ) -> dict[str, Any]:
         """Create a new OAuth2 client.
 
@@ -1627,7 +1686,7 @@ class AsyncClient:
         return result.json()
 
     async def update_oauth2_client(
-        self, client_id: str, body: dict, **kwargs: object
+        self, client_id: str, body: dict, **kwargs: Unpack[HeaderOptions]
     ) -> dict[str, Any]:
         """Update an OAuth2 client by its client_id.
 
@@ -1650,7 +1709,7 @@ class AsyncClient:
         return result.json()
 
     async def update_oauth2_client_uris(
-        self, client_id: str, update: OAuth2UpdateURI, **kwargs: object
+        self, client_id: str, update: OAuth2UpdateURI, **kwargs: Unpack[HeaderOptions]
     ) -> dict[str, Any]:
         """Update OAuth2 client URIs.
 
@@ -1672,7 +1731,9 @@ class AsyncClient:
         handle_server_errors(result)
         return result.json()
 
-    async def delete_oauth2_client(self, client_id: str, **kwargs: object) -> None:
+    async def delete_oauth2_client(
+        self, client_id: str, **kwargs: Unpack[HeaderOptions]
+    ) -> None:
         """Delete an OAuth2 client by its client_id.
 
         Args:
@@ -1699,7 +1760,7 @@ class AsyncClient:
         limit: int = 50,
         label_selector: list[str] | None = None,
         with_project: bool = True,  # noqa: FBT001, FBT002
-        **kwargs: object,
+        **kwargs: Unpack[ProjectHeaderOptions],
     ) -> dict[str, Any]:
         """List all config trees in a project.
 
@@ -1736,7 +1797,7 @@ class AsyncClient:
         self,
         body: dict,
         with_project: bool = True,  # noqa: FBT001, FBT002
-        **kwargs: object,
+        **kwargs: Unpack[ProjectHeaderOptions],
     ) -> dict[str, Any]:
         """Create a new config tree.
 
@@ -1768,7 +1829,7 @@ class AsyncClient:
         key_prefixes: list[str] | None = None,
         revision: str | None = None,
         with_project: bool = True,  # noqa: FBT001, FBT002
-        **kwargs: object,
+        **kwargs: Unpack[ProjectHeaderOptions],
     ) -> dict[str, Any]:
         """Get a config tree by its name.
 
@@ -1808,7 +1869,7 @@ class AsyncClient:
         name: str,
         configtree: object,
         project_guid: str | None = None,
-        **kwargs: object,
+        **kwargs: Unpack[ProjectOverrideHeaderOptions],
     ) -> dict[str, Any]:
         """Set a config tree revision.
 
@@ -1837,7 +1898,7 @@ class AsyncClient:
         name: str,
         body: dict,
         with_project: bool = True,  # noqa: FBT001, FBT002
-        **kwargs: object,
+        **kwargs: Unpack[ProjectHeaderOptions],
     ) -> dict[str, Any]:
         """Update a config tree by its name.
 
@@ -1863,7 +1924,9 @@ class AsyncClient:
 
         return result.json()
 
-    async def delete_configtree(self, name: str, **kwargs: object) -> None:
+    async def delete_configtree(
+        self, name: str, **kwargs: Unpack[HeaderOptions]
+    ) -> None:
         """Delete a config tree by its name.
 
         Args:
@@ -1889,7 +1952,7 @@ class AsyncClient:
         limit: int = 50,
         committed: bool = False,  # noqa: FBT001, FBT002
         label_selector: list[str] | None = None,
-        **kwargs: object,
+        **kwargs: Unpack[HeaderOptions],
     ) -> dict[str, Any]:
         """List all revisions of a config tree.
 
@@ -1925,7 +1988,11 @@ class AsyncClient:
         return result.json()
 
     async def create_revision(
-        self, name: str, body: dict, project_guid: str | None = None, **kwargs: object
+        self,
+        name: str,
+        body: dict,
+        project_guid: str | None = None,
+        **kwargs: Unpack[ProjectOverrideHeaderOptions],
     ) -> dict[str, Any]:
         """Create a new revision.
 
@@ -1950,7 +2017,11 @@ class AsyncClient:
         return result.json()
 
     async def put_keys_in_revision(
-        self, name: str, revision_id: str, config_values: dict, **kwargs: object
+        self,
+        name: str,
+        revision_id: str,
+        config_values: dict,
+        **kwargs: Unpack[HeaderOptions],
     ) -> dict[str, Any]:
         """Put keys in a revision.
 
@@ -1983,7 +2054,7 @@ class AsyncClient:
         message: str | None = None,
         project_guid: str | None = None,
         labels: dict[str, str] | None = None,
-        **kwargs: object,
+        **kwargs: Unpack[ProjectOverrideHeaderOptions],
     ) -> dict[str, Any]:
         """Commit a revision.
 
@@ -2026,7 +2097,7 @@ class AsyncClient:
         revision_id: str,
         key: str,
         project_guid: str | None = None,
-        **kwargs: object,
+        **kwargs: Unpack[ProjectOverrideHeaderOptions],
     ) -> object:
         """Get a key in a revision.
 
@@ -2057,9 +2128,9 @@ class AsyncClient:
         tree_name: str,
         revision_id: str,
         key: str,
-        body: object,
+        body: str | bytes | Iterable[bytes] | AsyncIterable[bytes] | None,
         project_guid: str | None = None,
-        **kwargs: object,
+        **kwargs: Unpack[ProjectOverrideHeaderOptions],
     ) -> dict[str, Any]:
         """Put a key in a revision.
 
@@ -2091,7 +2162,7 @@ class AsyncClient:
         revision_id: str,
         key: str,
         project_guid: str | None = None,
-        **kwargs: object,
+        **kwargs: Unpack[ProjectOverrideHeaderOptions],
     ) -> None:
         """Delete a key in a revision.
 
@@ -2121,7 +2192,7 @@ class AsyncClient:
         key: str,
         config_key_rename: dict,
         project_guid: str | None = None,
-        **kwargs: object,
+        **kwargs: Unpack[ProjectOverrideHeaderOptions],
     ) -> dict[str, Any]:
         """Rename a key in a revision.
 
@@ -2356,7 +2427,7 @@ class AsyncClient:
         label_selector: list[str] | None = None,
         name: str | None = None,
         guid: str | None = None,
-        **kwargs: object,
+        **kwargs: Unpack[ProjectHeaderOptions],
     ) -> UserGroupList:
         """List user groups.
 
@@ -2391,7 +2462,7 @@ class AsyncClient:
         return UserGroupList(**result.json())
 
     async def get_user_group(
-        self, group_name: str, group_guid: str, **kwargs: object
+        self, group_name: str, group_guid: str, **kwargs: Unpack[GroupHeaderOptions]
     ) -> UserGroup:
         """Get user group.
 
@@ -2412,7 +2483,7 @@ class AsyncClient:
         return UserGroup(**result.json())
 
     async def create_user_group(
-        self, user_group: UserGroup, **kwargs: object
+        self, user_group: UserGroup, **kwargs: Unpack[ProjectHeaderOptions]
     ) -> UserGroup:
         """Create user group.
 
@@ -2431,7 +2502,7 @@ class AsyncClient:
         return UserGroup(**result.json())
 
     async def update_user_group(
-        self, user_group: UserGroup, **kwargs: object
+        self, user_group: UserGroup, **kwargs: Unpack[GroupHeaderOptions]
     ) -> UserGroup:
         """Update user group.
 
@@ -2455,7 +2526,7 @@ class AsyncClient:
         return UserGroup(**result.json())
 
     async def delete_user_group(
-        self, group_name: str, group_guid: str, **kwargs: object
+        self, group_name: str, group_guid: str, **kwargs: Unpack[GroupHeaderOptions]
     ) -> None:
         """Delete user group.
 
@@ -2481,7 +2552,7 @@ class AsyncClient:
         limit: int = 50,
         label_selector: list[str] | None = None,
         name: str | None = None,
-        **kwargs: object,
+        **kwargs: Unpack[ProjectHeaderOptions],
     ) -> RoleList:
         """List roles.
 
@@ -2512,7 +2583,9 @@ class AsyncClient:
 
         return RoleList(**result.json())
 
-    async def get_role(self, role_name: str, **kwargs: object) -> Role:
+    async def get_role(
+        self, role_name: str, **kwargs: Unpack[ProjectHeaderOptions]
+    ) -> Role:
         """Get role.
 
         Args:
@@ -2528,7 +2601,9 @@ class AsyncClient:
 
         return Role(**result.json())
 
-    async def create_role(self, role: Role | dict, **kwargs: object) -> Role:
+    async def create_role(
+        self, role: Role | dict, **kwargs: Unpack[ProjectHeaderOptions]
+    ) -> Role:
         """Create role.
 
         Args:
@@ -2547,7 +2622,9 @@ class AsyncClient:
 
         return Role(**result.json())
 
-    async def update_role(self, role: Role, **kwargs: object) -> Role:
+    async def update_role(
+        self, role: Role, **kwargs: Unpack[ProjectHeaderOptions]
+    ) -> Role:
         """Update role.
 
         Args:
@@ -2566,7 +2643,9 @@ class AsyncClient:
 
         return Role(**result.json())
 
-    async def delete_role(self, role_name: str, **kwargs: object) -> None:
+    async def delete_role(
+        self, role_name: str, **kwargs: Unpack[ProjectHeaderOptions]
+    ) -> None:
         """Delete role.
 
         Args:
@@ -2595,7 +2674,7 @@ class AsyncClient:
         domain_names: list[str] | None = None,
         domain_kinds: list[str] | None = None,
         guids: list[str] | None = None,
-        **kwargs: object,
+        **kwargs: Unpack[ProjectHeaderOptions],
     ) -> RoleBindingList:
         """List role bindings.
 
@@ -2642,7 +2721,7 @@ class AsyncClient:
         return RoleBindingList(**result.json())
 
     async def get_role_binding(
-        self, binding_guid: str, **kwargs: object
+        self, binding_guid: str, **kwargs: Unpack[ProjectHeaderOptions]
     ) -> RoleBinding:
         """Get role binding.
 
@@ -2660,7 +2739,9 @@ class AsyncClient:
         return RoleBinding(**result.json())
 
     async def update_role_binding(
-        self, binding: BulkRoleBindingUpdate | dict, **kwargs: object
+        self,
+        binding: BulkRoleBindingUpdate | dict,
+        **kwargs: Unpack[ProjectHeaderOptions],
     ) -> RoleBinding | dict[str, Any]:
         """Update role binding.
 
@@ -2693,7 +2774,7 @@ class AsyncClient:
         label_selector: list[str] | None = None,
         name: str | None = None,
         regions: list[str] | None = None,
-        **kwargs: object,
+        **kwargs: Unpack[ProjectHeaderOptions],
     ) -> ServiceAccountList:
         """List service accounts.
 
@@ -2730,7 +2811,7 @@ class AsyncClient:
     async def get_service_account(
         self,
         name: str,
-        **kwargs: object,
+        **kwargs: Unpack[ProjectHeaderOptions],
     ) -> ServiceAccount:
         """Get service account.
 
@@ -2750,7 +2831,7 @@ class AsyncClient:
     async def create_service_account(
         self,
         service_account: ServiceAccount | dict,
-        **kwargs: object,
+        **kwargs: Unpack[ProjectHeaderOptions],
     ) -> ServiceAccount:
         """Create service account.
 
@@ -2774,7 +2855,7 @@ class AsyncClient:
         self,
         service_account: ServiceAccount | dict,
         name: str | None,
-        **kwargs: object,
+        **kwargs: Unpack[ProjectHeaderOptions],
     ) -> ServiceAccount:
         """Update service account.
 
@@ -2800,7 +2881,7 @@ class AsyncClient:
     async def delete_service_account(
         self,
         name: str,
-        **kwargs: object,
+        **kwargs: Unpack[ProjectHeaderOptions],
     ) -> None:
         """Delete service account.
 
@@ -2822,7 +2903,7 @@ class AsyncClient:
         name: str,
         cont: int = 0,  # noqa: ARG002
         limit: int = 50,  # noqa: ARG002
-        **kwargs: object,
+        **kwargs: Unpack[ProjectHeaderOptions],
     ) -> ServiceAccountTokenList:
         """List service account tokens.
 
@@ -2843,7 +2924,10 @@ class AsyncClient:
         return ServiceAccountTokenList(**result.json())
 
     async def create_service_account_token(
-        self, name: str, expiry_at: ServiceAccountToken | dict, **kwargs: object
+        self,
+        name: str,
+        expiry_at: ServiceAccountToken | dict,
+        **kwargs: Unpack[ProjectHeaderOptions],
     ) -> ServiceAccountTokenInfo:
         """Create service account token.
 
@@ -2871,7 +2955,7 @@ class AsyncClient:
         name: str,
         token_id: str,
         expiry_at: ServiceAccountToken | dict,
-        **kwargs: object,
+        **kwargs: Unpack[ProjectHeaderOptions],
     ) -> ServiceAccountTokenInfo:
         """Refresh service account token.
 
@@ -2896,7 +2980,7 @@ class AsyncClient:
         return ServiceAccountTokenInfo(**result.json())
 
     async def delete_service_account_token(
-        self, name: str, token_id: str, **kwargs: object
+        self, name: str, token_id: str, **kwargs: Unpack[ProjectHeaderOptions]
     ) -> None:
         """Delete service account token.
 
@@ -2922,7 +3006,7 @@ class AsyncClient:
         limit: int = 50,
         guids: list[str] | None = None,
         status: list[str] | None = None,
-        **kwargs: object,
+        **kwargs: Unpack[HeaderOptions],
     ) -> FileUploadList:
         """List all file uploads for a device.
 
@@ -2964,7 +3048,7 @@ class AsyncClient:
         self,
         device_guid: str,
         guid: str,
-        **kwargs: object,
+        **kwargs: Unpack[HeaderOptions],
     ) -> FileUpload:
         """Get a file upload by its GUID.
 
@@ -2989,7 +3073,7 @@ class AsyncClient:
         self,
         device_guid: str,
         body: FileUpload | dict[str, Any],
-        **kwargs: object,
+        **kwargs: Unpack[HeaderOptions],
     ) -> FileUpload:
         """Create a new file upload for a device.
 
@@ -3018,7 +3102,7 @@ class AsyncClient:
         self,
         device_guid: str,
         guid: str,
-        **kwargs: object,
+        **kwargs: Unpack[HeaderOptions],
     ) -> None:
         """Delete a file upload by its GUID.
 
@@ -3042,7 +3126,7 @@ class AsyncClient:
         self,
         device_guid: str,
         guid: str,
-        **kwargs: object,
+        **kwargs: Unpack[HeaderOptions],
     ) -> None:
         """Cancel a file upload.
 
@@ -3066,7 +3150,7 @@ class AsyncClient:
         self,
         device_guid: str,
         guid: str,
-        **kwargs: object,
+        **kwargs: Unpack[HeaderOptions],
     ) -> dict[str, Any]:
         """Get the download URL for a file upload.
 
@@ -3093,7 +3177,7 @@ class AsyncClient:
         fileupload_guid: str,
         cont: int = 0,
         limit: int = 50,
-        **kwargs: object,
+        **kwargs: Unpack[HeaderOptions],
     ) -> SharedURLList:
         """List all shared URLs for a file upload.
 
@@ -3122,7 +3206,7 @@ class AsyncClient:
     async def get_sharedurl(
         self,
         url_guid: str,
-        **kwargs: object,
+        **kwargs: Unpack[HeaderOptions],
     ) -> httpx.Response:
         """Get a shared URL and redirect to the signed download URL.
 
@@ -3147,7 +3231,7 @@ class AsyncClient:
         self,
         fileupload_guid: str,
         body: SharedURL | dict[str, Any],
-        **kwargs: object,
+        **kwargs: Unpack[HeaderOptions],
     ) -> SharedURL:
         """Create a shared URL for a file upload.
 
@@ -3179,7 +3263,7 @@ class AsyncClient:
     async def sign_ssh_public_key(
         self,
         body: SSHKeySignRequest | dict[str, Any],
-        **kwargs: object,
+        **kwargs: Unpack[HeaderOptions],
     ) -> SSHKeySignResponse:
         """Sign an SSH public key.
 

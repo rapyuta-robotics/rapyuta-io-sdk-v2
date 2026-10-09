@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING, Any
 
 import httpx
 import pytest
+from pydantic import ValidationError as PydanticValidationError
 
 from rapyuta_io_sdk_v2.exceptions import HttpNotFoundError, UnauthorizedAccessError
 from rapyuta_io_sdk_v2.models import Deployment, DeploymentList
@@ -319,3 +320,61 @@ def test_env_args_spec_plain_and_valuefrom_coexist() -> None:
     )
     assert arg.value == "fallback"
     assert arg.valueFrom.secret_key_ref.value == "injected"
+
+
+@pytest.mark.parametrize("field", ["uid", "gid", "perm"])
+@pytest.mark.parametrize("value", [0, 1])
+def test_cloud_deployment_rejects_device_volume_fields(
+    *, field: str, value: int
+) -> None:
+    payload = {
+        "metadata": {"name": "app"},
+        "spec": {"runtime": "cloud", "volumes": [{field: value}]},
+    }
+    with pytest.raises(PydanticValidationError, match="device-specific volume fields"):
+        Deployment.model_validate(payload)
+
+
+@pytest.mark.parametrize(
+    ("payload", "expected"),
+    [
+        (
+            {
+                "metadata": {
+                    "name": "app",
+                    "depends": {"nameOrGUID": "pkg", "version": "1"},
+                },
+                "spec": {
+                    "runtime": "cloud",
+                    "volumes": [{"depends": {"nameOrGUID": "disk"}}],
+                    "staticRoutes": [{"depends": {"nameOrGUID": "route"}}],
+                    "depends": [{"nameOrGUID": "prerequisite"}],
+                    "rosNetworks": [{"depends": {"nameOrGUID": "network"}}],
+                },
+            },
+            [
+                "package:pkg",
+                "disk:disk",
+                "staticroute:route",
+                "deployment:prerequisite",
+                "network:network",
+            ],
+        ),
+        (
+            {
+                "metadata": {"name": "app"},
+                "spec": {
+                    "runtime": "device",
+                    "device": {"depends": {"nameOrGUID": "robot"}},
+                    "volumes": [{"depends": {"nameOrGUID": "local-disk"}}],
+                },
+            },
+            ["device:robot"],
+        ),
+    ],
+)
+def test_deployment_list_dependencies_preserves_order(
+    *, payload: dict[str, Any], expected: list[str] | None
+) -> None:
+    resource = Deployment.model_validate(payload)
+    assert resource.list_dependencies() == expected

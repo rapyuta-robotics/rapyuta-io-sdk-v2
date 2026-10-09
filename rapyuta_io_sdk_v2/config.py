@@ -19,6 +19,7 @@ import json
 import os
 import pathlib
 from dataclasses import dataclass
+from typing import TypedDict, Unpack
 
 from rapyuta_io_sdk_v2.constants import (
     APP_NAME,
@@ -27,6 +28,13 @@ from rapyuta_io_sdk_v2.constants import (
 )
 from rapyuta_io_sdk_v2.exceptions import ValidationError
 from rapyuta_io_sdk_v2.utils import get_default_app_dir
+
+
+class RequestHeaderOptions(TypedDict, total=False):
+    """Optional checksum and content type values for request headers."""
+
+    x_checksum: str
+    content_type: str
 
 
 @dataclass
@@ -93,7 +101,7 @@ class Configuration:
         project_guid: str | None = None,
         with_group: bool = False,  # noqa: FBT001, FBT002
         group_guid: str | None = None,
-        **kwargs: str,
+        **kwargs: Unpack[RequestHeaderOptions],
     ) -> dict[str, str]:
         """Build authentication, resource context, and optional request headers.
 
@@ -134,7 +142,7 @@ class Configuration:
         return {"Authorization": token}
 
     @staticmethod
-    def _request_headers(options: dict[str, str]) -> dict[str, str]:
+    def _request_headers(options: RequestHeaderOptions) -> dict[str, str]:
         values = {
             "X-Request-ID": os.getenv("REQUEST_ID"),
             "X-Checksum": options.get("x_checksum"),
