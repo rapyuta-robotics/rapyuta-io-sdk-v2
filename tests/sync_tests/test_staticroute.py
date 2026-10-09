@@ -1,20 +1,37 @@
+# Copyright 2026 Rapyuta Robotics
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
 import httpx
 import pytest
-from pytest_mock import MockFixture
 
-# ruff: noqa: F811, F401
+from rapyuta_io_sdk_v2.exceptions import HttpAlreadyExistsError, HttpNotFoundError
 from rapyuta_io_sdk_v2.models import StaticRoute, StaticRouteList
-from tests.utils.fixtures import client
-from tests.data.mock_data import (
-    staticroutelist_model_mock as staticroutelist_model_mock,
-    staticroute_model_mock as staticroute_model_mock,
-    staticroute_body as staticroute_body,
-)
+
+if TYPE_CHECKING:
+    from pytest_mock import MockFixture
+
+    from rapyuta_io_sdk_v2 import Client
 
 
 def test_list_staticroutes_success(
-    client, staticroutelist_model_mock, mocker: MockFixture
-):
+    *, client: Client, staticroutelist_model_mock: dict[str, Any], mocker: MockFixture
+) -> None:
     # Mock the httpx.Client.get method
     mock_get = mocker.patch("httpx.Client.get")
 
@@ -37,7 +54,7 @@ def test_list_staticroutes_success(
     assert staticroute.kind == "StaticRoute"
 
 
-def test_list_staticroutes_not_found(client, mocker: MockFixture):
+def test_list_staticroutes_not_found(*, client: Client, mocker: MockFixture) -> None:
     # Mock the httpx.Client.get method
     mock_get = mocker.patch("httpx.Client.get")
 
@@ -47,15 +64,19 @@ def test_list_staticroutes_not_found(client, mocker: MockFixture):
         json={"error": "not found"},
     )
 
-    with pytest.raises(Exception) as exc:
+    with pytest.raises(HttpNotFoundError) as exc:
         client.list_staticroutes()
 
     assert str(exc.value) == "not found"
 
 
 def test_create_staticroute_success(
-    client, staticroute_body, staticroute_model_mock, mocker: MockFixture
-):
+    *,
+    client: Client,
+    staticroute_body: dict[str, Any],
+    staticroute_model_mock: dict[str, Any],
+    mocker: MockFixture,
+) -> None:
     # Mock the httpx.Client.post method
     mock_post = mocker.patch("httpx.Client.post")
 
@@ -74,7 +95,9 @@ def test_create_staticroute_success(
     assert response.metadata.name == "test-staticroute"
 
 
-def test_create_staticroute_bad_request(client, staticroute_body, mocker: MockFixture):
+def test_create_staticroute_bad_request(
+    *, client: Client, staticroute_body: dict[str, Any], mocker: MockFixture
+) -> None:
     # Mock the httpx.Client.post method
     mock_post = mocker.patch("httpx.Client.post")
 
@@ -84,13 +107,15 @@ def test_create_staticroute_bad_request(client, staticroute_body, mocker: MockFi
         json={"error": "already exists"},
     )
 
-    with pytest.raises(Exception) as exc:
+    with pytest.raises(HttpAlreadyExistsError) as exc:
         client.create_staticroute(body=staticroute_body)
 
     assert str(exc.value) == "already exists"
 
 
-def test_get_staticroute_success(client, staticroute_model_mock, mocker: MockFixture):
+def test_get_staticroute_success(
+    *, client: Client, staticroute_model_mock: dict[str, Any], mocker: MockFixture
+) -> None:
     # Mock the httpx.Client.get method
     mock_get = mocker.patch("httpx.Client.get")
 
@@ -110,8 +135,12 @@ def test_get_staticroute_success(client, staticroute_model_mock, mocker: MockFix
 
 
 def test_update_staticroute_success(
-    client, staticroute_body, staticroute_model_mock, mocker: MockFixture
-):
+    *,
+    client: Client,
+    staticroute_body: dict[str, Any],
+    staticroute_model_mock: dict[str, Any],
+    mocker: MockFixture,
+) -> None:
     # Mock the httpx.Client.put method
     mock_put = mocker.patch("httpx.Client.put")
 
@@ -132,7 +161,7 @@ def test_update_staticroute_success(
     assert response.metadata.name == "test-staticroute"
 
 
-def test_delete_staticroute_success(client, mocker: MockFixture):
+def test_delete_staticroute_success(*, client: Client, mocker: MockFixture) -> None:
     # Mock the httpx.Client.delete method
     mock_delete = mocker.patch("httpx.Client.delete")
 

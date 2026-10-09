@@ -1,25 +1,38 @@
+# Copyright 2026 Rapyuta Robotics
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
 import httpx
 import pytest
-from pydantic import ValidationError
-from pytest_mock import MockFixture
 
-# ruff: noqa: F811, F401
-from rapyuta_io_sdk_v2.models import DeploymentList, Deployment
+from rapyuta_io_sdk_v2.exceptions import HttpNotFoundError, UnauthorizedAccessError
+from rapyuta_io_sdk_v2.models import Deployment, DeploymentList
 from rapyuta_io_sdk_v2.models.deployment import EnvArgsSpec
-from tests.utils.fixtures import client
-from tests.data import (
-    deployment_body,
-    deploymentlist_model_mock,
-    cloud_deployment_model_mock,
-    device_deployment_model_mock,
-    cloud_deployment_with_service_account_body,
-    cloud_deployment_with_service_account_mock,
-    cloud_deployment_with_valuefrom_body,
-    cloud_deployment_with_valuefrom_mock,
-)
+
+if TYPE_CHECKING:
+    from pytest_mock import MockFixture
+
+    from rapyuta_io_sdk_v2 import Client
 
 
-def test_list_deployments_success(client, deploymentlist_model_mock, mocker: MockFixture):
+def test_list_deployments_success(
+    *, client: Client, deploymentlist_model_mock: dict[str, Any], mocker: MockFixture
+) -> None:
     mock_get = mocker.patch("httpx.Client.get")
     # Use the DeploymentList pydantic model mock and dump as JSON
     mock_get.return_value = httpx.Response(
@@ -30,8 +43,10 @@ def test_list_deployments_success(client, deploymentlist_model_mock, mocker: Moc
     response = client.list_deployments()
 
     assert isinstance(response, DeploymentList)
-    assert response.metadata.continue_ == 123
-    assert len(response.items) == 2
+    assert (
+        response.metadata.continue_ == deploymentlist_model_mock["metadata"]["continue"]
+    )
+    assert len(response.items) == len(deploymentlist_model_mock["items"])
     cloud_dep = response.items[0]
     device_dep = response.items[1]
     assert cloud_dep.spec.runtime == "cloud"
@@ -40,7 +55,7 @@ def test_list_deployments_success(client, deploymentlist_model_mock, mocker: Moc
     assert device_dep.metadata.guid == "dep-device-001"
 
 
-def test_list_deployments_not_found(client, mocker: MockFixture):
+def test_list_deployments_not_found(*, client: Client, mocker: MockFixture) -> None:
     # Mock the httpx.Client.get method
     mock_get = mocker.patch("httpx.Client.get")
 
@@ -50,15 +65,15 @@ def test_list_deployments_not_found(client, mocker: MockFixture):
         json={"error": "not found"},
     )
 
-    with pytest.raises(Exception) as exc:
+    with pytest.raises(HttpNotFoundError) as exc:
         client.list_deployments()
 
     assert str(exc.value) == "not found"
 
 
 def test_get_cloud_deployment_success(
-    client, cloud_deployment_model_mock, mocker: MockFixture
-):
+    *, client: Client, cloud_deployment_model_mock: dict[str, Any], mocker: MockFixture
+) -> None:
     mock_get = mocker.patch("httpx.Client.get")
     mock_get.return_value = httpx.Response(
         status_code=200,
@@ -75,8 +90,8 @@ def test_get_cloud_deployment_success(
 
 
 def test_get_device_deployment_success(
-    client, device_deployment_model_mock, mocker: MockFixture
-):
+    *, client: Client, device_deployment_model_mock: dict[str, Any], mocker: MockFixture
+) -> None:
     mock_get = mocker.patch("httpx.Client.get")
     mock_get.return_value = httpx.Response(
         status_code=200,
@@ -92,7 +107,7 @@ def test_get_device_deployment_success(
     )
 
 
-def test_get_deployment_not_found(client, mocker: MockFixture):
+def test_get_deployment_not_found(*, client: Client, mocker: MockFixture) -> None:
     # Mock the httpx.Client.get method
     mock_get = mocker.patch("httpx.Client.get")
 
@@ -103,13 +118,15 @@ def test_get_deployment_not_found(client, mocker: MockFixture):
     )
 
     # Call the get_deployment method
-    with pytest.raises(Exception) as exc:
+    with pytest.raises(HttpNotFoundError) as exc:
         client.get_deployment(name="mock_deployment_name")
 
     assert str(exc.value) == "deployment not found"
 
 
-def test_create_deployment_unauthorized(client, deployment_body, mocker: MockFixture):
+def test_create_deployment_unauthorized(
+    *, client: Client, deployment_body: dict[str, Any], mocker: MockFixture
+) -> None:
     mock_post = mocker.patch("httpx.Client.post")
 
     mock_post.return_value = httpx.Response(
@@ -117,15 +134,19 @@ def test_create_deployment_unauthorized(client, deployment_body, mocker: MockFix
         json={"error": "unauthorized"},
     )
 
-    with pytest.raises(Exception) as exc:
+    with pytest.raises(UnauthorizedAccessError) as exc:
         client.create_deployment(body=deployment_body)
 
     assert str(exc.value) == "unauthorized"
 
 
 def test_create_deployment_success(
-    client, deployment_body, device_deployment_model_mock, mocker: MockFixture
-):
+    *,
+    client: Client,
+    deployment_body: dict[str, Any],
+    device_deployment_model_mock: dict[str, Any],
+    mocker: MockFixture,
+) -> None:
     mock_post = mocker.patch("httpx.Client.post")
 
     mock_post.return_value = httpx.Response(
@@ -141,8 +162,12 @@ def test_create_deployment_success(
 
 
 def test_update_deployment_success(
-    client, deployment_body, device_deployment_model_mock, mocker: MockFixture
-):
+    *,
+    client: Client,
+    deployment_body: dict[str, Any],
+    device_deployment_model_mock: dict[str, Any],
+    mocker: MockFixture,
+) -> None:
     mock_put = mocker.patch("httpx.Client.patch")
 
     mock_put.return_value = httpx.Response(
@@ -156,7 +181,7 @@ def test_update_deployment_success(
     assert response.metadata.guid == "dep-device-001"
 
 
-def test_delete_deployment_success(client, mocker: MockFixture):
+def test_delete_deployment_success(*, client: Client, mocker: MockFixture) -> None:
     mock_delete = mocker.patch("httpx.Client.delete")
 
     mock_delete.return_value = httpx.Response(status_code=204, json={"success": True})
@@ -167,11 +192,12 @@ def test_delete_deployment_success(client, mocker: MockFixture):
 
 
 def test_create_deployment_with_service_account(
-    client,
-    cloud_deployment_with_service_account_body,
-    cloud_deployment_with_service_account_mock,
+    *,
+    client: Client,
+    cloud_deployment_with_service_account_body: dict[str, Any],
+    cloud_deployment_with_service_account_mock: dict[str, Any],
     mocker: MockFixture,
-):
+) -> None:
     mock_post = mocker.patch("httpx.Client.post")
     mock_post.return_value = httpx.Response(
         status_code=200,
@@ -190,8 +216,11 @@ def test_create_deployment_with_service_account(
 
 
 def test_get_deployment_with_valuefrom_success(
-    client, cloud_deployment_with_valuefrom_mock, mocker: MockFixture
-):
+    *,
+    client: Client,
+    cloud_deployment_with_valuefrom_mock: dict[str, Any],
+    mocker: MockFixture,
+) -> None:
     """GET a deployment whose envArgs contain valueFrom.secretKeyRef entries."""
     mock_get = mocker.patch("httpx.Client.get")
     mock_get.return_value = httpx.Response(
@@ -228,11 +257,12 @@ def test_get_deployment_with_valuefrom_success(
 
 
 def test_create_deployment_with_valuefrom_success(
-    client,
-    cloud_deployment_with_valuefrom_body,
-    cloud_deployment_with_valuefrom_mock,
+    *,
+    client: Client,
+    cloud_deployment_with_valuefrom_body: dict[str, Any],
+    cloud_deployment_with_valuefrom_mock: dict[str, Any],
     mocker: MockFixture,
-):
+) -> None:
     """POST a deployment with valueFrom envArgs and verify the response is parsed."""
     mock_post = mocker.patch("httpx.Client.post")
     mock_post.return_value = httpx.Response(
@@ -251,7 +281,7 @@ def test_create_deployment_with_valuefrom_success(
 # ── New: EnvArgsSpec model validation ────────────────────────────────────────
 
 
-def test_env_args_spec_valuefrom_model_validation():
+def test_env_args_spec_valuefrom_model_validation() -> None:
     """EnvArgsSpec correctly parses a valueFrom.secretKeyRef payload."""
     arg = EnvArgsSpec.model_validate(
         {
@@ -272,8 +302,8 @@ def test_env_args_spec_valuefrom_model_validation():
     assert arg.valueFrom.secret_key_ref.value is None
 
 
-def test_env_args_spec_plain_and_valuefrom_coexist():
-    """EnvArgsSpec with both value and valueFrom can be parsed (server may allow both)."""
+def test_env_args_spec_plain_and_valuefrom_coexist() -> None:
+    """Allow literal values and secret references on the same environment argument."""
     arg = EnvArgsSpec.model_validate(
         {
             "name": "OVERRIDE_ARG",
@@ -289,5 +319,3 @@ def test_env_args_spec_plain_and_valuefrom_coexist():
     )
     assert arg.value == "fallback"
     assert arg.valueFrom.secret_key_ref.value == "injected"
-
-

@@ -1,14 +1,37 @@
+# Copyright 2026 Rapyuta Robotics
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
 import httpx
 import pytest
-from pytest_mock import MockFixture
 
-# ruff: noqa: F811, F401
+from rapyuta_io_sdk_v2.exceptions import HttpNotFoundError
 from rapyuta_io_sdk_v2.models import Disk, DiskList
-from tests.data.mock_data import disk_body, disk_model_mock, disklist_model_mock
-from tests.utils.fixtures import client
+
+if TYPE_CHECKING:
+    from pytest_mock import MockFixture
+
+    from rapyuta_io_sdk_v2 import Client
 
 
-def test_list_disks_success(client, disklist_model_mock, mocker: MockFixture):
+def test_list_disks_success(
+    *, client: Client, disklist_model_mock: dict[str, Any], mocker: MockFixture
+) -> None:
     # Mock the httpx.Client.get method
     mock_get = mocker.patch("httpx.Client.get")
 
@@ -31,7 +54,7 @@ def test_list_disks_success(client, disklist_model_mock, mocker: MockFixture):
     assert disk.kind == "Disk"
 
 
-def test_list_disks_not_found(client, mocker: MockFixture):
+def test_list_disks_not_found(*, client: Client, mocker: MockFixture) -> None:
     # Mock the httpx.Client.get method
     mock_get = mocker.patch("httpx.Client.get")
 
@@ -41,13 +64,15 @@ def test_list_disks_not_found(client, mocker: MockFixture):
         json={"error": "not found"},
     )
 
-    with pytest.raises(Exception) as exc:
+    with pytest.raises(HttpNotFoundError) as exc:
         client.list_disks()
 
     assert str(exc.value) == "not found"
 
 
-def test_get_disk_success(client, disk_model_mock, mocker: MockFixture):
+def test_get_disk_success(
+    *, client: Client, disk_model_mock: dict[str, Any], mocker: MockFixture
+) -> None:
     # Mock the httpx.Client.get method
     mock_get = mocker.patch("httpx.Client.get")
 
@@ -66,7 +91,7 @@ def test_get_disk_success(client, disk_model_mock, mocker: MockFixture):
     assert response.metadata.name == "mock_disk_1"
 
 
-def test_get_disk_not_found(client, mocker: MockFixture):
+def test_get_disk_not_found(*, client: Client, mocker: MockFixture) -> None:
     # Mock the httpx.Client.get method
     mock_get = mocker.patch("httpx.Client.get")
 
@@ -77,13 +102,19 @@ def test_get_disk_not_found(client, mocker: MockFixture):
     )
 
     # Call the get_disk method
-    with pytest.raises(Exception) as exc:
+    with pytest.raises(HttpNotFoundError) as exc:
         client.get_disk(name="mock_disk_name")
 
     assert str(exc.value) == "disk not found"
 
 
-def test_create_disk_success(client, disk_body, disk_model_mock, mocker: MockFixture):
+def test_create_disk_success(
+    *,
+    client: Client,
+    disk_body: dict[str, Any],
+    disk_model_mock: dict[str, Any],
+    mocker: MockFixture,
+) -> None:
     mock_post = mocker.patch("httpx.Client.post")
 
     mock_post.return_value = httpx.Response(
@@ -98,7 +129,7 @@ def test_create_disk_success(client, disk_body, disk_model_mock, mocker: MockFix
     assert response.metadata.name == "mock_disk_1"
 
 
-def test_delete_disk_success(client, mocker: MockFixture):
+def test_delete_disk_success(*, client: Client, mocker: MockFixture) -> None:
     # Mock the httpx.Client.delete method
     mock_delete = mocker.patch("httpx.Client.delete")
 
@@ -115,7 +146,7 @@ def test_delete_disk_success(client, mocker: MockFixture):
     assert response is None
 
 
-def test_delete_disk_not_found(client, mocker: MockFixture):
+def test_delete_disk_not_found(*, client: Client, mocker: MockFixture) -> None:
     # Mock the httpx.Client.delete method
     mock_delete = mocker.patch("httpx.Client.delete")
 
@@ -126,7 +157,7 @@ def test_delete_disk_not_found(client, mocker: MockFixture):
     )
 
     # Call the delete_disk method
-    with pytest.raises(Exception) as exc:
+    with pytest.raises(HttpNotFoundError) as exc:
         client.delete_disk(name="mock_disk_name")
 
     assert str(exc.value) == "disk not found"

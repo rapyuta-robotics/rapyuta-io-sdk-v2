@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
 # Copyright 2025 Rapyuta Robotics
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -11,23 +15,21 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 import httpx
 import pytest
-from pytest_mock import MockFixture
 
-# ruff: noqa: F811, F401
-from rapyuta_io_sdk_v2.models import FileUpload, FileUploadList, SharedURL, SharedURLList
-from tests.utils.fixtures import async_client
-from tests.data import (
-    fileupload_body,
-    fileupload_model_mock,
-    fileuploadlist_model_mock,
-    sharedurl_body,
-    sharedurl_model_mock,
-    sharedurllist_model_mock,
+from rapyuta_io_sdk_v2.exceptions import HttpNotFoundError, UnauthorizedAccessError
+from rapyuta_io_sdk_v2.models import (
+    FileUpload,
+    FileUploadList,
+    SharedURL,
+    SharedURLList,
 )
 
+if TYPE_CHECKING:
+    from pytest_mock import MockFixture
+
+    from rapyuta_io_sdk_v2 import AsyncClient
 
 MOCK_DEVICE_GUID = "device-mockdevice12345678910"
 MOCK_FILEUPLOAD_GUID = "fileupload-mockupload12345678"
@@ -36,8 +38,11 @@ MOCK_SHAREDURL_GUID = "sharedurl-mocksharedurl123456"
 
 @pytest.mark.asyncio
 async def test_list_fileuploads_success(
-    async_client, fileuploadlist_model_mock, mocker: MockFixture
-):
+    *,
+    async_client: AsyncClient,
+    fileuploadlist_model_mock: dict[str, Any],
+    mocker: MockFixture,
+) -> None:
     mock_get = mocker.patch("httpx.AsyncClient.get")
     mock_get.return_value = httpx.Response(
         status_code=200,
@@ -53,8 +58,11 @@ async def test_list_fileuploads_success(
 
 @pytest.mark.asyncio
 async def test_get_fileupload_success(
-    async_client, fileupload_model_mock, mocker: MockFixture
-):
+    *,
+    async_client: AsyncClient,
+    fileupload_model_mock: dict[str, Any],
+    mocker: MockFixture,
+) -> None:
     mock_get = mocker.patch("httpx.AsyncClient.get")
     mock_get.return_value = httpx.Response(
         status_code=200,
@@ -70,14 +78,16 @@ async def test_get_fileupload_success(
 
 
 @pytest.mark.asyncio
-async def test_get_fileupload_not_found(async_client, mocker: MockFixture):
+async def test_get_fileupload_not_found(
+    *, async_client: AsyncClient, mocker: MockFixture
+) -> None:
     mock_get = mocker.patch("httpx.AsyncClient.get")
     mock_get.return_value = httpx.Response(
         status_code=404,
         json={"error": "fileupload not found"},
     )
 
-    with pytest.raises(Exception) as exc:
+    with pytest.raises(HttpNotFoundError) as exc:
         await async_client.get_fileupload(
             device_guid=MOCK_DEVICE_GUID,
             guid=MOCK_FILEUPLOAD_GUID,
@@ -88,8 +98,12 @@ async def test_get_fileupload_not_found(async_client, mocker: MockFixture):
 
 @pytest.mark.asyncio
 async def test_create_fileupload_success(
-    async_client, fileupload_body, fileupload_model_mock, mocker: MockFixture
-):
+    *,
+    async_client: AsyncClient,
+    fileupload_body: dict[str, Any],
+    fileupload_model_mock: dict[str, Any],
+    mocker: MockFixture,
+) -> None:
     mock_post = mocker.patch("httpx.AsyncClient.post")
     mock_post.return_value = httpx.Response(
         status_code=201,
@@ -107,15 +121,15 @@ async def test_create_fileupload_success(
 
 @pytest.mark.asyncio
 async def test_create_fileupload_unauthorized(
-    async_client, fileupload_body, mocker: MockFixture
-):
+    *, async_client: AsyncClient, fileupload_body: dict[str, Any], mocker: MockFixture
+) -> None:
     mock_post = mocker.patch("httpx.AsyncClient.post")
     mock_post.return_value = httpx.Response(
         status_code=401,
         json={"error": "unauthorized"},
     )
 
-    with pytest.raises(Exception) as exc:
+    with pytest.raises(UnauthorizedAccessError) as exc:
         await async_client.create_fileupload(
             device_guid=MOCK_DEVICE_GUID,
             body=fileupload_body,
@@ -125,7 +139,9 @@ async def test_create_fileupload_unauthorized(
 
 
 @pytest.mark.asyncio
-async def test_delete_fileupload_success(async_client, mocker: MockFixture):
+async def test_delete_fileupload_success(
+    *, async_client: AsyncClient, mocker: MockFixture
+) -> None:
     mock_delete = mocker.patch("httpx.AsyncClient.delete")
     mock_delete.return_value = httpx.Response(status_code=204, json={"success": True})
 
@@ -138,7 +154,9 @@ async def test_delete_fileupload_success(async_client, mocker: MockFixture):
 
 
 @pytest.mark.asyncio
-async def test_cancel_fileupload_success(async_client, mocker: MockFixture):
+async def test_cancel_fileupload_success(
+    *, async_client: AsyncClient, mocker: MockFixture
+) -> None:
     mock_post = mocker.patch("httpx.AsyncClient.post")
 
     mock_post.return_value = httpx.Response(
@@ -154,7 +172,9 @@ async def test_cancel_fileupload_success(async_client, mocker: MockFixture):
 
 
 @pytest.mark.asyncio
-async def test_download_fileupload_success(async_client, mocker: MockFixture):
+async def test_download_fileupload_success(
+    *, async_client: AsyncClient, mocker: MockFixture
+) -> None:
     mock_get = mocker.patch("httpx.AsyncClient.get")
 
     mock_get.return_value = httpx.Response(
@@ -173,8 +193,11 @@ async def test_download_fileupload_success(async_client, mocker: MockFixture):
 # SharedURL Async Tests
 @pytest.mark.asyncio
 async def test_list_sharedurls_success(
-    async_client, sharedurllist_model_mock, mocker: MockFixture
-):
+    *,
+    async_client: AsyncClient,
+    sharedurllist_model_mock: dict[str, Any],
+    mocker: MockFixture,
+) -> None:
     mock_get = mocker.patch("httpx.AsyncClient.get")
     mock_get.return_value = httpx.Response(
         status_code=200,
@@ -190,8 +213,12 @@ async def test_list_sharedurls_success(
 
 @pytest.mark.asyncio
 async def test_create_sharedurl_success(
-    async_client, sharedurl_body, sharedurl_model_mock, mocker: MockFixture
-):
+    *,
+    async_client: AsyncClient,
+    sharedurl_body: dict[str, Any],
+    sharedurl_model_mock: dict[str, Any],
+    mocker: MockFixture,
+) -> None:
     mock_post = mocker.patch("httpx.AsyncClient.post")
     mock_post.return_value = httpx.Response(
         status_code=201,
@@ -208,7 +235,9 @@ async def test_create_sharedurl_success(
 
 
 @pytest.mark.asyncio
-async def test_get_sharedurl_redirect(async_client, mocker: MockFixture):
+async def test_get_sharedurl_redirect(
+    *, async_client: AsyncClient, mocker: MockFixture
+) -> None:
     mock_get = mocker.patch("httpx.AsyncClient.get")
 
     mock_get.return_value = httpx.Response(
@@ -218,14 +247,17 @@ async def test_get_sharedurl_redirect(async_client, mocker: MockFixture):
 
     response = await async_client.get_sharedurl(url_guid=MOCK_SHAREDURL_GUID)
 
-    assert response.status_code == 302
+    assert response.status_code == httpx.codes.FOUND
     assert "Location" in response.headers
 
 
 @pytest.mark.asyncio
 async def test_list_fileuploads_with_filters(
-    async_client, fileuploadlist_model_mock, mocker: MockFixture
-):
+    *,
+    async_client: AsyncClient,
+    fileuploadlist_model_mock: dict[str, Any],
+    mocker: MockFixture,
+) -> None:
     """Test list_fileuploads with status and guids filters."""
     mock_get = mocker.patch("httpx.AsyncClient.get")
 
@@ -248,8 +280,11 @@ async def test_list_fileuploads_with_filters(
 
 @pytest.mark.asyncio
 async def test_create_fileupload_with_dict(
-    async_client, fileupload_model_mock, mocker: MockFixture
-):
+    *,
+    async_client: AsyncClient,
+    fileupload_model_mock: dict[str, Any],
+    mocker: MockFixture,
+) -> None:
     """Test create_fileupload with dict input instead of model."""
     mock_post = mocker.patch("httpx.AsyncClient.post")
 
@@ -277,8 +312,11 @@ async def test_create_fileupload_with_dict(
 
 @pytest.mark.asyncio
 async def test_create_sharedurl_with_dict(
-    async_client, sharedurl_model_mock, mocker: MockFixture
-):
+    *,
+    async_client: AsyncClient,
+    sharedurl_model_mock: dict[str, Any],
+    mocker: MockFixture,
+) -> None:
     """Test create_sharedurl with dict input instead of model."""
     mock_post = mocker.patch("httpx.AsyncClient.post")
 
@@ -305,7 +343,9 @@ async def test_create_sharedurl_with_dict(
 
 
 @pytest.mark.asyncio
-async def test_delete_fileupload_not_found(async_client, mocker: MockFixture):
+async def test_delete_fileupload_not_found(
+    *, async_client: AsyncClient, mocker: MockFixture
+) -> None:
     """Test delete_fileupload when not found."""
     mock_delete = mocker.patch("httpx.AsyncClient.delete")
 
@@ -314,7 +354,7 @@ async def test_delete_fileupload_not_found(async_client, mocker: MockFixture):
         json={"error": "fileupload not found"},
     )
 
-    with pytest.raises(Exception) as exc:
+    with pytest.raises(HttpNotFoundError) as exc:
         await async_client.delete_fileupload(
             device_guid=MOCK_DEVICE_GUID,
             guid=MOCK_FILEUPLOAD_GUID,
@@ -324,7 +364,9 @@ async def test_delete_fileupload_not_found(async_client, mocker: MockFixture):
 
 
 @pytest.mark.asyncio
-async def test_cancel_fileupload_not_found(async_client, mocker: MockFixture):
+async def test_cancel_fileupload_not_found(
+    *, async_client: AsyncClient, mocker: MockFixture
+) -> None:
     """Test cancel_fileupload when not found."""
     mock_post = mocker.patch("httpx.AsyncClient.post")
 
@@ -333,7 +375,7 @@ async def test_cancel_fileupload_not_found(async_client, mocker: MockFixture):
         json={"error": "fileupload not found"},
     )
 
-    with pytest.raises(Exception) as exc:
+    with pytest.raises(HttpNotFoundError) as exc:
         await async_client.cancel_fileupload(
             device_guid=MOCK_DEVICE_GUID,
             guid=MOCK_FILEUPLOAD_GUID,
@@ -344,9 +386,14 @@ async def test_cancel_fileupload_not_found(async_client, mocker: MockFixture):
 
 @pytest.mark.asyncio
 async def test_list_sharedurls_with_pagination(
-    async_client, sharedurllist_model_mock, mocker: MockFixture
-):
+    *,
+    async_client: AsyncClient,
+    sharedurllist_model_mock: dict[str, Any],
+    mocker: MockFixture,
+) -> None:
     """Test list_sharedurls with pagination parameters."""
+    requested_cont = 10
+    requested_limit = 25
     mock_get = mocker.patch("httpx.AsyncClient.get")
 
     mock_get.return_value = httpx.Response(
@@ -356,18 +403,20 @@ async def test_list_sharedurls_with_pagination(
 
     response = await async_client.list_sharedurls(
         fileupload_guid=MOCK_FILEUPLOAD_GUID,
-        cont=10,
-        limit=25,
+        cont=requested_cont,
+        limit=requested_limit,
     )
 
     assert isinstance(response, SharedURLList)
     call_kwargs = mock_get.call_args
-    assert call_kwargs.kwargs["params"]["continue"] == 10
-    assert call_kwargs.kwargs["params"]["limit"] == 25
+    assert call_kwargs.kwargs["params"]["continue"] == requested_cont
+    assert call_kwargs.kwargs["params"]["limit"] == requested_limit
 
 
 @pytest.mark.asyncio
-async def test_list_sharedurls_not_found(async_client, mocker: MockFixture):
+async def test_list_sharedurls_not_found(
+    *, async_client: AsyncClient, mocker: MockFixture
+) -> None:
     """Test list_sharedurls when fileupload not found."""
     mock_get = mocker.patch("httpx.AsyncClient.get")
 
@@ -376,7 +425,7 @@ async def test_list_sharedurls_not_found(async_client, mocker: MockFixture):
         json={"error": "fileupload not found"},
     )
 
-    with pytest.raises(Exception) as exc:
+    with pytest.raises(HttpNotFoundError) as exc:
         await async_client.list_sharedurls(fileupload_guid=MOCK_FILEUPLOAD_GUID)
 
     assert str(exc.value) == "fileupload not found"

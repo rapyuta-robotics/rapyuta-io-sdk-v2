@@ -1,17 +1,41 @@
-from asyncmock import AsyncMock
+# Copyright 2026 Rapyuta Robotics
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
 import httpx
 import pytest
 
-# ruff: noqa: F811, F401
+from rapyuta_io_sdk_v2.exceptions import UnauthorizedAccessError
 from rapyuta_io_sdk_v2.models.organization import Organization
-from tests.data.mock_data import mock_response_organization, organization_body
-from tests.utils.fixtures import async_client as client
+
+if TYPE_CHECKING:
+    from pytest_mock import MockFixture
+
+    from rapyuta_io_sdk_v2 import AsyncClient
 
 
 @pytest.mark.asyncio
 async def test_get_organization_success(
-    client, mock_response_organization, mocker: AsyncMock
-):
+    *,
+    async_client: AsyncClient,
+    mock_response_organization: dict[str, Any],
+    mocker: MockFixture,
+) -> None:
     mock_get = mocker.patch("httpx.AsyncClient.get")
 
     # Use mock_response_organization fixture for GET response
@@ -20,13 +44,15 @@ async def test_get_organization_success(
         json=mock_response_organization,
     )
 
-    response = await client.get_organization()
+    response = await async_client.get_organization()
 
     # Validate that response is an Organization model object
     assert isinstance(response, Organization)
     assert response.metadata.name == "test-org"
     assert response.metadata.guid == "org-testorg123456789abcdef"
-    assert len(response.spec.members) == 4
+    assert len(response.spec.members) == len(
+        mock_response_organization["spec"]["members"]
+    )
     # Check first member (ServiceAccount)
     assert response.spec.members[0].subject.kind == "ServiceAccount"
     assert response.spec.members[0].subject.name == "test-project-builtin-paramsync-sa"
@@ -42,7 +68,9 @@ async def test_get_organization_success(
 
 
 @pytest.mark.asyncio
-async def test_get_organization_unauthorized(client, mocker: AsyncMock):
+async def test_get_organization_unauthorized(
+    *, async_client: AsyncClient, mocker: MockFixture
+) -> None:
     mock_get = mocker.patch("httpx.AsyncClient.get")
 
     mock_get.return_value = httpx.Response(
@@ -50,19 +78,20 @@ async def test_get_organization_unauthorized(client, mocker: AsyncMock):
         json={"error": "user is not part of organization"},
     )
 
-    with pytest.raises(Exception) as exc:
-        await client.get_organization()
+    with pytest.raises(UnauthorizedAccessError) as exc:
+        await async_client.get_organization()
 
     assert str(exc.value) == "user is not part of organization"
 
 
 @pytest.mark.asyncio
 async def test_update_organization_success(
-    client,
-    mock_response_organization,
-    organization_body,
-    mocker: AsyncMock,
-):
+    *,
+    async_client: AsyncClient,
+    mock_response_organization: dict[str, Any],
+    organization_body: dict[str, Any],
+    mocker: MockFixture,
+) -> None:
     mock_put = mocker.patch("httpx.AsyncClient.put")
 
     mock_put.return_value = httpx.Response(
@@ -70,7 +99,7 @@ async def test_update_organization_success(
         json=mock_response_organization,
     )
 
-    response = await client.update_organization(
+    response = await async_client.update_organization(
         organization_guid="org-testorg123456789abcdef",
         body=organization_body,
     )
@@ -79,7 +108,9 @@ async def test_update_organization_success(
     assert isinstance(response, Organization)
     assert response.metadata.name == "test-org"
     assert response.metadata.guid == "org-testorg123456789abcdef"
-    assert len(response.spec.members) == 4
+    assert len(response.spec.members) == len(
+        mock_response_organization["spec"]["members"]
+    )
     # Verify admin member
     assert response.spec.members[1].roleNames == ["rio-org_admin", "rio-org_member"]
     # Verify regular member

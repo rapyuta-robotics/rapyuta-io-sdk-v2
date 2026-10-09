@@ -11,10 +11,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Authentication, request headers, and environment endpoint configuration."""
+
 from __future__ import annotations
 
 import json
 import os
+import pathlib
 from dataclasses import dataclass
 
 from rapyuta_io_sdk_v2.constants import (
@@ -30,18 +33,19 @@ from rapyuta_io_sdk_v2.utils import get_default_app_dir
 class Configuration:
     """Configuration class for the SDK."""
 
-    email: str = None
-    password: str = None
-    auth_token: str = None
-    project_guid: str = None
-    organization_guid: str = None
+    email: str | None = None
+    password: str | None = None
+    auth_token: str | None = None
+    project_guid: str | None = None
+    organization_guid: str | None = None
     environment: str = "ga"  # Default environment is prod
-    v2_api_host: str = None
-    rip_host: str = None
+    v2_api_host: str | None = None
+    rip_host: str | None = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         # Normalize empty or whitespace-only host strings to None so that they
         # are treated the same as "not provided".
+        """Normalize host overrides and resolve environment endpoints."""
         if isinstance(self.v2_api_host, str):
             self.v2_api_host = self.v2_api_host.strip() or None
         if isinstance(self.rip_host, str):
@@ -52,10 +56,11 @@ class Configuration:
 
     @classmethod
     def from_env(cls) -> Configuration:
+        """Reserve environment loading for a future implementation."""
         raise NotImplementedError
 
     @classmethod
-    def from_file(cls, file_path: str = None) -> Configuration:
+    def from_file(cls, file_path: str | None = None) -> Configuration:
         """Create a configuration object from a file.
 
         Args:
@@ -66,9 +71,9 @@ class Configuration:
         """
         if file_path is None:
             default_dir = get_default_app_dir(APP_NAME)
-            file_path = os.path.join(default_dir, "config.json")
+            file_path = str(pathlib.Path(default_dir) / "config.json")
 
-        with open(file_path) as file:
+        with pathlib.Path(file_path).open() as file:
             data = json.load(file)
             return cls(
                 email=data.get("email_id"),
@@ -79,60 +84,63 @@ class Configuration:
                 auth_token=data.get("auth_token"),
             )
 
-    def get_headers(
+    # Preserve the positional signature used by existing SDK callers.
+    def get_headers(  # noqa: PLR0913, PLR0917
         self,
-        with_organization: bool = True,
+        with_organization: bool = True,  # noqa: FBT001, FBT002
         organization_guid: str | None = None,
-        with_project: bool = True,
+        with_project: bool = True,  # noqa: FBT001, FBT002
         project_guid: str | None = None,
-        with_group: bool = False,
+        with_group: bool = False,  # noqa: FBT001, FBT002
         group_guid: str | None = None,
-        **kwargs,
+        **kwargs: str,
     ) -> dict[str, str]:
-        """Get the headers for the configuration.
+        """Build authentication, resource context, and optional request headers.
 
         Args:
-            with_organization (bool): Whether to include the organization headers. Defaults to True.
-            organization_guid (str, optional): The organization guid. Defaults to None.
-            with_project (bool): Whether to include the project headers. Defaults to True.
-            project_guid (str, optional): The project guid. Defaults to None.
-            with_group (bool): Whether to include the group headers. Defaults to False.
-            group_guid (str, optional): The group guid. Defaults to None.
-            **kwargs: Additional keyword arguments (e.g., x_checksum, content_type).
-
-        Returns:
-            dict: Headers for the configuration, including Authorization, organizationguid,
-                  project, groupguid, and other custom headers.
+            with_organization: Include the organization context when available.
+            organization_guid: Override the configured organization GUID.
+            with_project: Include the project context when available.
+            project_guid: Override the configured project GUID.
+            with_group: Include the supplied group context.
+            group_guid: GUID identifying the group.
+            **kwargs: Optional x_checksum and content_type header values.
         """
-        auth_value = self.auth_token.strip() if self.auth_token else None
-        if auth_value and not auth_value.lower().startswith("bearer "):
-            auth_value = f"Bearer {auth_value}"
-        headers = {"Authorization": auth_value} if auth_value else {}
-
-        organization_guid = organization_guid or self.organization_guid
-        if with_organization and organization_guid:
-            headers["organizationguid"] = organization_guid
-
-        project_guid = project_guid or self.project_guid
-        if with_project and project_guid:
-            headers["project"] = project_guid
-
-        if with_group and group_guid:
-            headers["groupguid"] = group_guid
-
-        custom_client_request_id = os.getenv("REQUEST_ID")
-        if custom_client_request_id:
-            headers["X-Request-ID"] = custom_client_request_id
-
-        x_checksum = kwargs.get("x_checksum", None)
-        if x_checksum:
-            headers["X-Checksum"] = x_checksum
-
-        content_type = kwargs.get("content_type", None)
-        if content_type:
-            headers["Content-Type"] = content_type
-
+        headers = self._auth_headers()
+        contexts = {
+            "organizationguid": (
+                with_organization,
+                organization_guid or self.organization_guid,
+            ),
+            "project": (with_project, project_guid or self.project_guid),
+            "groupguid": (with_group, group_guid),
+        }
+        headers.update(
+            {
+                key: value
+                for key, (include, value) in contexts.items()
+                if include and value
+            }
+        )
+        headers.update(self._request_headers(kwargs))
         return headers
+
+    def _auth_headers(self) -> dict[str, str]:
+        token = self.auth_token.strip() if self.auth_token else None
+        if not token:
+            return {}
+        if not token.lower().startswith("bearer "):
+            token = f"Bearer {token}"
+        return {"Authorization": token}
+
+    @staticmethod
+    def _request_headers(options: dict[str, str]) -> dict[str, str]:
+        values = {
+            "X-Request-ID": os.getenv("REQUEST_ID"),
+            "X-Checksum": options.get("x_checksum"),
+            "Content-Type": options.get("content_type"),
+        }
+        return {key: value for key, value in values.items() if value}
 
     def set_project(self, project_guid: str) -> None:
         """Set the project for the configuration.
@@ -150,7 +158,7 @@ class Configuration:
         """
         self.organization_guid = organization_guid
 
-    def set_environment(self, name: str = None) -> None:
+    def set_environment(self, name: str | None = None) -> None:
         """Set the environment for the configuration.
 
         Populates ``hosts`` with the correct URLs for *name*.  If the caller
@@ -173,7 +181,8 @@ class Configuration:
             and name not in NAMED_ENVIRONMENTS
             and not name.startswith("pr")
         ):
-            raise ValidationError("invalid environment")
+            message = "invalid environment"
+            raise ValidationError(message)
 
         self.hosts["environment"] = name
 

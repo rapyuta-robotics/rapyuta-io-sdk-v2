@@ -1,22 +1,38 @@
+# Copyright 2026 Rapyuta Robotics
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
 import httpx
 import pytest
-from pytest_mock import MockFixture
 
-# ruff: noqa: F811, F401
+from rapyuta_io_sdk_v2.exceptions import HttpAlreadyExistsError, HttpNotFoundError
 from rapyuta_io_sdk_v2.models import Secret, SecretList
 from rapyuta_io_sdk_v2.models.secret import SecretCreate
-from tests.data.mock_data import (
-    secret_body,
-    secret_model_mock,
-    secretlist_model_mock,
-    docker_secret_typed_model_mock,
-    opaque_secret_body,
-    opaque_secret_model_mock,
-)
-from tests.utils.fixtures import client
+
+if TYPE_CHECKING:
+    from pytest_mock import MockFixture
+
+    from rapyuta_io_sdk_v2 import Client
 
 
-def test_list_secrets_success(client, secretlist_model_mock, mocker: MockFixture):
+def test_list_secrets_success(
+    *, client: Client, secretlist_model_mock: dict[str, Any], mocker: MockFixture
+) -> None:
     # Mock the httpx.Client.get method
     mock_get = mocker.patch("httpx.Client.get")
 
@@ -42,7 +58,7 @@ def test_list_secrets_success(client, secretlist_model_mock, mocker: MockFixture
     assert secret.spec.docker.username == "testuser"
 
 
-def test_list_secrets_not_found(client, mocker: MockFixture):
+def test_list_secrets_not_found(*, client: Client, mocker: MockFixture) -> None:
     # Mock the httpx.Client.get method
     mock_get = mocker.patch("httpx.Client.get")
 
@@ -52,15 +68,19 @@ def test_list_secrets_not_found(client, mocker: MockFixture):
         json={"error": "not found"},
     )
 
-    with pytest.raises(Exception) as exc:
+    with pytest.raises(HttpNotFoundError) as exc:
         client.list_secrets()
 
     assert str(exc.value) == "not found"
 
 
 def test_create_secret_success(
-    client, secret_body, secret_model_mock, mocker: MockFixture
-):
+    *,
+    client: Client,
+    secret_body: dict[str, Any],
+    secret_model_mock: dict[str, Any],
+    mocker: MockFixture,
+) -> None:
     # Mock the httpx.Client.post method
     mock_post = mocker.patch("httpx.Client.post")
 
@@ -80,7 +100,9 @@ def test_create_secret_success(
     assert response.spec.type == "Docker"
 
 
-def test_create_secret_already_exists(client, secret_body, mocker: MockFixture):
+def test_create_secret_already_exists(
+    *, client: Client, secret_body: dict[str, Any], mocker: MockFixture
+) -> None:
     # Mock the httpx.Client.post method
     mock_post = mocker.patch("httpx.Client.post")
 
@@ -90,15 +112,19 @@ def test_create_secret_already_exists(client, secret_body, mocker: MockFixture):
         json={"error": "secret already exists"},
     )
 
-    with pytest.raises(Exception) as exc:
+    with pytest.raises(HttpAlreadyExistsError) as exc:
         client.create_secret(secret_body)
 
     assert str(exc.value) == "secret already exists"
 
 
 def test_update_secret_success(
-    client, secret_body, secret_model_mock, mocker: MockFixture
-):
+    *,
+    client: Client,
+    secret_body: dict[str, Any],
+    secret_model_mock: dict[str, Any],
+    mocker: MockFixture,
+) -> None:
     # Mock the httpx.Client.put method
     mock_put = mocker.patch("httpx.Client.put")
 
@@ -118,7 +144,7 @@ def test_update_secret_success(
     assert response.spec.type == "Docker"
 
 
-def test_delete_secret_success(client, mocker: MockFixture):
+def test_delete_secret_success(*, client: Client, mocker: MockFixture) -> None:
     # Mock the httpx.Client.delete method
     mock_delete = mocker.patch("httpx.Client.delete")
 
@@ -135,7 +161,9 @@ def test_delete_secret_success(client, mocker: MockFixture):
     assert response is None
 
 
-def test_get_secret_success(client, secret_model_mock, mocker: MockFixture):
+def test_get_secret_success(
+    *, client: Client, secret_model_mock: dict[str, Any], mocker: MockFixture
+) -> None:
     # Mock the httpx.Client.get method
     mock_get = mocker.patch("httpx.Client.get")
 
@@ -161,8 +189,11 @@ def test_get_secret_success(client, secret_model_mock, mocker: MockFixture):
 
 
 def test_get_docker_secret_with_type_and_keys(
-    client, docker_secret_typed_model_mock, mocker: MockFixture
-):
+    *,
+    client: Client,
+    docker_secret_typed_model_mock: dict[str, Any],
+    mocker: MockFixture,
+) -> None:
     """Server returns a Docker secret with type and secretKeys fields."""
     mock_get = mocker.patch("httpx.Client.get")
     mock_get.return_value = httpx.Response(
@@ -183,8 +214,8 @@ def test_get_docker_secret_with_type_and_keys(
 
 
 def test_get_opaque_secret_success(
-    client, opaque_secret_model_mock, mocker: MockFixture
-):
+    *, client: Client, opaque_secret_model_mock: dict[str, Any], mocker: MockFixture
+) -> None:
     """Server returns an Opaque secret with data and secretKeys."""
     mock_get = mocker.patch("httpx.Client.get")
     mock_get.return_value = httpx.Response(
@@ -197,13 +228,20 @@ def test_get_opaque_secret_success(
     assert isinstance(response, Secret)
     assert response.metadata.guid == "secret-cccccccccccccccccccc"
     assert response.spec.type == "Opaque"
-    assert response.spec.data == {"API_KEY": "my-api-key-value", "DB_PASSWORD": "my-db-password"}
+    assert response.spec.data == {
+        "API_KEY": "my-api-key-value",
+        "DB_PASSWORD": "my-db-password",
+    }
     assert set(response.spec.secret_keys) == {"API_KEY", "DB_PASSWORD"}
 
 
 def test_create_opaque_secret_success(
-    client, opaque_secret_body, opaque_secret_model_mock, mocker: MockFixture
-):
+    *,
+    client: Client,
+    opaque_secret_body: dict[str, Any],
+    opaque_secret_model_mock: dict[str, Any],
+    mocker: MockFixture,
+) -> None:
     """Creating an Opaque secret returns a parsed Secret model."""
     mock_post = mocker.patch("httpx.Client.post")
     mock_post.return_value = httpx.Response(
@@ -221,7 +259,7 @@ def test_create_opaque_secret_success(
 # ── New: SecretCreate model validation ───────────────────────────────────────
 
 
-def test_secret_create_model_docker_requires_password():
+def test_secret_create_model_docker_requires_password() -> None:
     """SecretCreate raises when creating a Docker secret without a password."""
     with pytest.raises(Exception, match="password"):
         SecretCreate.model_validate(
@@ -242,7 +280,7 @@ def test_secret_create_model_docker_requires_password():
         )
 
 
-def test_secret_create_model_opaque_requires_data():
+def test_secret_create_model_opaque_requires_data() -> None:
     """SecretCreate raises when creating an Opaque secret without data."""
     with pytest.raises(Exception, match="data"):
         SecretCreate.model_validate(
@@ -258,7 +296,7 @@ def test_secret_create_model_opaque_requires_data():
         )
 
 
-def test_secret_create_model_docker_valid():
+def test_secret_create_model_docker_valid() -> None:
     """SecretCreate succeeds with all required Docker fields."""
     secret = SecretCreate.model_validate(
         {
@@ -280,7 +318,7 @@ def test_secret_create_model_docker_valid():
     assert secret.spec.type == "Docker"
 
 
-def test_secret_create_model_opaque_valid():
+def test_secret_create_model_opaque_valid() -> None:
     """SecretCreate succeeds with all required Opaque fields."""
     secret = SecretCreate.model_validate(
         {
@@ -295,5 +333,3 @@ def test_secret_create_model_opaque_valid():
     )
     assert secret.spec.type == "Opaque"
     assert secret.spec.data == {"MY_KEY": "my-value"}
-
-

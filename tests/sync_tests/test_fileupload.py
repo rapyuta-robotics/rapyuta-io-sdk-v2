@@ -1,26 +1,50 @@
+# Copyright 2026 Rapyuta Robotics
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
 import httpx
 import pytest
-from pytest_mock import MockFixture
 
-# ruff: noqa: F811, F401
-from rapyuta_io_sdk_v2.models import FileUpload, FileUploadList, SharedURL, SharedURLList
-from tests.data.mock_data import (
-    fileupload_body,
-    fileupload_model_mock,
-    fileuploadlist_model_mock,
-    sharedurl_body,
-    sharedurl_model_mock,
-    sharedurllist_model_mock,
+from rapyuta_io_sdk_v2.exceptions import (
+    HttpAlreadyExistsError,
+    HttpNotFoundError,
+    MethodNotAllowedError,
 )
-from tests.utils.fixtures import client
+from rapyuta_io_sdk_v2.models import (
+    FileUpload,
+    FileUploadList,
+    SharedURL,
+    SharedURLList,
+)
 
+if TYPE_CHECKING:
+    from pytest_mock import MockFixture
+
+    from rapyuta_io_sdk_v2 import Client
 
 MOCK_DEVICE_GUID = "device-mockdevice12345678910"
 MOCK_FILEUPLOAD_GUID = "fileupload-mockupload12345678"
 MOCK_SHAREDURL_GUID = "sharedurl-mocksharedurl123456"
 
 
-def test_list_fileuploads_success(client, fileuploadlist_model_mock, mocker: MockFixture):
+def test_list_fileuploads_success(
+    *, client: Client, fileuploadlist_model_mock: dict[str, Any], mocker: MockFixture
+) -> None:
     mock_get = mocker.patch("httpx.Client.get")
 
     mock_get.return_value = httpx.Response(
@@ -38,7 +62,7 @@ def test_list_fileuploads_success(client, fileuploadlist_model_mock, mocker: Moc
     assert fileupload.kind == "DeviceFileUpload"
 
 
-def test_list_fileuploads_not_found(client, mocker: MockFixture):
+def test_list_fileuploads_not_found(*, client: Client, mocker: MockFixture) -> None:
     mock_get = mocker.patch("httpx.Client.get")
 
     mock_get.return_value = httpx.Response(
@@ -46,13 +70,15 @@ def test_list_fileuploads_not_found(client, mocker: MockFixture):
         json={"error": "not found"},
     )
 
-    with pytest.raises(Exception) as exc:
+    with pytest.raises(HttpNotFoundError) as exc:
         client.list_fileuploads(device_guid=MOCK_DEVICE_GUID)
 
     assert str(exc.value) == "not found"
 
 
-def test_get_fileupload_success(client, fileupload_model_mock, mocker: MockFixture):
+def test_get_fileupload_success(
+    *, client: Client, fileupload_model_mock: dict[str, Any], mocker: MockFixture
+) -> None:
     mock_get = mocker.patch("httpx.Client.get")
 
     mock_get.return_value = httpx.Response(
@@ -70,7 +96,7 @@ def test_get_fileupload_success(client, fileupload_model_mock, mocker: MockFixtu
     assert response.spec.file_path == "/home/user/data/sensor_data.log"
 
 
-def test_get_fileupload_not_found(client, mocker: MockFixture):
+def test_get_fileupload_not_found(*, client: Client, mocker: MockFixture) -> None:
     mock_get = mocker.patch("httpx.Client.get")
 
     mock_get.return_value = httpx.Response(
@@ -78,15 +104,19 @@ def test_get_fileupload_not_found(client, mocker: MockFixture):
         json={"error": "fileupload not found"},
     )
 
-    with pytest.raises(Exception) as exc:
+    with pytest.raises(HttpNotFoundError) as exc:
         client.get_fileupload(device_guid=MOCK_DEVICE_GUID, guid=MOCK_FILEUPLOAD_GUID)
 
     assert str(exc.value) == "fileupload not found"
 
 
 def test_create_fileupload_success(
-    client, fileupload_body, fileupload_model_mock, mocker: MockFixture
-):
+    *,
+    client: Client,
+    fileupload_body: dict[str, Any],
+    fileupload_model_mock: dict[str, Any],
+    mocker: MockFixture,
+) -> None:
     mock_post = mocker.patch("httpx.Client.post")
 
     mock_post.return_value = httpx.Response(
@@ -105,7 +135,7 @@ def test_create_fileupload_success(
     assert response.spec.file_path == "/home/user/data/sensor_data.log"
 
 
-def test_delete_fileupload_success(client, mocker: MockFixture):
+def test_delete_fileupload_success(*, client: Client, mocker: MockFixture) -> None:
     mock_delete = mocker.patch("httpx.Client.delete")
 
     mock_delete.return_value = httpx.Response(
@@ -121,7 +151,7 @@ def test_delete_fileupload_success(client, mocker: MockFixture):
     assert response is None
 
 
-def test_delete_fileupload_not_found(client, mocker: MockFixture):
+def test_delete_fileupload_not_found(*, client: Client, mocker: MockFixture) -> None:
     mock_delete = mocker.patch("httpx.Client.delete")
 
     mock_delete.return_value = httpx.Response(
@@ -129,13 +159,15 @@ def test_delete_fileupload_not_found(client, mocker: MockFixture):
         json={"error": "fileupload not found"},
     )
 
-    with pytest.raises(Exception) as exc:
-        client.delete_fileupload(device_guid=MOCK_DEVICE_GUID, guid=MOCK_FILEUPLOAD_GUID)
+    with pytest.raises(HttpNotFoundError) as exc:
+        client.delete_fileupload(
+            device_guid=MOCK_DEVICE_GUID, guid=MOCK_FILEUPLOAD_GUID
+        )
 
     assert str(exc.value) == "fileupload not found"
 
 
-def test_cancel_fileupload_success(client, mocker: MockFixture):
+def test_cancel_fileupload_success(*, client: Client, mocker: MockFixture) -> None:
     mock_post = mocker.patch("httpx.Client.post")
 
     mock_post.return_value = httpx.Response(
@@ -150,7 +182,7 @@ def test_cancel_fileupload_success(client, mocker: MockFixture):
     assert response is None
 
 
-def test_download_fileupload_success(client, mocker: MockFixture):
+def test_download_fileupload_success(*, client: Client, mocker: MockFixture) -> None:
     mock_get = mocker.patch("httpx.Client.get")
 
     mock_get.return_value = httpx.Response(
@@ -167,7 +199,9 @@ def test_download_fileupload_success(client, mocker: MockFixture):
 
 
 # SharedURL Tests
-def test_list_sharedurls_success(client, sharedurllist_model_mock, mocker: MockFixture):
+def test_list_sharedurls_success(
+    *, client: Client, sharedurllist_model_mock: dict[str, Any], mocker: MockFixture
+) -> None:
     mock_get = mocker.patch("httpx.Client.get")
 
     mock_get.return_value = httpx.Response(
@@ -186,8 +220,12 @@ def test_list_sharedurls_success(client, sharedurllist_model_mock, mocker: MockF
 
 
 def test_create_sharedurl_success(
-    client, sharedurl_body, sharedurl_model_mock, mocker: MockFixture
-):
+    *,
+    client: Client,
+    sharedurl_body: dict[str, Any],
+    sharedurl_model_mock: dict[str, Any],
+    mocker: MockFixture,
+) -> None:
     mock_post = mocker.patch("httpx.Client.post")
 
     mock_post.return_value = httpx.Response(
@@ -204,7 +242,7 @@ def test_create_sharedurl_success(
     assert response.metadata.guid == MOCK_SHAREDURL_GUID
 
 
-def test_get_sharedurl_redirect(client, mocker: MockFixture):
+def test_get_sharedurl_redirect(*, client: Client, mocker: MockFixture) -> None:
     mock_get = mocker.patch("httpx.Client.get")
 
     mock_get.return_value = httpx.Response(
@@ -214,13 +252,13 @@ def test_get_sharedurl_redirect(client, mocker: MockFixture):
 
     response = client.get_sharedurl(url_guid=MOCK_SHAREDURL_GUID)
 
-    assert response.status_code == 302
+    assert response.status_code == httpx.codes.FOUND
     assert "Location" in response.headers
 
 
 def test_list_fileuploads_with_filters(
-    client, fileuploadlist_model_mock, mocker: MockFixture
-):
+    *, client: Client, fileuploadlist_model_mock: dict[str, Any], mocker: MockFixture
+) -> None:
     """Test list_fileuploads with status and guids filters."""
     mock_get = mocker.patch("httpx.Client.get")
 
@@ -246,7 +284,9 @@ def test_list_fileuploads_with_filters(
     assert call_kwargs.kwargs["params"]["status"] == ["PENDING", "COMPLETED"]
 
 
-def test_create_fileupload_with_dict(client, fileupload_model_mock, mocker: MockFixture):
+def test_create_fileupload_with_dict(
+    *, client: Client, fileupload_model_mock: dict[str, Any], mocker: MockFixture
+) -> None:
     """Test create_fileupload with dict input instead of model."""
     mock_post = mocker.patch("httpx.Client.post")
 
@@ -272,7 +312,9 @@ def test_create_fileupload_with_dict(client, fileupload_model_mock, mocker: Mock
     assert response.metadata.guid == MOCK_FILEUPLOAD_GUID
 
 
-def test_create_sharedurl_with_dict(client, sharedurl_model_mock, mocker: MockFixture):
+def test_create_sharedurl_with_dict(
+    *, client: Client, sharedurl_model_mock: dict[str, Any], mocker: MockFixture
+) -> None:
     """Test create_sharedurl with dict input instead of model."""
     mock_post = mocker.patch("httpx.Client.post")
 
@@ -298,7 +340,7 @@ def test_create_sharedurl_with_dict(client, sharedurl_model_mock, mocker: MockFi
     assert response.metadata.guid == MOCK_SHAREDURL_GUID
 
 
-def test_cancel_fileupload_not_found(client, mocker: MockFixture):
+def test_cancel_fileupload_not_found(*, client: Client, mocker: MockFixture) -> None:
     """Test cancel_fileupload when fileupload not found."""
     mock_post = mocker.patch("httpx.Client.post")
 
@@ -307,7 +349,7 @@ def test_cancel_fileupload_not_found(client, mocker: MockFixture):
         json={"error": "fileupload not found"},
     )
 
-    with pytest.raises(Exception) as exc:
+    with pytest.raises(HttpNotFoundError) as exc:
         client.cancel_fileupload(
             device_guid=MOCK_DEVICE_GUID,
             guid=MOCK_FILEUPLOAD_GUID,
@@ -316,7 +358,9 @@ def test_cancel_fileupload_not_found(client, mocker: MockFixture):
     assert str(exc.value) == "fileupload not found"
 
 
-def test_create_fileupload_conflict(client, fileupload_body, mocker: MockFixture):
+def test_create_fileupload_conflict(
+    *, client: Client, fileupload_body: dict[str, Any], mocker: MockFixture
+) -> None:
     """Test create_fileupload when file already exists (409 Conflict)."""
     mock_post = mocker.patch("httpx.Client.post")
 
@@ -325,7 +369,7 @@ def test_create_fileupload_conflict(client, fileupload_body, mocker: MockFixture
         json={"error": "file upload already exists"},
     )
 
-    with pytest.raises(Exception) as exc:
+    with pytest.raises(HttpAlreadyExistsError) as exc:
         client.create_fileupload(
             device_guid=MOCK_DEVICE_GUID,
             body=fileupload_body,
@@ -334,7 +378,9 @@ def test_create_fileupload_conflict(client, fileupload_body, mocker: MockFixture
     assert str(exc.value) == "file upload already exists"
 
 
-def test_create_sharedurl_invalid_status(client, sharedurl_body, mocker: MockFixture):
+def test_create_sharedurl_invalid_status(
+    *, client: Client, sharedurl_body: dict[str, Any], mocker: MockFixture
+) -> None:
     """Test create_sharedurl when file upload is in invalid status."""
     mock_post = mocker.patch("httpx.Client.post")
 
@@ -343,7 +389,7 @@ def test_create_sharedurl_invalid_status(client, sharedurl_body, mocker: MockFix
         json={"error": "cannot create shared URL for file in FAILED status"},
     )
 
-    with pytest.raises(Exception) as exc:
+    with pytest.raises(MethodNotAllowedError) as exc:
         client.create_sharedurl(
             fileupload_guid=MOCK_FILEUPLOAD_GUID,
             body=sharedurl_body,
@@ -353,9 +399,11 @@ def test_create_sharedurl_invalid_status(client, sharedurl_body, mocker: MockFix
 
 
 def test_list_sharedurls_with_pagination(
-    client, sharedurllist_model_mock, mocker: MockFixture
-):
+    *, client: Client, sharedurllist_model_mock: dict[str, Any], mocker: MockFixture
+) -> None:
     """Test list_sharedurls with pagination parameters."""
+    requested_cont = 10
+    requested_limit = 25
     mock_get = mocker.patch("httpx.Client.get")
 
     mock_get.return_value = httpx.Response(
@@ -365,20 +413,20 @@ def test_list_sharedurls_with_pagination(
 
     response = client.list_sharedurls(
         fileupload_guid=MOCK_FILEUPLOAD_GUID,
-        cont=10,
-        limit=25,
+        cont=requested_cont,
+        limit=requested_limit,
     )
 
     assert isinstance(response, SharedURLList)
     # Verify pagination params were passed
     call_kwargs = mock_get.call_args
-    assert call_kwargs.kwargs["params"]["continue"] == 10
-    assert call_kwargs.kwargs["params"]["limit"] == 25
+    assert call_kwargs.kwargs["params"]["continue"] == requested_cont
+    assert call_kwargs.kwargs["params"]["limit"] == requested_limit
 
 
 def test_fileupload_with_all_status_types(
-    client, fileupload_model_mock, mocker: MockFixture
-):
+    *, client: Client, fileupload_model_mock: dict[str, Any], mocker: MockFixture
+) -> None:
     """Test parsing file uploads with different status types."""
     mock_get = mocker.patch("httpx.Client.get")
 

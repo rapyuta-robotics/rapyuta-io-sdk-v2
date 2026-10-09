@@ -1,3 +1,19 @@
+# Copyright 2026 Rapyuta Robotics
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""Resource validation models for rolebinding."""
+
 from __future__ import annotations
 
 from typing import Literal
@@ -14,34 +30,45 @@ from rapyuta_io_sdk_v2.models.utils import (
 
 
 class RoleBindingMetadata(BaseMetadata):
+    """Binding metadata that omits the resource name."""
+
     name: None = Field(default=None, exclude=True)
 
 
 class RoleRef(BaseModel):
+    """Role identified by name or GUID."""
+
     kind: Literal["Role"] = "Role"
     name: str | None = None
     guid: str | None = None
 
     @model_validator(mode="after")
-    def ensure_name_or_guid(self):
+    def ensure_name_or_guid(self) -> RoleRef:
+        """Require a resource name or GUID."""
         if self.name is None and self.guid is None:
-            raise ValueError("either 'name' or 'guid' should be specified")
+            message = "either 'name' or 'guid' should be specified"
+            raise ValueError(message)
 
         return self
 
 
 class RoleBindingSpec(BaseModel):
+    """Role granted to a subject within a domain."""
+
     role_ref: RoleRef = Field(alias="roleRef")
     domain: Domain
     subject: Subject
 
 
 class RoleBinding(BaseObject):
+    """Authorization grant connecting a role, subject, and domain."""
+
     kind: Literal["RoleBinding"] | None = "RoleBinding"
     metadata: RoleBindingMetadata
     spec: RoleBindingSpec
 
     def list_dependencies(self) -> list[str] | None:
+        """Return resource dependencies in manifest order."""
         dependencies: list[str] = []
 
         # Add role dependency
@@ -60,9 +87,11 @@ class RoleBinding(BaseObject):
 
 
 class BulkRoleBindingUpdate(BaseModel):
+    """Bindings to add and bindings to replace in one update."""
+
     new_bindings: list[RoleBinding] = Field(alias="newBindings")
     old_bindings: list[RoleBinding | None] = Field(alias="oldBindings")
 
 
 class RoleBindingList(BaseList[RoleBinding]):
-    pass
+    """Paginated role binding resources."""
