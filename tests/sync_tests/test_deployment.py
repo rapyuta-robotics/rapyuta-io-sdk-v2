@@ -22,7 +22,10 @@ import pytest
 from pydantic import ValidationError as PydanticValidationError
 
 from rapyuta_io_sdk_v2.exceptions import HttpNotFoundError, UnauthorizedAccessError
-from rapyuta_io_sdk_v2.models import Deployment, DeploymentList
+from rapyuta_io_sdk_v2.models import (
+    Deployment,
+    DeploymentList,
+)
 from rapyuta_io_sdk_v2.models.deployment import EnvArgsSpec
 
 if TYPE_CHECKING:
@@ -136,7 +139,7 @@ def test_create_deployment_unauthorized(
     )
 
     with pytest.raises(UnauthorizedAccessError) as exc:
-        client.create_deployment(body=deployment_body)
+        client.create_deployment(body=Deployment.model_validate(deployment_body))
 
     assert str(exc.value) == "unauthorized"
 
@@ -155,7 +158,7 @@ def test_create_deployment_success(
         json=device_deployment_model_mock,
     )
 
-    response = client.create_deployment(body=deployment_body)
+    response = client.create_deployment(body=Deployment.model_validate(deployment_body))
 
     assert isinstance(response, Deployment)
     assert response.metadata.guid == "dep-device-001"
@@ -176,7 +179,7 @@ def test_update_deployment_success(
         json=device_deployment_model_mock,
     )
 
-    response = client.update_deployment(body=deployment_body)
+    response = client.update_deployment(body=Deployment.model_validate(deployment_body))
 
     assert isinstance(response, Deployment)
     assert response.metadata.guid == "dep-device-001"
@@ -205,10 +208,12 @@ def test_create_deployment_with_service_account(
         json=cloud_deployment_with_service_account_mock,
     )
 
-    response = client.create_deployment(body=cloud_deployment_with_service_account_body)
+    response = client.create_deployment(
+        body=Deployment.model_validate(cloud_deployment_with_service_account_body)
+    )
 
     assert isinstance(response, Deployment)
-    assert response.spec.serviceAccount == "my-service-account"
+    assert response.spec.service_account == "my-service-account"
     assert response.spec.runtime == "cloud"
     assert response.metadata.guid == "dep-cloud-002"
 
@@ -235,26 +240,26 @@ def test_get_deployment_with_valuefrom_success(
     assert response.metadata.guid == "dep-cloud-003"
     assert response.spec.runtime == "cloud"
 
-    env_args = response.spec.envArgs
+    env_args = response.spec.env_args
     assert env_args is not None
 
     plain = next(a for a in env_args if a.name == "PLAIN_VAR")
     assert plain.value == "plain-value"
-    assert plain.valueFrom is None
+    assert plain.value_from is None
 
     api_key = next(a for a in env_args if a.name == "API_KEY")
     assert api_key.value is None
-    assert api_key.valueFrom is not None
-    assert api_key.valueFrom.secret_key_ref is not None
-    assert api_key.valueFrom.secret_key_ref.name == "my-api-secret"
-    assert api_key.valueFrom.secret_key_ref.key == "API_KEY"
+    assert api_key.value_from is not None
+    assert api_key.value_from.secret_key_ref is not None
+    assert api_key.value_from.secret_key_ref.name == "my-api-secret"
+    assert api_key.value_from.secret_key_ref.key == "API_KEY"
     # server resolves the value and returns it
-    assert api_key.valueFrom.secret_key_ref.value == "resolved-api-key"
+    assert api_key.value_from.secret_key_ref.value == "resolved-api-key"
 
     db_pass = next(a for a in env_args if a.name == "DB_PASS")
     assert db_pass.exposed is True
     assert db_pass.exposed_name == "DB_PASS"
-    assert db_pass.valueFrom.secret_key_ref.name == "db-credentials"
+    assert db_pass.value_from.secret_key_ref.name == "db-credentials"
 
 
 def test_create_deployment_with_valuefrom_success(
@@ -271,12 +276,14 @@ def test_create_deployment_with_valuefrom_success(
         json=cloud_deployment_with_valuefrom_mock,
     )
 
-    response = client.create_deployment(body=cloud_deployment_with_valuefrom_body)
+    response = client.create_deployment(
+        body=Deployment.model_validate(cloud_deployment_with_valuefrom_body)
+    )
 
     assert isinstance(response, Deployment)
     assert response.metadata.guid == "dep-cloud-003"
-    api_key = next(a for a in response.spec.envArgs if a.name == "API_KEY")
-    assert api_key.valueFrom.secret_key_ref.key == "API_KEY"
+    api_key = next(a for a in response.spec.env_args if a.name == "API_KEY")
+    assert api_key.value_from.secret_key_ref.key == "API_KEY"
 
 
 # ── New: EnvArgsSpec model validation ────────────────────────────────────────
@@ -297,10 +304,10 @@ def test_env_args_spec_valuefrom_model_validation() -> None:
     )
     assert arg.name == "MY_SECRET_ARG"
     assert arg.value is None
-    assert arg.valueFrom is not None
-    assert arg.valueFrom.secret_key_ref.name == "my-secret"
-    assert arg.valueFrom.secret_key_ref.key == "MY_KEY"
-    assert arg.valueFrom.secret_key_ref.value is None
+    assert arg.value_from is not None
+    assert arg.value_from.secret_key_ref.name == "my-secret"
+    assert arg.value_from.secret_key_ref.key == "MY_KEY"
+    assert arg.value_from.secret_key_ref.value is None
 
 
 def test_env_args_spec_plain_and_valuefrom_coexist() -> None:
@@ -319,7 +326,7 @@ def test_env_args_spec_plain_and_valuefrom_coexist() -> None:
         }
     )
     assert arg.value == "fallback"
-    assert arg.valueFrom.secret_key_ref.value == "injected"
+    assert arg.value_from.secret_key_ref.value == "injected"
 
 
 @pytest.mark.parametrize("field", ["uid", "gid", "perm"])

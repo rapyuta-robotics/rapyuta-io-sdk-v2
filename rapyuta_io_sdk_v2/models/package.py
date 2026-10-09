@@ -23,8 +23,9 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field, ValidationInfo, field_validator, model_validator
+from pydantic import Field, ValidationInfo, field_validator, model_validator
 
+from rapyuta_io_sdk_v2.models.base import SDKModel
 from rapyuta_io_sdk_v2.models.utils import (
     Architecture,
     BaseList,
@@ -52,7 +53,7 @@ class StringMap(dict[str, str]):
     """Dictionary of string keys and string values."""
 
 
-class PullSecret(BaseModel):
+class PullSecret(SDKModel):
     """Reference to credentials used to pull a container image."""
 
     depends: SecretDepends | None = None
@@ -70,51 +71,53 @@ class PullSecret(BaseModel):
         return value
 
 
-class HttpHeader(BaseModel):
+class HttpHeader(SDKModel):
     """HTTP header sent by a container health probe."""
 
     name: str
     value: str
 
 
-# CamelCase attributes preserve the public model API and serialized field names.
-class HttpGet(BaseModel):
+class HttpGet(SDKModel):
     """HTTP endpoint and headers used by a health probe."""
 
     path: str
     port: int
     host: str | None = Field(default=None)
     scheme: str | None = Field(default="HTTP")
-    httpHeaders: list[HttpHeader] | None = Field(default=None)  # noqa: N815
+    http_headers: list[HttpHeader] | None = Field(alias="httpHeaders", default=None)
 
 
-class LivenessProbe(BaseModel):
+class LivenessProbe(SDKModel):
     """Container health checks and their timing and failure thresholds."""
 
-    httpGet: HttpGet | None = None  # noqa: N815
+    http_get: HttpGet | None = Field(default=None, alias="httpGet")
     exec: dict | None = None
-    tcpSocket: dict | None = None  # noqa: N815
-    initialDelaySeconds: int | None = Field(default=None, ge=1)  # noqa: N815
-    timeoutSeconds: int | None = Field(default=None, ge=10)  # noqa: N815
-    periodSeconds: int | None = Field(default=None, ge=1)  # noqa: N815
-    successThreshold: int | None = Field(default=None, ge=1)  # noqa: N815
-    failureThreshold: int | None = Field(default=None, ge=1)  # noqa: N815
+    tcp_socket: dict | None = Field(default=None, alias="tcpSocket")
+    initial_delay_seconds: int | None = Field(
+        alias="initialDelaySeconds", default=None, ge=1
+    )
+    timeout_seconds: int | None = Field(alias="timeoutSeconds", default=None, ge=10)
+    period_seconds: int | None = Field(alias="periodSeconds", default=None, ge=1)
+    success_threshold: int | None = Field(alias="successThreshold", default=None, ge=1)
+    failure_threshold: int | None = Field(alias="failureThreshold", default=None, ge=1)
 
 
-class EnvironmentSpec(BaseModel):
+class EnvironmentSpec(SDKModel):
     """Environment variable defaults, exposure, and secret references."""
 
     name: str
     description: str | None = None
     default: str | None = None
-    valueFrom: ValueFrom | None = Field(  # noqa: N815
+    value_from: ValueFrom | None = Field(
+        alias="valueFrom",
         default=None,
         description="Populate the env var's value from a Secret key reference",
     )
     exposed: bool | None = Field(default=None)
-    exposedName: str | None = None  # noqa: N815
+    exposed_name: str | None = Field(default=None, alias="exposedName")
 
-    @field_validator("exposedName")
+    @field_validator("exposed_name")
     @classmethod
     def validate_exposed_name(cls, v: str | None, info: ValidationInfo) -> str | None:
         """Require an exposed name for exposed environment variables.
@@ -129,22 +132,24 @@ class EnvironmentSpec(BaseModel):
         return v
 
 
-class Limits(BaseModel):
+class Limits(SDKModel):
     """CPU and memory limits for a container executable."""
 
     cpu: float | None = Field(default=None, ge=0, le=256)
     memory: float | int | None = Field(default=None, ge=0)
 
 
-class DockerSpec(BaseModel):
+class DockerSpec(SDKModel):
     """Container image, image pull policy, and registry credentials."""
 
     image: str
-    imagePullPolicy: str | None = Field(default="IfNotPresent")  # noqa: N815
+    image_pull_policy: str | None = Field(
+        alias="imagePullPolicy", default="IfNotPresent"
+    )
     pull_secret: PullSecret | None = Field(default=None, alias="pullSecret")
 
 
-class Executable(BaseModel):
+class Executable(SDKModel):
     """Container image, launch command, health probe, and process settings."""
 
     name: str | None = None
@@ -154,7 +159,7 @@ class Executable(BaseModel):
     run_as_bash: bool = Field(default=False, alias="runAsBash")
     args: list[str] | None = None
     limits: Limits | None = None
-    livenessProbe: LivenessProbe | None = None  # noqa: N815
+    liveness_probe: LivenessProbe | None = Field(default=None, alias="livenessProbe")
     uid: int | None = None
     gid: int | None = None
 
@@ -179,30 +184,30 @@ class Executable(BaseModel):
         return self
 
 
-class EndpointSpec(BaseModel):
+class EndpointSpec(SDKModel):
     """Network endpoint ports and transport exposed by a package."""
 
     name: str
     type: EndpointProto | None = None
     port: int | None = None
-    targetPort: int | None = None  # noqa: N815
-    portRange: str | None = None  # noqa: N815
+    target_port: int | None = Field(default=None, alias="targetPort")
+    port_range: str | None = Field(default=None, alias="portRange")
 
 
-class DeviceComponentInfoSpec(BaseModel):
+class DeviceComponentInfoSpec(SDKModel):
     """Architecture and restart policy for a device package."""
 
     arch: Architecture | None = Field(default="amd64")
     restart: RestartPolicy | None = Field(default="always")
 
 
-class CloudComponentInfoSpec(BaseModel):
+class CloudComponentInfoSpec(SDKModel):
     """Replica count for a cloud package."""
 
     replicas: int | None = Field(default=1)
 
 
-class RosEndpointSpec(BaseModel):
+class RosEndpointSpec(SDKModel):
     """ROS communication endpoint and delivery settings."""
 
     type: str
@@ -214,25 +219,29 @@ class RosEndpointSpec(BaseModel):
     timeout: int | float | None = None
 
 
-class RosComponentSpec(BaseModel):
+class RosComponentSpec(SDKModel):
     """ROS version and endpoints enabled by a package."""
 
     enabled: bool | None = Field(default=False)
     version: Literal["kinetic", "melodic", "noetic", "foxy"] | None = None
-    rosEndpoints: list[RosEndpointSpec] | None = None  # noqa: N815
+    ros_endpoints: list[RosEndpointSpec] | None = Field(
+        default=None, alias="rosEndpoints"
+    )
 
 
-class PackageSpec(BaseModel):
+class PackageSpec(SDKModel):
     """Runtime, executables, and exposed interfaces for a package."""
 
     runtime: Runtime | None = None
     executables: list[Executable] | None = None
-    environmentVars: list[EnvironmentSpec] | None = None  # noqa: N815
+    environment_vars: list[EnvironmentSpec] | None = Field(
+        default=None, alias="environmentVars"
+    )
     ros: RosComponentSpec | None = None
     endpoints: list[EndpointSpec] | None = None
     device: DeviceComponentInfoSpec | None = None
     cloud: CloudComponentInfoSpec | None = None
-    hostPID: bool | None = None  # noqa: N815
+    host_pid: bool | None = Field(default=None, alias="hostPID")
 
     @model_validator(mode="after")
     @staticmethod
@@ -275,10 +284,10 @@ class PackageMetadata(BaseMetadata):
     description: str | None = Field(default=None)
 
 
-class Package(BaseModel):
+class Package(SDKModel):
     """Package model."""
 
-    apiVersion: str | None = Field(default="api.rapyuta.io/v2")  # noqa: N815
+    api_version: str | None = Field(alias="apiVersion", default="api.rapyuta.io/v2")
     kind: Literal["Package"] = Field(default="Package")
     metadata: PackageMetadata
     spec: PackageSpec

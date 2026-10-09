@@ -21,7 +21,10 @@ import httpx
 import pytest
 
 from rapyuta_io_sdk_v2.exceptions import HttpNotFoundError, UnauthorizedAccessError
-from rapyuta_io_sdk_v2.models import Project, ProjectList
+from rapyuta_io_sdk_v2.models import (
+    Project,
+    ProjectList,
+)
 
 if TYPE_CHECKING:
     from pytest_mock import MockFixture
@@ -147,7 +150,7 @@ def test_create_project_success(
     )
 
     # Call the create_project method
-    response = client.create_project(body=project_body)
+    response = client.create_project(body=Project.model_validate(project_body))
 
     # Validate the response
     assert isinstance(response, Project)
@@ -169,7 +172,7 @@ def test_create_project_unauthorized(
 
     # Call the create_project method
     with pytest.raises(UnauthorizedAccessError) as exc:
-        client.create_project(body=project_body)
+        client.create_project(body=Project.model_validate(project_body))
 
     # Validate the exception message
     assert str(exc.value) == "unauthorized permission access"
@@ -193,7 +196,7 @@ def test_update_project_success(
 
     # Call the update_project method
     response = client.update_project(
-        project_guid="mock_project_guid", body=project_body
+        project_guid="mock_project_guid", body=Project.model_validate(project_body)
     )
 
     # Validate the response

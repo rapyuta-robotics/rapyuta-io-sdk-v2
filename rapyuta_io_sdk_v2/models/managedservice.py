@@ -16,20 +16,21 @@
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import Field
 
+from rapyuta_io_sdk_v2.models.base import SDKModel
 from rapyuta_io_sdk_v2.models.utils import BaseList, BaseMetadata, ListMeta
 
 # --- ManagedServiceProvider Models ---
 
 
-class ManagedServiceProvider(BaseModel):
+class ManagedServiceProvider(SDKModel):
     """Managed service provider model."""
 
     name: str = Field(description="Name of the provider")
 
 
-class ManagedServiceProviderList(BaseModel):
+class ManagedServiceProviderList(SDKModel):
     """List of managed service providers."""
 
     metadata: ListMeta | None = Field(default=None, description="List metadata")
@@ -41,7 +42,7 @@ class ManagedServiceProviderList(BaseModel):
 # --- ManagedServiceInstance Models ---
 
 
-class ManagedServiceInstanceSpec(BaseModel):
+class ManagedServiceInstanceSpec(SDKModel):
     """Specification for ManagedServiceInstance resource."""
 
     provider: str = Field(description="The provider for the managed service")
@@ -50,7 +51,7 @@ class ManagedServiceInstanceSpec(BaseModel):
     )
 
 
-class ManagedServiceInstanceStatus(BaseModel):
+class ManagedServiceInstanceStatus(SDKModel):
     """Status for ManagedServiceInstance resource."""
 
     status: Literal["Pending", "Error", "Success", "Deleting", "Unknown"] | None = (
@@ -64,11 +65,11 @@ class ManagedServiceInstanceStatus(BaseModel):
     )
 
 
-# CamelCase attributes preserve the public model API and serialized field names.
-class ManagedServiceInstance(BaseModel):
+class ManagedServiceInstance(SDKModel):
     """Managed service instance model."""
 
-    apiVersion: str | None = Field(  # noqa: N815
+    api_version: str | None = Field(
+        alias="apiVersion",
         default=None,
         description="API version",
     )
@@ -95,7 +96,7 @@ class ManagedServiceInstanceList(BaseList[ManagedServiceInstance]):
 # --- ManagedServiceBinding Models ---
 
 
-class ManagedServiceBindingSpec(BaseModel):
+class ManagedServiceBindingSpec(SDKModel):
     """Specification for ManagedServiceBinding resource."""
 
     provider: str | None = Field(
@@ -113,16 +114,17 @@ class ManagedServiceBindingSpec(BaseModel):
     )
 
 
-class ManagedServiceBindingStatus(BaseModel):
+class ManagedServiceBindingStatus(SDKModel):
     """Status for ManagedServiceBinding resource."""
 
     # The API currently defines no fields for binding status.
 
 
-class ManagedServiceBinding(BaseModel):
+class ManagedServiceBinding(SDKModel):
     """Managed service binding model."""
 
-    apiVersion: str | None = Field(  # noqa: N815
+    api_version: str | None = Field(
+        alias="apiVersion",
         default=None,
         description="API version",
     )
@@ -134,7 +136,7 @@ class ManagedServiceBinding(BaseModel):
     )
 
 
-class ManagedServiceBindingListOption(BaseModel):
+class ManagedServiceBindingListOption(SDKModel):
     """List options for ManagedServiceBinding."""
 
     # Add specific options as needed

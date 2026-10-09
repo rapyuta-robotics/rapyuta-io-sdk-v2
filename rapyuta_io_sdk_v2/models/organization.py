@@ -16,20 +16,21 @@
 
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import Field
+
+from rapyuta_io_sdk_v2.models.base import SDKModel
 
 from .utils import BaseMetadata, BaseObject, Subject
 
 
-# CamelCase attributes preserve the public model API and serialized field names.
-class OrganizationMember(BaseModel):
+class OrganizationMember(SDKModel):
     """Organization subject and its assigned roles."""
 
     subject: Subject
-    roleNames: list[str]  # noqa: N815
+    role_names: list[str] = Field(alias="roleNames")
 
 
-class OrganizationSpec(BaseModel):
+class OrganizationSpec(SDKModel):
     """Members authorized within an organization."""
 
     members: list[OrganizationMember]

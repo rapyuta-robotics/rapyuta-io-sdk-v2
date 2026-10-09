@@ -23,8 +23,9 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import Field, model_validator
 
+from rapyuta_io_sdk_v2.models.base import SDKModel
 from rapyuta_io_sdk_v2.models.utils import (
     BaseList,
     BaseMetadata,
@@ -34,7 +35,7 @@ from rapyuta_io_sdk_v2.models.utils import (
 )
 
 
-class DockerSpec(BaseModel):
+class DockerSpec(SDKModel):
     """Registry login details stored in a Docker secret."""
 
     registry: str = Field(
@@ -53,7 +54,7 @@ class DockerSpecCreate(DockerSpec):
 SecretType = Literal["Docker", "Opaque"]
 
 
-class SecretSpec(BaseModel):
+class SecretSpec(SDKModel):
     """Specification for Secret resource."""
 
     type: SecretType = Field(
@@ -78,7 +79,7 @@ class SecretSpec(BaseModel):
     depends: DeviceDepends | None = None
 
 
-class SecretSpecCreate(BaseModel):
+class SecretSpecCreate(SDKModel):
     """Credential payload and dependency settings for a new secret."""
 
     type: SecretType = Field(
