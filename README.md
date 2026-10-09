@@ -26,7 +26,7 @@ To use the SDK, you need to configure it with your rapyuta.io credentials.
 You can create a `Configuration` object from a JSON file.
 
 ```python
-from rapyuta_io_sdk_v2.config import Configuration, Client
+from rapyuta_io_sdk_v2 import Configuration, Client
 
 config = Configuration.from_file("/path/to/config.json")
 client = Client(config)
@@ -35,7 +35,7 @@ client = Client(config)
 ### Using `email` and `password`
 
 ```python
-from rapyuta_io_sdk_v2.config import Configuration, Client
+from rapyuta_io_sdk_v2 import Configuration, Client
 
 config = Configuration(organization_guid="ORGANIZATION_GUID")
 client = Client(config)
@@ -50,6 +50,56 @@ For example, this is how you can list projects.
 projects = client.list_projects()
 print(projects)
 ```
+
+### Typed API payloads
+
+Model attributes use `snake_case`. Explicit aliases preserve the v2 API's JSON
+keys when loading dictionaries or serializing with `by_alias=True`. Client
+request bodies must be Pydantic models; convert existing manifests before
+passing them to either `Client` or `AsyncClient`.
+
+```python
+from rapyuta_io_sdk_v2.models import Deployment
+
+manifest = {
+    "apiVersion": "api.rapyuta.io/v2",
+    "kind": "Deployment",
+    "metadata": {"name": "app", "projectGUID": "project-guid"},
+    "spec": {"runtime": "cloud", "serviceAccount": "worker"},
+}
+body = Deployment.model_validate(manifest)
+print(body.metadata.project_guid)
+print(body.spec.service_account)
+created = client.create_deployment(body)
+print(created.metadata.guid)
+wire_payload = body.model_dump(by_alias=True, exclude_unset=True, mode="json")
+assert wire_payload == manifest
+```
+
+JSON responses, including OAuth2 clients, config trees, revisions, deployment
+history and graphs, and file download URLs, are returned as Pydantic models.
+Access their fields as attributes. Authentication helpers still return tokens,
+and shared-URL redirects retain the HTTP response.
+
+Commit information is now supplied through a revision model:
+
+```python
+from rapyuta_io_sdk_v2.models import ConfigTreeRevision, ConfigTreeRevisionMetadata
+
+revision = ConfigTreeRevision(
+    author="operator",
+    message="Update configuration",
+    metadata=ConfigTreeRevisionMetadata(labels={"release": "1"}),
+)
+client.commit_revision("settings", "revision-guid", revision)
+```
+
+Use `ConfigValues` for a map of `ConfigValue` entries, `ConfigKeyRename` for key
+renames, and `ConfigKeyUpload` for raw string or bytes uploads. Decoded key
+content is returned as `ConfigKeyContent`; its `.root` holds the decoded JSON/YAML
+value (including dates and YAML binary values) or the original bytes for binary
+downloads. Bulk role-binding updates return `BulkRoleBindingUpdate`. The retired
+`update_project_owner` method has been removed.
 
 ## Contributing
 

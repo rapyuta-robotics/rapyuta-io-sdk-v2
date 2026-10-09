@@ -24,6 +24,14 @@ from rapyuta_io_sdk_v2.exceptions import (
     BadGatewayError,
     ServiceUnavailableError,
 )
+from rapyuta_io_sdk_v2.models import (
+    ConfigKeyRename,
+    ConfigKeyUpload,
+    ConfigTree,
+    ConfigTreeRevision,
+    ConfigValue,
+    ConfigValues,
+)
 
 if TYPE_CHECKING:
     from pytest_mock import MockFixture
@@ -43,7 +51,14 @@ async def test_list_configtrees_success(
         status_code=200,
         json={
             "metadata": {"continue": 1},
-            "items": [{"name": "test-configtree", "guid": "mock_configtree_guid"}],
+            "items": [
+                {
+                    "metadata": {
+                        "name": "test-configtree",
+                        "guid": "mock_configtree_guid",
+                    }
+                }
+            ],
         },
     )
 
@@ -51,9 +66,8 @@ async def test_list_configtrees_success(
     response = await async_client.list_configtrees()
 
     # Validate the response
-    assert response["items"] == [
-        {"name": "test-configtree", "guid": "mock_configtree_guid"}
-    ]
+    assert response.items[0].metadata.name == "test-configtree"
+    assert response.items[0].metadata.guid == "mock_configtree_guid"
 
 
 @pytest.mark.asyncio
@@ -92,10 +106,12 @@ async def test_create_configtree_success(
     )
 
     # Call the create_configtree method
-    response = await async_client.create_configtree(configtree_body)
+    response = await async_client.create_configtree(
+        ConfigTree.model_validate(configtree_body)
+    )
 
     # Validate the response
-    assert response["metadata"]["guid"] == "test_configtree_guid"
+    assert response.metadata.guid == "test_configtree_guid"
 
 
 @pytest.mark.asyncio
@@ -113,7 +129,7 @@ async def test_create_configtree_service_unavailable(
 
     # Call the create_configtree method
     with pytest.raises(ServiceUnavailableError) as exc:
-        await async_client.create_configtree(configtree_body)
+        await async_client.create_configtree(ConfigTree.model_validate(configtree_body))
 
     assert str(exc.value) == "service unavailable"
 
@@ -137,8 +153,8 @@ async def test_get_configtree_success(
     response = await async_client.get_configtree(name="mock_configtree_name")
 
     # Validate the response
-    assert response["metadata"]["guid"] == "test_configtree_guid"
-    assert response["metadata"]["name"] == "test_configtree"
+    assert response.metadata.guid == "test_configtree_guid"
+    assert response.metadata.name == "test_configtree"
 
 
 @pytest.mark.asyncio
@@ -158,12 +174,13 @@ async def test_set_configtree_revision_success(
 
     # Call the set_configtree_revision method
     response = await async_client.set_configtree_revision(
-        name="mock_configtree_name", configtree=configtree_body
+        name="mock_configtree_name",
+        configtree=ConfigTree.model_validate(configtree_body),
     )
 
     # Validate the response
-    assert response["metadata"]["guid"] == "test_configtree_guid"
-    assert response["metadata"]["name"] == "test_configtree"
+    assert response.metadata.guid == "test_configtree_guid"
+    assert response.metadata.name == "test_configtree"
 
 
 @pytest.mark.asyncio
@@ -179,10 +196,10 @@ async def test_update_configtree_success(
         },
     )
     response = await async_client.update_configtree(
-        name="mock_configtree_name", body=configtree_body
+        name="mock_configtree_name", body=ConfigTree.model_validate(configtree_body)
     )
-    assert response["metadata"]["guid"] == "test_configtree_guid"
-    assert response["metadata"]["name"] == "test_configtree"
+    assert response.metadata.guid == "test_configtree_guid"
+    assert response.metadata.name == "test_configtree"
 
 
 @pytest.mark.asyncio
@@ -217,7 +234,14 @@ async def test_list_revisions_success(
         status_code=200,
         json={
             "metadata": {"continue": 1},
-            "items": [{"name": "test-configtree", "guid": "mock_configtree_guid"}],
+            "items": [
+                {
+                    "metadata": {
+                        "name": "test-configtree",
+                        "guid": "mock_configtree_guid",
+                    }
+                }
+            ],
         },
     )
 
@@ -225,9 +249,8 @@ async def test_list_revisions_success(
     response = await async_client.list_revisions(tree_name="mock_configtree_name")
 
     # Validate the response
-    assert response["items"] == [
-        {"name": "test-configtree", "guid": "mock_configtree_guid"}
-    ]
+    assert response.items[0].metadata.name == "test-configtree"
+    assert response.items[0].metadata.guid == "mock_configtree_guid"
 
 
 @pytest.mark.asyncio
@@ -247,11 +270,12 @@ async def test_create_revision_success(
 
     # Call the create_revision method
     response = await async_client.create_revision(
-        name="mock_configtree_name", body=configtree_body
+        name="mock_configtree_name",
+        body=ConfigTreeRevision.model_validate(configtree_body),
     )
 
     # Validate the response
-    assert response["metadata"]["guid"] == "test_revision_guid"
+    assert response.metadata.guid == "test_revision_guid"
 
 
 @pytest.mark.asyncio
@@ -264,21 +288,19 @@ async def test_put_keys_in_revision_success(
     # Set up the mock response
     mock_put.return_value = httpx.Response(
         status_code=200,
-        json={
-            "metadata": {"guid": "test_revision_guid", "name": "test_revision"},
-        },
+        json={"success": True},
     )
 
     # Call the put_keys_in_revision method
     response = await async_client.put_keys_in_revision(
         name="mock_configtree_name",
         revision_id="mock_revision_id",
-        config_values=["mock_value1", "mock_value2"],
+        config_values=ConfigValues({"mock_key": ConfigValue(data="dmFsdWU=")}),
     )
 
     # Validate the response
-    assert response["metadata"]["guid"] == "test_revision_guid"
-    assert response["metadata"]["name"] == "test_revision"
+    assert response.success is True
+    assert response.success is True
 
 
 @pytest.mark.asyncio
@@ -300,11 +322,12 @@ async def test_commit_revision_success(
     response = await async_client.commit_revision(
         tree_name="mock_configtree_name",
         revision_id="mock_revision_id",
+        body=ConfigTreeRevision(),
     )
 
     # Validate the response
-    assert response["metadata"]["guid"] == "test_revision_guid"
-    assert response["metadata"]["name"] == "test_revision"
+    assert response.metadata.guid == "test_revision_guid"
+    assert response.metadata.name == "test_revision"
 
 
 @pytest.mark.asyncio
@@ -325,10 +348,10 @@ async def test_commit_revision_with_labels(
     response = await async_client.commit_revision(
         tree_name="mock_configtree_name",
         revision_id="mock_revision_id",
-        labels={"rapyuta.io/milestone": "v1.0"},
+        body=ConfigTreeRevision(metadata={"labels": {"rapyuta.io/milestone": "v1.0"}}),
     )
-    assert response["metadata"]["guid"] == "test_revision_guid"
-    assert response["metadata"]["labels"]["rapyuta.io/milestone"] == "v1.0"
+    assert response.metadata.guid == "test_revision_guid"
+    assert response.metadata.labels["rapyuta.io/milestone"] == "v1.0"
 
     # Verify the request body included metadata.labels
     call_kwargs = mock_patch.call_args
@@ -352,8 +375,8 @@ async def test_get_key_in_revision_str(
     )
 
     # Validate the response
-    assert isinstance(response, str)
-    assert response == "test_value"
+    assert isinstance(response.root, str)
+    assert response.root == "test_value"
 
 
 @pytest.mark.asyncio
@@ -373,8 +396,8 @@ async def test_get_key_in_revision_int(
     )
 
     # Validate the response
-    assert isinstance(response, int)
-    assert response == expected_value
+    assert isinstance(response.root, int)
+    assert response.root == expected_value
 
 
 @pytest.mark.asyncio
@@ -393,8 +416,8 @@ async def test_get_key_in_revision_bool(
     )
 
     # Validate the response
-    assert isinstance(response, bool)
-    assert not response
+    assert isinstance(response.root, bool)
+    assert not response.root
 
 
 @pytest.mark.asyncio
@@ -407,9 +430,7 @@ async def test_put_key_in_revision_success(
     # Set up the mock response
     mock_put.return_value = httpx.Response(
         status_code=200,
-        json={
-            "metadata": {"guid": "test_revision_guid", "name": "test_revision"},
-        },
+        json={"success": True},
     )
 
     # Call the put_key_in_revision method
@@ -417,12 +438,12 @@ async def test_put_key_in_revision_success(
         tree_name="mock_configtree_name",
         revision_id="mock_revision_id",
         key="mock_key",
-        body="value",
+        body=ConfigKeyUpload("value"),
     )
 
     # Validate the response
-    assert response["metadata"]["guid"] == "test_revision_guid"
-    assert response["metadata"]["name"] == "test_revision"
+    assert response.success is True
+    assert response.success is True
 
 
 @pytest.mark.asyncio
@@ -451,18 +472,16 @@ async def test_rename_key_in_revision_success(
 
     mock_patch.return_value = httpx.Response(
         status_code=200,
-        json={
-            "metadata": {"guid": "test_revision_guid", "name": "test_revision"},
-        },
+        json={"success": True},
     )
 
     response = await async_client.rename_key_in_revision(
         tree_name="mock_configtree_name",
         revision_id="mock_revision_id",
         key="mock_key",
-        config_key_rename={"metadata": {"name": "test_key"}},
+        config_key_rename=ConfigKeyRename(name="test_key"),
     )
 
-    assert isinstance(response, dict)
-    assert response["metadata"]["guid"] == "test_revision_guid"
-    assert response["metadata"]["name"] == "test_revision"
+    assert response.success is True
+    assert response.success is True
+    assert response.success is True

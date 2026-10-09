@@ -25,7 +25,6 @@ import pathlib
 from typing import TYPE_CHECKING, Literal
 
 from pydantic import (
-    BaseModel,
     ConfigDict,
     Field,
     ValidationInfo,
@@ -33,6 +32,7 @@ from pydantic import (
     model_validator,
 )
 
+from rapyuta_io_sdk_v2.models.base import SDKModel
 from rapyuta_io_sdk_v2.models.utils import (
     BaseList,
     BaseMetadata,
@@ -63,13 +63,13 @@ class DeploymentMetadata(BaseMetadata):
     generation: int | None = None
 
 
-# CamelCase attributes preserve the public model API and serialized field names.
-class EnvArgsSpec(BaseModel):
+class EnvArgsSpec(SDKModel):
     """Deployment environment variable value or secret reference."""
 
     name: str
     value: str | None = None
-    valueFrom: ValueFrom | None = Field(  # noqa: N815
+    value_from: ValueFrom | None = Field(
+        alias="valueFrom",
         default=None,
         description="Populate the env var's value from a Secret key reference",
     )
@@ -91,7 +91,7 @@ class EnvArgsSpec(BaseModel):
         return v
 
 
-class DeploymentVolume(BaseModel):
+class DeploymentVolume(SDKModel):
     """Unified volume spec matching Go DeploymentVolume struct."""
 
     exec_name: str | None = Field(default=None, alias="execName")
@@ -132,7 +132,7 @@ class DeploymentVolume(BaseModel):
         return v
 
 
-class DeploymentStaticRoute(BaseModel):
+class DeploymentStaticRoute(SDKModel):
     """Static route configuration matching Go DeploymentStaticRoute struct."""
 
     name: str | None = None
@@ -155,11 +155,12 @@ class DeploymentStaticRoute(BaseModel):
         return data
 
 
-class DeploymentROSNetwork(BaseModel):
+class DeploymentROSNetwork(SDKModel):
     """ROS Network configuration matching Go DeploymentROSNetwork struct."""
 
     depends: NetworkDepends
-    domainID: int | None = Field(  # noqa: N815
+    domain_id: int | None = Field(
+        alias="domainID",
         default=None,
         description="ROS Domain ID",
     )
@@ -181,28 +182,28 @@ class DeploymentROSNetwork(BaseModel):
         return data
 
 
-class DeploymentParamConfig(BaseModel):
+class DeploymentParamConfig(SDKModel):
     """Param configuration matching Go DeploymentParamConfig struct."""
 
     enabled: bool | None = None
     trees: list[str] | None = None
-    blockUntilSynced: bool | None = Field(default=False)  # noqa: N815
+    block_until_synced: bool | None = Field(alias="blockUntilSynced", default=False)
 
 
-class DeploymentVPNConfig(BaseModel):
+class DeploymentVPNConfig(SDKModel):
     """VPN configuration matching Go DeploymentVPNConfig struct."""
 
     enabled: bool | None = Field(default=False)
 
 
-class DeploymentFeatures(BaseModel):
+class DeploymentFeatures(SDKModel):
     """Features configuration matching Go DeploymentFeatures struct."""
 
     params: DeploymentParamConfig | None = None
     vpn: DeploymentVPNConfig | None = None
 
 
-class DeploymentDevice(BaseModel):
+class DeploymentDevice(SDKModel):
     """Device configuration matching Go DeploymentDevice struct."""
 
     depends: DeviceDepends
@@ -223,20 +224,25 @@ class DeploymentDevice(BaseModel):
         return data
 
 
-class DeploymentSpec(BaseModel):
+class DeploymentSpec(SDKModel):
     """Deployment runtime, dependencies, volumes, and process overrides."""
 
     runtime: Runtime
     depends: list[DeploymentDepends] | None = None
     device: DeploymentDevice | None = None
     restart: RestartPolicy | None = None
-    envArgs: list[EnvArgsSpec] | None = None  # noqa: N815
+    env_args: list[EnvArgsSpec] | None = Field(default=None, alias="envArgs")
     volumes: list[DeploymentVolume] | None = None
-    rosNetworks: list[DeploymentROSNetwork] | None = None  # noqa: N815
+    ros_networks: list[DeploymentROSNetwork] | None = Field(
+        default=None, alias="rosNetworks"
+    )
     features: DeploymentFeatures | None = None
-    staticRoutes: list[DeploymentStaticRoute] | None = None  # noqa: N815
-    serviceAccount: str | None = None  # noqa: N815
-    networkInterface: str | None = Field(  # noqa: N815
+    static_routes: list[DeploymentStaticRoute] | None = Field(
+        default=None, alias="staticRoutes"
+    )
+    service_account: str | None = Field(default=None, alias="serviceAccount")
+    network_interface: str | None = Field(
+        alias="networkInterface",
         default=None,
         description=(
             "Network interface to use for ROS networks. "
@@ -257,7 +263,7 @@ class DeploymentSpec(BaseModel):
         return self
 
 
-class ExecutableStatus(BaseModel):
+class ExecutableStatus(SDKModel):
     """Container lifecycle, image, restart history, and exit result."""
 
     name: str | None = None
@@ -270,7 +276,7 @@ class ExecutableStatus(BaseModel):
     exit_code: int | None = None
 
 
-class DependentDeploymentStatus(BaseModel):
+class DependentDeploymentStatus(SDKModel):
     """Lifecycle and errors for a prerequisite deployment."""
 
     name: str | None = None
@@ -280,7 +286,7 @@ class DependentDeploymentStatus(BaseModel):
     error_codes: list[str] | None = None
 
 
-class DependentNetworkStatus(BaseModel):
+class DependentNetworkStatus(SDKModel):
     """Lifecycle and errors for a prerequisite network."""
 
     name: str | None = None
@@ -290,7 +296,7 @@ class DependentNetworkStatus(BaseModel):
     error_codes: list[str] | None = None
 
 
-class DependentDiskStatus(BaseModel):
+class DependentDiskStatus(SDKModel):
     """Lifecycle and errors for a prerequisite disk."""
 
     name: str | None = None
@@ -299,7 +305,7 @@ class DependentDiskStatus(BaseModel):
     error_codes: str | None = None
 
 
-class Dependencies(BaseModel):
+class Dependencies(SDKModel):
     """Observed deployment, network, and disk dependency status."""
 
     deployments: list[DependentDeploymentStatus] | None = None
@@ -307,7 +313,7 @@ class Dependencies(BaseModel):
     disks: list[DependentDiskStatus] | None = Field(default=None, alias="disk")
 
 
-class DeploymentStatus(BaseModel):
+class DeploymentStatus(SDKModel):
     """Deployment lifecycle and executable and dependency status."""
 
     phase: DeploymentPhase | None = None
@@ -334,7 +340,7 @@ class Deployment(BaseObject):
         dependencies.extend(_dependency_names(self.spec.depends or [], "deployment"))
         dependencies.extend(
             _dependency_names(
-                (network.depends for network in self.spec.rosNetworks or []), "network"
+                (network.depends for network in self.spec.ros_networks or []), "network"
             )
         )
         return dependencies
@@ -345,7 +351,8 @@ class Deployment(BaseObject):
                 (volume.depends for volume in self.spec.volumes or []), "disk"
             )
             routes = _dependency_names(
-                (route.depends for route in self.spec.staticRoutes or []), "staticroute"
+                (route.depends for route in self.spec.static_routes or []),
+                "staticroute",
             )
             return disks + routes
         if self.spec.runtime == "device" and self.spec.device:
@@ -384,3 +391,54 @@ def _validate_cloud_volume(volume: DeploymentVolume) -> None:
             "Cloud runtime cannot use device-specific volume fields: uid, gid, perm"
         )
         raise ValueError(message)
+
+
+class DeploymentHistoryMetadata(BaseMetadata):
+    """Historical deployment generation and common resource metadata."""
+
+    name: str | None = None
+    generation: int | None = None
+
+
+class DeploymentHistoryStatus(SDKModel):
+    """Deployment status recorded for a historical generation."""
+
+    error_codes: list[str] | None = None
+    phase: DeploymentPhase | None = None
+    status: DeploymentStatusType | None = None
+
+
+class DeploymentHistory(SDKModel):
+    """One deployment history entry."""
+
+    metadata: DeploymentHistoryMetadata
+    status: DeploymentHistoryStatus
+
+
+class DeploymentHistoryList(BaseList[DeploymentHistory]):
+    """Historical deployment generations."""
+
+
+class DeploymentGraphNode(SDKModel):
+    """Named resource in a deployment dependency graph."""
+
+    name: str = Field(alias="Name")
+    type: Literal["Deployment", "Network", "Disk"] = Field(alias="Type")
+
+
+class DeploymentGraphEdge(SDKModel):
+    """Directed dependency between two graph nodes."""
+
+    from_: DeploymentGraphNode = Field(alias="From")
+    to: DeploymentGraphNode = Field(alias="To")
+    text: str = Field(alias="Text")
+    type: Literal[
+        "Deployment", "Network", "Disk", "ROSTopic", "ROSService", "ROSAction"
+    ] = Field(alias="Type")
+
+
+class DeploymentGraph(SDKModel):
+    """Dependency graph preserving the server's capitalized JSON keys."""
+
+    nodes: list[DeploymentGraphNode] | None = Field(default=None, alias="Nodes")
+    lines: list[DeploymentGraphEdge] | None = Field(default=None, alias="Lines")

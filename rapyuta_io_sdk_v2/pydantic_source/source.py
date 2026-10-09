@@ -29,6 +29,8 @@ from rapyuta_io_sdk_v2 import Client, Configuration
 if TYPE_CHECKING:
     from pydantic.fields import FieldInfo
 
+    from rapyuta_io_sdk_v2.models.configtree import ConfigValue
+
 
 class ConfigTreeSource(PydanticBaseSettingsSource):
     """Load Pydantic settings from a remote or local configuration tree."""
@@ -74,14 +76,14 @@ class ConfigTreeSource(PydanticBaseSettingsSource):
             key_prefixes=[self._top_prefix],
             with_project=self._with_project,
         )
-        if "keys" not in response:
+        if response.keys is None:
             message = (
                 f"'keys' not found in response for config tree '{self._tree_name}' "
                 f"with prefix '{self._top_prefix}'"
             )
             raise KeyError(message)
 
-        return self._extract_data_api(input_data=response["keys"])
+        return self._extract_data_api(input_data=response.keys)
 
     def _load_from_local_file(self) -> dict[str, Any]:
         """Load the configuration tree from a local JSON or YAML file."""
@@ -114,16 +116,16 @@ class ConfigTreeSource(PydanticBaseSettingsSource):
         return processed_data
 
     # * Methods to process the tree
-    def _extract_data_api(self, input_data: dict[str, Any]) -> dict[str, Any]:
+    def _extract_data_api(self, input_data: dict[str, ConfigValue]) -> dict[str, Any]:
         """Extract data api.
 
         Args:
             input_data: Input data.
         """
         return {
-            key: self._decode_value(value.get("data"))
+            key: self._decode_value(value.data)
             for key, value in input_data.items()
-            if "data" in value
+            if value.data is not None
         }
 
     def _decode_value(self, encoded_data: str) -> object:

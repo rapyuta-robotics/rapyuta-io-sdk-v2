@@ -21,8 +21,9 @@ This module mirrors the Go `ServiceAccount` and related types from the
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import Field, field_validator
 
+from rapyuta_io_sdk_v2.models.base import SDKModel
 from rapyuta_io_sdk_v2.models.utils import (
     BaseList,
     BaseMetadata,
@@ -32,14 +33,14 @@ from rapyuta_io_sdk_v2.models.utils import (
 )
 
 
-class ServiceAccountBinding(BaseModel):
+class ServiceAccountBinding(SDKModel):
     """Roles granted to a service account within a domain."""
 
     domain: Domain
     role_names: list[str] = Field(default_factory=list, alias="roleNames")
 
 
-class ServiceAccountSpec(BaseModel):
+class ServiceAccountSpec(SDKModel):
     """Service account description and authorization bindings."""
 
     description: str | None = None
@@ -68,7 +69,7 @@ class ServiceAccountList(BaseList[ServiceAccount]):
     """List of service accounts using BaseList."""
 
 
-class ServiceAccountToken(BaseModel):
+class ServiceAccountToken(SDKModel):
     """Token ownership and timezone-aware expiration settings."""
 
     owner: str | None = None
@@ -88,7 +89,7 @@ class ServiceAccountToken(BaseModel):
         return v
 
 
-class ServiceAccountTokenInfo(BaseModel):
+class ServiceAccountTokenInfo(SDKModel):
     """Issued token identifier, credential, and expiration time."""
 
     id: int | None = None

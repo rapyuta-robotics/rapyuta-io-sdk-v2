@@ -21,8 +21,11 @@ import httpx
 import pytest
 
 from rapyuta_io_sdk_v2.exceptions import HttpNotFoundError, UnauthorizedAccessError
-from rapyuta_io_sdk_v2.models import Secret, SecretList
-from rapyuta_io_sdk_v2.models.secret import SecretCreate
+from rapyuta_io_sdk_v2.models import (
+    Secret,
+    SecretCreate,
+    SecretList,
+)
 
 if TYPE_CHECKING:
     from pytest_mock import MockFixture
@@ -95,7 +98,7 @@ async def test_create_secret_unauthorized(
     )
 
     with pytest.raises(UnauthorizedAccessError) as exc:
-        await async_client.create_secret(body=secret_body)
+        await async_client.create_secret(body=SecretCreate.model_validate(secret_body))
 
     assert str(exc.value) == "unauthorized"
 
@@ -114,7 +117,9 @@ async def test_update_secret_success(
         json=secret_model_mock,
     )
 
-    response = await async_client.update_secret(name="test_secret", body=secret_body)
+    response = await async_client.update_secret(
+        name="test_secret", body=SecretCreate.model_validate(secret_body)
+    )
 
     assert isinstance(response, Secret)
     assert response.metadata.name == "test_secret"
@@ -200,7 +205,9 @@ async def test_create_opaque_secret_success(
         json=opaque_secret_model_mock,
     )
 
-    response = await async_client.create_secret(body=opaque_secret_body)
+    response = await async_client.create_secret(
+        body=SecretCreate.model_validate(opaque_secret_body)
+    )
 
     assert isinstance(response, Secret)
     assert response.spec.type == "Opaque"

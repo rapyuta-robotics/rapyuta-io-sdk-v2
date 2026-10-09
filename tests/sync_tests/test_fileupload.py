@@ -126,7 +126,7 @@ def test_create_fileupload_success(
 
     response = client.create_fileupload(
         device_guid=MOCK_DEVICE_GUID,
-        body=fileupload_body,
+        body=FileUpload.model_validate(fileupload_body),
         project_guid="mock_project_guid",
     )
 
@@ -195,7 +195,7 @@ def test_download_fileupload_success(*, client: Client, mocker: MockFixture) -> 
         guid=MOCK_FILEUPLOAD_GUID,
     )
 
-    assert response["url"] == "https://storage.example.com/signed-url"
+    assert response.url == "https://storage.example.com/signed-url"
 
 
 # SharedURL Tests
@@ -235,7 +235,7 @@ def test_create_sharedurl_success(
 
     response = client.create_sharedurl(
         fileupload_guid=MOCK_FILEUPLOAD_GUID,
-        body=sharedurl_body,
+        body=SharedURL.model_validate(sharedurl_body),
     )
 
     assert isinstance(response, SharedURL)
@@ -284,10 +284,10 @@ def test_list_fileuploads_with_filters(
     assert call_kwargs.kwargs["params"]["status"] == ["PENDING", "COMPLETED"]
 
 
-def test_create_fileupload_with_dict(
+def test_create_fileupload_rejects_dict(
     *, client: Client, fileupload_model_mock: dict[str, Any], mocker: MockFixture
 ) -> None:
-    """Test create_fileupload with dict input instead of model."""
+    """Reject dictionary payloads before making an HTTP request."""
     mock_post = mocker.patch("httpx.Client.post")
 
     mock_post.return_value = httpx.Response(
@@ -303,19 +303,19 @@ def test_create_fileupload_with_dict(
         },
     }
 
-    response = client.create_fileupload(
-        device_guid=MOCK_DEVICE_GUID,
-        body=body_dict,
-    )
+    with pytest.raises(AttributeError, match="model_dump"):
+        client.create_fileupload(
+            device_guid=MOCK_DEVICE_GUID,
+            body=body_dict,
+        )
 
-    assert isinstance(response, FileUpload)
-    assert response.metadata.guid == MOCK_FILEUPLOAD_GUID
+    mock_post.assert_not_called()
 
 
-def test_create_sharedurl_with_dict(
+def test_create_sharedurl_rejects_dict(
     *, client: Client, sharedurl_model_mock: dict[str, Any], mocker: MockFixture
 ) -> None:
-    """Test create_sharedurl with dict input instead of model."""
+    """Reject dictionary payloads before making an HTTP request."""
     mock_post = mocker.patch("httpx.Client.post")
 
     mock_post.return_value = httpx.Response(
@@ -331,13 +331,13 @@ def test_create_sharedurl_with_dict(
         },
     }
 
-    response = client.create_sharedurl(
-        fileupload_guid=MOCK_FILEUPLOAD_GUID,
-        body=body_dict,
-    )
+    with pytest.raises(AttributeError, match="model_dump"):
+        client.create_sharedurl(
+            fileupload_guid=MOCK_FILEUPLOAD_GUID,
+            body=body_dict,
+        )
 
-    assert isinstance(response, SharedURL)
-    assert response.metadata.guid == MOCK_SHAREDURL_GUID
+    mock_post.assert_not_called()
 
 
 def test_cancel_fileupload_not_found(*, client: Client, mocker: MockFixture) -> None:
@@ -372,7 +372,7 @@ def test_create_fileupload_conflict(
     with pytest.raises(HttpAlreadyExistsError) as exc:
         client.create_fileupload(
             device_guid=MOCK_DEVICE_GUID,
-            body=fileupload_body,
+            body=FileUpload.model_validate(fileupload_body),
         )
 
     assert str(exc.value) == "file upload already exists"
@@ -392,7 +392,7 @@ def test_create_sharedurl_invalid_status(
     with pytest.raises(MethodNotAllowedError) as exc:
         client.create_sharedurl(
             fileupload_guid=MOCK_FILEUPLOAD_GUID,
-            body=sharedurl_body,
+            body=SharedURL.model_validate(sharedurl_body),
         )
 
     assert "cannot create shared URL" in str(exc.value)
