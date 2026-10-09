@@ -96,7 +96,7 @@ def test_create_backup_success(
         json=backup_model_mock,
     )
 
-    response = client.create_backup(body=backup_body)
+    response = client.create_backup(body=Backup.model_validate(backup_body))
 
     assert isinstance(response, Backup)
     assert response.metadata.name == "orders-nightly"
@@ -113,7 +113,7 @@ def test_create_backup_unauthorized(
     )
 
     with pytest.raises(Exception, match=r".+") as exc:
-        client.create_backup(body=backup_body)
+        client.create_backup(body=Backup.model_validate(backup_body))
 
     assert str(exc.value) == "unauthorized"
 

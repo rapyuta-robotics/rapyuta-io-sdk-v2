@@ -21,8 +21,11 @@ import httpx
 import pytest
 
 from rapyuta_io_sdk_v2.exceptions import HttpAlreadyExistsError, HttpNotFoundError
-from rapyuta_io_sdk_v2.models import Secret, SecretList
-from rapyuta_io_sdk_v2.models.secret import SecretCreate
+from rapyuta_io_sdk_v2.models import (
+    Secret,
+    SecretCreate,
+    SecretList,
+)
 
 if TYPE_CHECKING:
     from pytest_mock import MockFixture
@@ -91,7 +94,7 @@ def test_create_secret_success(
     )
 
     # Call the create_secret method
-    response = client.create_secret(secret_body)
+    response = client.create_secret(SecretCreate.model_validate(secret_body))
 
     # Validate the response
     assert isinstance(response, Secret)
@@ -113,7 +116,7 @@ def test_create_secret_already_exists(
     )
 
     with pytest.raises(HttpAlreadyExistsError) as exc:
-        client.create_secret(secret_body)
+        client.create_secret(SecretCreate.model_validate(secret_body))
 
     assert str(exc.value) == "secret already exists"
 
@@ -135,7 +138,9 @@ def test_update_secret_success(
     )
 
     # Call the update_secret method
-    response = client.update_secret("secret-aaaaaaaaaaaaaaaaaaaa", body=secret_body)
+    response = client.update_secret(
+        "secret-aaaaaaaaaaaaaaaaaaaa", body=SecretCreate.model_validate(secret_body)
+    )
 
     # Validate the response
     assert isinstance(response, Secret)
@@ -249,7 +254,7 @@ def test_create_opaque_secret_success(
         json=opaque_secret_model_mock,
     )
 
-    response = client.create_secret(opaque_secret_body)
+    response = client.create_secret(SecretCreate.model_validate(opaque_secret_body))
 
     assert isinstance(response, Secret)
     assert response.spec.type == "Opaque"

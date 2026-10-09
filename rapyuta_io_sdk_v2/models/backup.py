@@ -19,12 +19,13 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import ConfigDict, Field
 
+from rapyuta_io_sdk_v2.models.base import SDKModel
 from rapyuta_io_sdk_v2.models.utils import BaseList, BaseMetadata, BaseObject
 
 
-class BackupSpec(BaseModel):
+class BackupSpec(SDKModel):
     """Specification for a Backup resource."""
 
     type: Literal["scheduled", "onDemand"] = Field(default="scheduled")
@@ -40,7 +41,7 @@ class BackupSpec(BaseModel):
     primary_port: int | None = Field(default=None, alias="primaryPort")
 
 
-class BackupVerification(BaseModel):
+class BackupVerification(SDKModel):
     """Verification outcomes for a backup run."""
 
     check: Literal["Passed", "Failed", "Skipped"] | None = Field(default=None)
@@ -51,7 +52,7 @@ class BackupVerification(BaseModel):
     recover: Literal["Passed", "Failed", "Skipped"] | None = Field(default=None)
 
 
-class BackupRun(BaseModel):
+class BackupRun(SDKModel):
     """A single backup run."""
 
     backup_id: str | None = Field(default=None, alias="backupID")
@@ -61,7 +62,7 @@ class BackupRun(BaseModel):
     completed_at: str | None = Field(default=None, alias="completedAt")
 
 
-class BackupStatus(BaseModel):
+class BackupStatus(SDKModel):
     """Status of a Backup resource."""
 
     # An on-demand backup ends in Succeeded or Failed; Ready is scheduled-only.
@@ -89,7 +90,7 @@ class BackupList(BaseList[Backup]):
     """Paginated list of Backup resources."""
 
 
-class BackupArchive(BaseModel):
+class BackupArchive(SDKModel):
     """One uploaded archive of a database.
 
     A projection of the file upload, not the record itself: `guid` is what

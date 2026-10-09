@@ -19,8 +19,9 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import ConfigDict, Field, field_validator
 
+from rapyuta_io_sdk_v2.models.base import SDKModel
 from rapyuta_io_sdk_v2.models.utils import (
     BaseList,
     BaseMetadata,
@@ -29,7 +30,7 @@ from rapyuta_io_sdk_v2.models.utils import (
 )
 
 
-class DeviceSpec(BaseModel):
+class DeviceSpec(SDKModel):
     """Device placement for a Postgres instance."""
 
     device_name: str = Field(alias="deviceName")
@@ -38,7 +39,7 @@ class DeviceSpec(BaseModel):
     port: int | None = Field(default=None)
 
 
-class Credentials(BaseModel):
+class Credentials(SDKModel):
     """References to Postgres username and password secret keys.
 
     Only ``name``+``key`` are sent on create; the apiserver resolves
@@ -50,7 +51,7 @@ class Credentials(BaseModel):
     password: SecretKeyRef | None = Field(default=None)
 
 
-class PostgresUsers(BaseModel):
+class PostgresUsers(SDKModel):
     """Secret references for Postgres users."""
 
     primary: Credentials | None = Field(default=None)
@@ -60,7 +61,7 @@ class PostgresUsers(BaseModel):
     replication: Credentials | None = Field(default=None)
 
 
-class StandbySpec(BaseModel):
+class StandbySpec(SDKModel):
     """Optional hot-standby topology.
 
     Each standby sits on a distinct device from the primary and other standbys.
@@ -77,7 +78,7 @@ class StandbySpec(BaseModel):
     devices: list[DeviceSpec] | None = Field(default=None)
 
 
-class PostgresParameters(BaseModel):
+class PostgresParameters(SDKModel):
     """Tunable ``postgresql.conf`` parameters.
 
     Omitted fields keep the Postgres defaults.
@@ -99,7 +100,7 @@ class PostgresParameters(BaseModel):
     )
 
 
-class PostgresSpec(BaseModel):
+class PostgresSpec(SDKModel):
     """Specification for a PostgreSQL database instance."""
 
     version: Literal["16", "17", "18"]
@@ -112,14 +113,14 @@ class PostgresSpec(BaseModel):
     parameters: PostgresParameters | None = Field(default=None)
 
 
-class DatabaseSpec(BaseModel):
+class DatabaseSpec(SDKModel):
     """Specification for a Database resource."""
 
     type: Literal["postgres"] = Field(default="postgres")
     postgres: PostgresSpec | None = Field(default=None)
 
 
-class ContainerState(BaseModel):
+class ContainerState(SDKModel):
     """Container state details."""
 
     status: str | None = Field(
@@ -128,7 +129,7 @@ class ContainerState(BaseModel):
     started_at: str | None = Field(default=None, alias="startedAt")
 
 
-class InstanceStatus(BaseModel):
+class InstanceStatus(SDKModel):
     """Status of one Postgres instance on one device.
 
     Primary and standby instances report the same shape. The aliases keep names at
@@ -164,14 +165,14 @@ PrimaryStatus = InstanceStatus
 StandbyStatus = InstanceStatus
 
 
-class PostgresStatus(BaseModel):
+class PostgresStatus(SDKModel):
     """Status of the Postgres instance."""
 
     primary: PrimaryStatus | None = Field(default=None)
     standby: list[StandbyStatus] | None = Field(default=None)
 
 
-class DatabaseStatus(BaseModel):
+class DatabaseStatus(SDKModel):
     """Status of a Database resource."""
 
     phase: (

@@ -25,7 +25,10 @@ from rapyuta_io_sdk_v2.exceptions import (
     InternalServerError,
     UnauthorizedAccessError,
 )
-from rapyuta_io_sdk_v2.models import SSHKeySignResponse
+from rapyuta_io_sdk_v2.models import (
+    SSHKeySignRequest,
+    SSHKeySignResponse,
+)
 
 if TYPE_CHECKING:
     from pytest_mock import MockFixture
@@ -47,7 +50,7 @@ def test_sign_ssh_public_key_success(
     )
 
     response = client.sign_ssh_public_key(
-        body=ssh_key_sign_request_body,
+        body=SSHKeySignRequest.model_validate(ssh_key_sign_request_body),
     )
 
     assert isinstance(response, SSHKeySignResponse)
@@ -58,7 +61,7 @@ def test_sign_ssh_public_key_success(
     assert "/v2/certs/ssh/sign/" in call_kwargs.kwargs["url"]
 
 
-def test_sign_ssh_public_key_with_dict_body(
+def test_sign_ssh_public_key_rejects_dict_body(
     *, client: Client, ssh_key_sign_response_mock: dict[str, Any], mocker: MockFixture
 ) -> None:
     mock_post = mocker.patch("httpx.Client.post")
@@ -67,18 +70,12 @@ def test_sign_ssh_public_key_with_dict_body(
         json=ssh_key_sign_response_mock,
     )
 
-    response = client.sign_ssh_public_key(
-        body={"publicKey": "ssh-rsa AAAAB3... user@example.com"},
-    )
+    with pytest.raises(AttributeError, match="model_dump"):
+        client.sign_ssh_public_key(
+            body={"publicKey": "ssh-rsa AAAAB3... user@example.com"},
+        )
 
-    assert isinstance(response, SSHKeySignResponse)
-    assert response.certificate == ssh_key_sign_response_mock["certificate"]
-
-    # Verify the JSON payload uses the alias
-    call_kwargs = mock_post.call_args
-    assert (
-        call_kwargs.kwargs["json"]["publicKey"] == "ssh-rsa AAAAB3... user@example.com"
-    )
+    mock_post.assert_not_called()
 
 
 def test_sign_ssh_public_key_unauthorized(
@@ -92,7 +89,7 @@ def test_sign_ssh_public_key_unauthorized(
 
     with pytest.raises(UnauthorizedAccessError) as exc:
         client.sign_ssh_public_key(
-            body=ssh_key_sign_request_body,
+            body=SSHKeySignRequest.model_validate(ssh_key_sign_request_body),
         )
 
     assert str(exc.value) == "unauthorized"
@@ -109,7 +106,7 @@ def test_sign_ssh_public_key_not_found(
 
     with pytest.raises(HttpNotFoundError) as exc:
         client.sign_ssh_public_key(
-            body=ssh_key_sign_request_body,
+            body=SSHKeySignRequest.model_validate(ssh_key_sign_request_body),
         )
 
     assert str(exc.value) == "not found"
@@ -126,7 +123,7 @@ def test_sign_ssh_public_key_server_error(
 
     with pytest.raises(InternalServerError) as exc:
         client.sign_ssh_public_key(
-            body=ssh_key_sign_request_body,
+            body=SSHKeySignRequest.model_validate(ssh_key_sign_request_body),
         )
 
     assert str(exc.value) == "internal server error"

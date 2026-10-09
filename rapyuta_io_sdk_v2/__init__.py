@@ -79,20 +79,77 @@ from rapyuta_io_sdk_v2.utils import (
 __version__ = "v0.11.0"
 
 
+from rapyuta_io_sdk_v2.models.auth import (
+    AuthSubject,
+    AuthSubjectResponse,
+    LoginRequest,
+    TokenRequest,
+    TokenResponse,
+)
+from rapyuta_io_sdk_v2.models.configtree import (
+    ConfigKeyContent,
+    ConfigKeyRename,
+    ConfigKeyUpload,
+    ConfigTree,
+    ConfigTreeList,
+    ConfigTreeRevision,
+    ConfigTreeRevisionList,
+    ConfigTreeRevisionMetadata,
+    ConfigValue,
+    ConfigValues,
+)
+from rapyuta_io_sdk_v2.models.deployment import (
+    DeploymentGraph,
+    DeploymentGraphEdge,
+    DeploymentGraphNode,
+    DeploymentHistory,
+    DeploymentHistoryList,
+)
+from rapyuta_io_sdk_v2.models.fileupload import (
+    FileUploadDownloadResponse,
+)
+from rapyuta_io_sdk_v2.models.oauth2 import (
+    OAuth2Client,
+    OAuth2ClientList,
+)
+from rapyuta_io_sdk_v2.models.responses import (
+    APIResponse,
+)
+
 __all__ = [
+    "APIResponse",
     "AsyncClient",
+    "AuthSubject",
+    "AuthSubjectResponse",
     "Backup",
     "BackupList",
     "BulkRoleBindingUpdate",
     "Client",
+    "ConfigKeyContent",
+    "ConfigKeyRename",
+    "ConfigKeyUpload",
+    "ConfigTree",
+    "ConfigTreeList",
+    "ConfigTreeRevision",
+    "ConfigTreeRevisionList",
+    "ConfigTreeRevisionMetadata",
+    "ConfigValue",
+    "ConfigValues",
     "Configuration",
     "Daemon",
     "Database",
     "DatabaseList",
     "Deployment",
+    "DeploymentGraph",
+    "DeploymentGraphEdge",
+    "DeploymentGraphNode",
+    "DeploymentHistory",
+    "DeploymentHistoryList",
     "DeploymentList",
     "Disk",
     "DiskList",
+    "FileUploadDownloadResponse",
+    "LoginRequest",
     "ManagedServiceBinding",
     "ManagedServiceBindingList",
     "ManagedServiceInstance",
@@ -101,6 +158,8 @@ __all__ = [
     "ManagedServiceProviderList",
     "Network",
     "NetworkList",
+    "OAuth2Client",
+    "OAuth2ClientList",
     "OAuth2UpdateURI",
     "Organization",
     "Package",
@@ -125,6 +184,8 @@ __all__ = [
     "ServiceAccountTokenList",
     "StaticRoute",
     "StaticRouteList",
+    "TokenRequest",
+    "TokenResponse",
     "User",
     "UserGroup",
     "UserGroupCreate",

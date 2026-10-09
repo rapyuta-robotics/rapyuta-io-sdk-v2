@@ -96,7 +96,7 @@ def test_create_restore_success(
         json=restore_model_mock,
     )
 
-    response = client.create_restore(body=restore_body)
+    response = client.create_restore(body=Restore.model_validate(restore_body))
 
     assert isinstance(response, Restore)
     assert response.metadata.name == "orders-db-restore"
@@ -121,7 +121,7 @@ def test_create_restore_migration_source(
         json=restore_model_mock,
     )
 
-    client.create_restore(body=restore_migration_body)
+    client.create_restore(body=Restore.model_validate(restore_migration_body))
 
     # A migration is the same operation with a dataDirectory source.
     sent = mock_post.call_args.kwargs["json"]
@@ -146,7 +146,7 @@ def test_create_restore_requires_target_database(
     # Without a target there is no route to post to, and a restore always runs
     # against a live database.
     with pytest.raises(ValueError, match="target database is not specified"):
-        client.create_restore(body=body)
+        client.create_restore(body=Restore.model_validate(body))
 
 
 def test_create_restore_conflict(
@@ -161,6 +161,6 @@ def test_create_restore_conflict(
     # Two concurrent pg_restores into one live cluster is data loss, so the
     # apiserver refuses the second.
     with pytest.raises(Exception, match=r".+") as exc:
-        client.create_restore(body=restore_body)
+        client.create_restore(body=Restore.model_validate(restore_body))
 
     assert "already in progress" in str(exc.value)

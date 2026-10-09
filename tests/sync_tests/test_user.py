@@ -79,7 +79,9 @@ def test_update_user_success(
         status_code=200,
         json=mock_response_user,
     )
-    response = client.update_user(email_id="test.user@example.com", body=user_body)
+    response = client.update_user(
+        email_id="test.user@example.com", body=User.model_validate(user_body)
+    )
     assert response.metadata.name == "test user"
     assert response.metadata.guid == "user-testuser-guid-000000001"
     assert response.spec.email_id == "test.user@example.com"
@@ -98,7 +100,9 @@ def test_update_user_unauthorized(
     )
 
     with pytest.raises(UnauthorizedAccessError) as exc:
-        client.update_user(email_id="test.user@example.com", body=user_body)
+        client.update_user(
+            email_id="test.user@example.com", body=User.model_validate(user_body)
+        )
     assert "user cannot be authenticated" in str(exc.value)
 
 
@@ -188,9 +192,8 @@ def test_get_user_permissions_unauthorized(
     assert "user cannot be authenticated" in str(exc.value)
 
 
-@pytest.mark.parametrize("input_type", ["dict", "model"])
 def test_add_user_sends_json_and_returns_user(
-    *, client: Client, mocker: MockFixture, input_type: str
+    *, client: Client, mocker: MockFixture
 ) -> None:
     user = User.model_validate(
         {
@@ -198,7 +201,7 @@ def test_add_user_sends_json_and_returns_user(
             "spec": {"emailID": "operator@example.com", "firstName": "Operator"},
         }
     )
-    payload = user.model_dump(by_alias=True)
+    payload = user.model_dump(by_alias=True, mode="json")
 
     def handle_request(request: httpx.Request) -> httpx.Response:
         assert request.method == "POST"
@@ -213,7 +216,7 @@ def test_add_user_sends_json_and_returns_user(
     with httpx.Client(transport=httpx.MockTransport(handle_request)) as connection:
         mocker.patch.object(client, "c", connection)
         result = client.add_user(
-            payload if input_type == "dict" else user,
+            user,
             content_type="application/json",
             x_checksum="checksum",
             organization_guid="override-org",

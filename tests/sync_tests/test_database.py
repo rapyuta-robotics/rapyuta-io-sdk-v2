@@ -211,7 +211,7 @@ def test_create_database_success(
         json=database_model_mock,
     )
 
-    response = client.create_database(body=database_body)
+    response = client.create_database(body=Database.model_validate(database_body))
 
     assert isinstance(response, Database)
     assert response.metadata.name == "orders-db"
@@ -237,7 +237,7 @@ def test_create_database_unauthorized(
     )
 
     with pytest.raises(Exception, match=r".+") as exc:
-        client.create_database(body=database_body)
+        client.create_database(body=Database.model_validate(database_body))
 
     assert str(exc.value) == "unauthorized"
 
@@ -255,7 +255,9 @@ def test_update_database_success(
         json=database_model_mock,
     )
 
-    response = client.update_database(name="orders-db", body=database_body)
+    response = client.update_database(
+        name="orders-db", body=Database.model_validate(database_body)
+    )
 
     assert isinstance(response, Database)
     assert mock_put.call_args.kwargs["url"].endswith("/v2/databases/orders-db/")
@@ -276,7 +278,9 @@ def test_update_with_empty_devices_removes_every_standby(
     mock_put = mocker.patch("httpx.Client.put")
     mock_put.return_value = httpx.Response(status_code=202, json=database_model_mock)
 
-    client.update_database(name="orders-db", body=database_body)
+    client.update_database(
+        name="orders-db", body=Database.model_validate(database_body)
+    )
 
     sent = mock_put.call_args.kwargs["json"]["spec"]["postgres"]
     assert sent["standby"]["devices"] == []

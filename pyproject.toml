@@ -99,6 +99,7 @@ convention = "google"
 # Pydantic needs model annotations available at runtime.
 runtime-evaluated-base-classes = [
     "pydantic.BaseModel",
+    "rapyuta_io_sdk_v2.models.base.SDKModel",
     "rapyuta_io_sdk_v2.models.utils.BaseObject",
     "rapyuta_io_sdk_v2.models.utils.BaseMetadata",
     "rapyuta_io_sdk_v2.models.utils.BaseList",

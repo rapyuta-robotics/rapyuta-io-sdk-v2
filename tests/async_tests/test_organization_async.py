@@ -21,7 +21,9 @@ import httpx
 import pytest
 
 from rapyuta_io_sdk_v2.exceptions import UnauthorizedAccessError
-from rapyuta_io_sdk_v2.models.organization import Organization
+from rapyuta_io_sdk_v2.models import (
+    Organization,
+)
 
 if TYPE_CHECKING:
     from pytest_mock import MockFixture
@@ -56,15 +58,15 @@ async def test_get_organization_success(
     # Check first member (ServiceAccount)
     assert response.spec.members[0].subject.kind == "ServiceAccount"
     assert response.spec.members[0].subject.name == "test-project-builtin-paramsync-sa"
-    assert response.spec.members[0].roleNames == ["rio-org_member"]
+    assert response.spec.members[0].role_names == ["rio-org_member"]
     # Check second member (User - admin)
     assert response.spec.members[1].subject.kind == "User"
     assert response.spec.members[1].subject.name == "test.user1@example.com"
-    assert response.spec.members[1].roleNames == ["rio-org_admin", "rio-org_member"]
+    assert response.spec.members[1].role_names == ["rio-org_admin", "rio-org_member"]
     # Check third member (User - member only)
     assert response.spec.members[2].subject.kind == "User"
     assert response.spec.members[2].subject.name == "test.user2@example.com"
-    assert response.spec.members[2].roleNames == ["rio-org_member"]
+    assert response.spec.members[2].role_names == ["rio-org_member"]
 
 
 @pytest.mark.asyncio
@@ -101,7 +103,7 @@ async def test_update_organization_success(
 
     response = await async_client.update_organization(
         organization_guid="org-testorg123456789abcdef",
-        body=organization_body,
+        body=Organization.model_validate(organization_body),
     )
 
     # Validate that response is an Organization model object
@@ -112,6 +114,6 @@ async def test_update_organization_success(
         mock_response_organization["spec"]["members"]
     )
     # Verify admin member
-    assert response.spec.members[1].roleNames == ["rio-org_admin", "rio-org_member"]
+    assert response.spec.members[1].role_names == ["rio-org_admin", "rio-org_member"]
     # Verify regular member
-    assert response.spec.members[2].roleNames == ["rio-org_member"]
+    assert response.spec.members[2].role_names == ["rio-org_member"]

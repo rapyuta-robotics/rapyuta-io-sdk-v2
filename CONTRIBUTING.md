@@ -83,8 +83,9 @@ name the specific rule and explain the reason. Unused `noqa` comments are errors
 Unsafe fixes require deliberate review. Update the pinned version in
 `pyproject.toml`, CI, and these commands together when upgrading Ruff.
 
-Existing positional SDK signatures, camelCase model attributes, and required
-framework interfaces have documented rule-specific compatibility exceptions.
+Existing positional SDK signatures and required framework interfaces have
+documented rule-specific compatibility exceptions. Model attributes use
+snake_case with explicit aliases for the API JSON keys.
 New interfaces should meet the limits without suppressions. Ruff catches
 structural problems; behavior still needs tests, and type correctness needs a
 type checker.

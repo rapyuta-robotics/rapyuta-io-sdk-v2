@@ -16,8 +16,9 @@
 
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import Field
 
+from rapyuta_io_sdk_v2.models.base import SDKModel
 from rapyuta_io_sdk_v2.models.utils import (
     BaseList,
     BaseMetadata,
@@ -28,7 +29,7 @@ from rapyuta_io_sdk_v2.models.utils import (
 )
 
 
-class UserGroupMemberCreate(BaseModel):
+class UserGroupMemberCreate(SDKModel):
     """Subject and explicit roles added to a user group."""
 
     subject: Subject
@@ -43,14 +44,14 @@ class UserGroupMember(UserGroupMemberCreate):
     )
 
 
-class UserGroupBinding(BaseModel):
+class UserGroupBinding(SDKModel):
     """Role assigned to a user group within a domain."""
 
     domain: Domain
     role_name: str = Field(alias="roleName")
 
 
-class UserGroupSpec(BaseModel):
+class UserGroupSpec(SDKModel):
     """Group description, memberships, and authorization bindings."""
 
     description: str | None = None
