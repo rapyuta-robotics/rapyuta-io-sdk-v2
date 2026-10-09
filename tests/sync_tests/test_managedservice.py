@@ -1,25 +1,40 @@
-import httpx
-from pytest_mock import MockFixture
+# Copyright 2026 Rapyuta Robotics
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
-# ruff: noqa: F811, F401
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
+import httpx
+
 from rapyuta_io_sdk_v2.models import (
     ManagedServiceBinding,
-    ManagedServiceInstanceList,
     ManagedServiceBindingList,
     ManagedServiceInstance,
+    ManagedServiceInstanceList,
     ManagedServiceProvider,
     ManagedServiceProviderList,
 )
-from tests.utils.fixtures import client
-from tests.data import (
-    managedservice_binding_model_mock,
-    managedservice_model_mock,
-    managedservicebindinglist_model_mock,
-    managedservicelist_model_mock,
-)
+
+if TYPE_CHECKING:
+    from pytest_mock import MockFixture
+
+    from rapyuta_io_sdk_v2 import Client
 
 
-def test_list_providers_success(client, mocker: MockFixture):
+def test_list_providers_success(*, client: Client, mocker: MockFixture) -> None:
     # Mock the httpx.Client.get method
     mock_get = mocker.patch("httpx.Client.get")
 
@@ -42,8 +57,11 @@ def test_list_providers_success(client, mocker: MockFixture):
 
 
 def test_list_instances_success(
-    client, managedservicelist_model_mock, mocker: MockFixture
-):
+    *,
+    client: Client,
+    managedservicelist_model_mock: dict[str, Any],
+    mocker: MockFixture,
+) -> None:
     # Mock the httpx.Client.get method
     mock_get = mocker.patch("httpx.Client.get")
 
@@ -68,7 +86,9 @@ def test_list_instances_success(
     assert instance.spec.config["version"] == "7.10"
 
 
-def test_get_instance_success(client, managedservice_model_mock, mocker: MockFixture):
+def test_get_instance_success(
+    *, client: Client, managedservice_model_mock: dict[str, Any], mocker: MockFixture
+) -> None:
     # Mock the httpx.Client.get method
     mock_get = mocker.patch("httpx.Client.get")
 
@@ -89,7 +109,9 @@ def test_get_instance_success(client, managedservice_model_mock, mocker: MockFix
     assert response.spec.provider == "elasticsearch"
 
 
-def test_create_instance_success(client, managedservice_model_mock, mocker: MockFixture):
+def test_create_instance_success(
+    *, client: Client, managedservice_model_mock: dict[str, Any], mocker: MockFixture
+) -> None:
     # Mock the httpx.Client.post method
     mock_post = mocker.patch("httpx.Client.post")
 
@@ -100,7 +122,6 @@ def test_create_instance_success(client, managedservice_model_mock, mocker: Mock
     )
 
     # Call the create_instance method
-    # print(ManagedServiceInstance.model_json_schema())
     response = client.create_instance(
         body={
             "apiVersion": "api.rapyuta.io/v2",
@@ -117,7 +138,7 @@ def test_create_instance_success(client, managedservice_model_mock, mocker: Mock
     assert response.kind == "ManagedServiceInstance"
 
 
-def test_delete_instance_success(client, mocker: MockFixture):
+def test_delete_instance_success(*, client: Client, mocker: MockFixture) -> None:
     # Mock the httpx.Client.delete method
     mock_delete = mocker.patch("httpx.Client.delete")
 
@@ -135,8 +156,11 @@ def test_delete_instance_success(client, mocker: MockFixture):
 
 
 def test_list_instance_bindings_success(
-    client, managedservicebindinglist_model_mock, mocker: MockFixture
-):
+    *,
+    client: Client,
+    managedservicebindinglist_model_mock: dict[str, Any],
+    mocker: MockFixture,
+) -> None:
     # Mock the httpx.Client.get method
     mock_get = mocker.patch("httpx.Client.get")
 
@@ -161,74 +185,11 @@ def test_list_instance_bindings_success(
 
 
 def test_get_instance_binding_success(
-    client, managedservice_binding_model_mock, mocker: MockFixture
-):
-    # Mock the httpx.Client.get method
-    mock_get = mocker.patch("httpx.Client.get")
-
-    # Set up the mock response
-    mock_get.return_value = httpx.Response(
-        status_code=200,
-        json=managedservice_binding_model_mock,
-    )
-
-    # Call the get_instance_binding method
-    response = client.get_instance_binding(
-        name="mock_instance_binding_name", instance_name="mock_instance_name"
-    )
-
-    # Validate the response
-    assert response["metadata"]["guid"] == "mock_instance_binding_guid"
-    assert response["metadata"]["name"] == "test-instance-binding"
-    assert response["kind"] == "ManagedServiceBinding"
-    assert response["spec"]["provider"] == "headscalevpn"
-
-
-def test_create_instance_binding_success(
-    client, managedservice_binding_model_mock, mocker: MockFixture
-):
-    # Mock the httpx.Client.post method
-    mock_post = mocker.patch("httpx.Client.post")
-
-    # Set up the mock response
-    mock_post.return_value = httpx.Response(
-        status_code=201,
-        json=managedservice_binding_model_mock,
-    )
-
-    # Call the create_instance_binding method
-    response = client.create_instance_binding(
-        body={"name": "test_instance_binding"}, instance_name="mock_instance_name"
-    )
-
-    # Validate the response
-    assert response["metadata"]["guid"] == "mock_instance_binding_guid"
-    assert response["metadata"]["name"] == "test-instance-binding"
-    assert response["kind"] == "ManagedServiceBinding"
-
-
-def test_delete_instance_binding_success(client, mocker: MockFixture):
-    # Mock the httpx.Client.delete method
-    mock_delete = mocker.patch("httpx.Client.delete")
-
-    # Set up the mock response
-    mock_delete.return_value = httpx.Response(
-        status_code=204,
-        json={"success": True},
-    )
-
-    # Call the delete_instance_binding method
-    response = client.delete_instance_binding(
-        name="mock_instance_binding_name", instance_name="mock_instance_name"
-    )
-
-    # Validate the response
-    assert response is None
-
-
-def test_get_instance_binding_success(
-    client, managedservice_binding_model_mock, mocker: MockFixture
-):
+    *,
+    client: Client,
+    managedservice_binding_model_mock: dict[str, Any],
+    mocker: MockFixture,
+) -> None:
     mock_get = mocker.patch("httpx.Client.get")
 
     # Set up the mock response
@@ -251,8 +212,11 @@ def test_get_instance_binding_success(
 
 
 def test_create_instance_binding_success(
-    client, managedservice_binding_model_mock, mocker: MockFixture
-):
+    *,
+    client: Client,
+    managedservice_binding_model_mock: dict[str, Any],
+    mocker: MockFixture,
+) -> None:
     # Mock the httpx.Client.post method
     mock_post = mocker.patch("httpx.Client.post")
 
@@ -284,7 +248,9 @@ def test_create_instance_binding_success(
     assert response.kind == "ManagedServiceBinding"
 
 
-def test_delete_instance_binding_success(client, mocker: MockFixture):
+def test_delete_instance_binding_success(
+    *, client: Client, mocker: MockFixture
+) -> None:
     # Mock the httpx.Client.delete method
     mock_delete = mocker.patch("httpx.Client.delete")
 

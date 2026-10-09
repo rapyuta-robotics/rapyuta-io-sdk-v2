@@ -12,17 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Resource validation models for user."""
+
 from __future__ import annotations
 
-from typing import Dict, List, Literal
+from typing import Literal
 
 from pydantic import AliasChoices, BaseModel, Field, model_validator
 
 from rapyuta_io_sdk_v2.models.utils import BaseList, BaseMetadata, BaseObject
 
 # Type aliases for permissions
-ActionMap = Dict[str, List[str]]
-ResourceMap = Dict[str, ActionMap]
+ActionMap = dict[str, list[str]]
+ResourceMap = dict[str, ActionMap]
 
 
 class UserPermissions(BaseModel):
@@ -43,9 +45,11 @@ class UserOrganization(BaseModel):
     role_names: list[str] | None = Field(alias="roleNames")
 
     @model_validator(mode="after")
-    def ensure_name_or_guid(self):
+    def ensure_name_or_guid(self) -> UserOrganization:
+        """Require a resource name or GUID."""
         if self.name is None and self.guid is None:
-            raise ValueError("either 'name' or 'guid' should be specified")
+            message = "either 'name' or 'guid' should be specified"
+            raise ValueError(message)
 
         return self
 
@@ -63,9 +67,11 @@ class UserProject(BaseModel):
     role_names: list[str] | None = Field(alias="roleNames")
 
     @model_validator(mode="after")
-    def ensure_name_or_guid(self):
+    def ensure_name_or_guid(self) -> UserProject:
+        """Require a resource name or GUID."""
         if self.name is None and self.guid is None:
-            raise ValueError("either 'name' or 'guid' should be specified")
+            message = "either 'name' or 'guid' should be specified"
+            raise ValueError(message)
 
         return self
 
@@ -83,9 +89,11 @@ class UserUserGroup(BaseModel):
     role_names: list[str] = Field(alias="roleNames")
 
     @model_validator(mode="after")
-    def ensure_name_or_guid(self):
+    def ensure_name_or_guid(self) -> UserUserGroup:
+        """Require a resource name or GUID."""
         if self.name is None and self.guid is None:
-            raise ValueError("either 'name' or 'guid' should be specified")
+            message = "either 'name' or 'guid' should be specified"
+            raise ValueError(message)
 
         return self
 
@@ -113,5 +121,3 @@ class User(BaseObject):
 
 class UserList(BaseList[User]):
     """List of users using BaseList."""
-
-    pass

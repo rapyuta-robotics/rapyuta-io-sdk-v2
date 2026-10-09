@@ -1,16 +1,45 @@
+# Copyright 2026 Rapyuta Robotics
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
 import httpx
 import pytest
-from pytest_mock import MockFixture
 
-# ruff: noqa: F811, F401
+from rapyuta_io_sdk_v2.exceptions import (
+    HttpNotFoundError,
+    InternalServerError,
+    UnauthorizedAccessError,
+)
 from rapyuta_io_sdk_v2.models import SSHKeySignResponse
-from tests.data.mock_data import ssh_key_sign_request_body, ssh_key_sign_response_mock
-from tests.utils.fixtures import client
+
+if TYPE_CHECKING:
+    from pytest_mock import MockFixture
+
+    from rapyuta_io_sdk_v2 import Client
 
 
 def test_sign_ssh_public_key_success(
-    client, ssh_key_sign_request_body, ssh_key_sign_response_mock, mocker: MockFixture
-):
+    *,
+    client: Client,
+    ssh_key_sign_request_body: dict[str, Any],
+    ssh_key_sign_response_mock: dict[str, Any],
+    mocker: MockFixture,
+) -> None:
     mock_post = mocker.patch("httpx.Client.post")
     mock_post.return_value = httpx.Response(
         status_code=200,
@@ -30,8 +59,8 @@ def test_sign_ssh_public_key_success(
 
 
 def test_sign_ssh_public_key_with_dict_body(
-    client, ssh_key_sign_response_mock, mocker: MockFixture
-):
+    *, client: Client, ssh_key_sign_response_mock: dict[str, Any], mocker: MockFixture
+) -> None:
     mock_post = mocker.patch("httpx.Client.post")
     mock_post.return_value = httpx.Response(
         status_code=200,
@@ -47,19 +76,21 @@ def test_sign_ssh_public_key_with_dict_body(
 
     # Verify the JSON payload uses the alias
     call_kwargs = mock_post.call_args
-    assert call_kwargs.kwargs["json"]["publicKey"] == "ssh-rsa AAAAB3... user@example.com"
+    assert (
+        call_kwargs.kwargs["json"]["publicKey"] == "ssh-rsa AAAAB3... user@example.com"
+    )
 
 
 def test_sign_ssh_public_key_unauthorized(
-    client, ssh_key_sign_request_body, mocker: MockFixture
-):
+    *, client: Client, ssh_key_sign_request_body: dict[str, Any], mocker: MockFixture
+) -> None:
     mock_post = mocker.patch("httpx.Client.post")
     mock_post.return_value = httpx.Response(
         status_code=401,
         json={"error": "unauthorized"},
     )
 
-    with pytest.raises(Exception) as exc:
+    with pytest.raises(UnauthorizedAccessError) as exc:
         client.sign_ssh_public_key(
             body=ssh_key_sign_request_body,
         )
@@ -68,15 +99,15 @@ def test_sign_ssh_public_key_unauthorized(
 
 
 def test_sign_ssh_public_key_not_found(
-    client, ssh_key_sign_request_body, mocker: MockFixture
-):
+    *, client: Client, ssh_key_sign_request_body: dict[str, Any], mocker: MockFixture
+) -> None:
     mock_post = mocker.patch("httpx.Client.post")
     mock_post.return_value = httpx.Response(
         status_code=404,
         json={"error": "not found"},
     )
 
-    with pytest.raises(Exception) as exc:
+    with pytest.raises(HttpNotFoundError) as exc:
         client.sign_ssh_public_key(
             body=ssh_key_sign_request_body,
         )
@@ -85,15 +116,15 @@ def test_sign_ssh_public_key_not_found(
 
 
 def test_sign_ssh_public_key_server_error(
-    client, ssh_key_sign_request_body, mocker: MockFixture
-):
+    *, client: Client, ssh_key_sign_request_body: dict[str, Any], mocker: MockFixture
+) -> None:
     mock_post = mocker.patch("httpx.Client.post")
     mock_post.return_value = httpx.Response(
         status_code=500,
         json={"error": "internal server error"},
     )
 
-    with pytest.raises(Exception) as exc:
+    with pytest.raises(InternalServerError) as exc:
         client.sign_ssh_public_key(
             body=ssh_key_sign_request_body,
         )

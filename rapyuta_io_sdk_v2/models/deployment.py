@@ -1,5 +1,18 @@
-"""
-Pydantic models for Deployment resource validation.
+# Copyright 2026 Rapyuta Robotics
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""Pydantic models for Deployment resource validation.
 
 This module contains Pydantic models that correspond to the Deployment JSON schema,
 providing validation for Deployment resources to help users identify missing or
@@ -8,16 +21,23 @@ incorrect fields.
 
 from __future__ import annotations
 
-from os import path
+import pathlib
+from typing import TYPE_CHECKING, Literal
 
-from typing import Literal
-
-from pydantic import BaseModel, ConfigDict, Field, model_validator, field_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    ValidationInfo,
+    field_validator,
+    model_validator,
+)
 
 from rapyuta_io_sdk_v2.models.utils import (
     BaseList,
     BaseMetadata,
     BaseObject,
+    Depends,
     DeploymentDepends,
     DeploymentPhase,
     DeploymentStatusType,
@@ -32,6 +52,9 @@ from rapyuta_io_sdk_v2.models.utils import (
     ValueFrom,
 )
 
+if TYPE_CHECKING:
+    from collections.abc import Iterable
+
 
 class DeploymentMetadata(BaseMetadata):
     """Metadata for Deployment resource."""
@@ -40,10 +63,13 @@ class DeploymentMetadata(BaseMetadata):
     generation: int | None = None
 
 
+# CamelCase attributes preserve the public model API and serialized field names.
 class EnvArgsSpec(BaseModel):
+    """Deployment environment variable value or secret reference."""
+
     name: str
     value: str | None = None
-    valueFrom: ValueFrom | None = Field(
+    valueFrom: ValueFrom | None = Field(  # noqa: N815
         default=None,
         description="Populate the env var's value from a Secret key reference",
     )
@@ -52,7 +78,12 @@ class EnvArgsSpec(BaseModel):
 
     @field_validator("value", mode="before")
     @classmethod
-    def coerce_value_to_str(cls, v):
+    def coerce_value_to_str(cls, v: object) -> str | None:
+        """Convert scalar environment values to strings.
+
+        Args:
+            v: Field value supplied to the validator.
+        """
         if v is None:
             return v
         if not isinstance(v, str):
@@ -73,8 +104,12 @@ class DeploymentVolume(BaseModel):
 
     @model_validator(mode="before")
     @classmethod
-    def handle_empty_depends(cls, data):
-        """Handle empty depends dictionaries by converting them to None."""
+    def handle_empty_depends(cls, data: object) -> object:
+        """Handle empty depends dictionaries by converting them to None.
+
+        Args:
+            data: Raw resource data supplied before model validation.
+        """
         if isinstance(data, dict) and "depends" in data:
             depends = data["depends"]
             # If depends is an empty dictionary, set it to None
@@ -84,9 +119,16 @@ class DeploymentVolume(BaseModel):
 
     @field_validator("mount_path", mode="before")
     @classmethod
-    def check_absolute_path(cls, v, info):
-        if v is not None and not path.isabs(v):
-            raise ValueError(f"{info.field_name} must be an absolute path.")
+    def check_absolute_path(cls, v: str | None, info: ValidationInfo) -> str | None:
+        """Reject relative mount paths.
+
+        Args:
+            v: Field value supplied to the validator.
+            info: Field name and previously validated sibling values.
+        """
+        if v is not None and not pathlib.Path(v).is_absolute():
+            message = f"{info.field_name} must be an absolute path."
+            raise ValueError(message)
         return v
 
 
@@ -99,8 +141,12 @@ class DeploymentStaticRoute(BaseModel):
 
     @model_validator(mode="before")
     @classmethod
-    def handle_empty_depends(cls, data):
-        """Handle empty depends dictionaries by converting them to None."""
+    def handle_empty_depends(cls, data: object) -> object:
+        """Handle empty depends dictionaries by converting them to None.
+
+        Args:
+            data: Raw resource data supplied before model validation.
+        """
         if isinstance(data, dict) and "depends" in data:
             depends = data["depends"]
             # If depends is an empty dictionary, set it to None
@@ -113,13 +159,20 @@ class DeploymentROSNetwork(BaseModel):
     """ROS Network configuration matching Go DeploymentROSNetwork struct."""
 
     depends: NetworkDepends
-    domainID: int | None | None = Field(default=None, description="ROS Domain ID")
+    domainID: int | None = Field(  # noqa: N815
+        default=None,
+        description="ROS Domain ID",
+    )
     interface: str | None = Field(default=None, description="Network interface")
 
     @model_validator(mode="before")
     @classmethod
-    def handle_empty_depends(cls, data):
-        """Handle empty depends dictionaries by converting them to None."""
+    def handle_empty_depends(cls, data: object) -> object:
+        """Handle empty depends dictionaries by converting them to None.
+
+        Args:
+            data: Raw resource data supplied before model validation.
+        """
         if isinstance(data, dict) and "depends" in data:
             depends = data["depends"]
             # If depends is an empty dictionary, set it to None
@@ -133,7 +186,7 @@ class DeploymentParamConfig(BaseModel):
 
     enabled: bool | None = None
     trees: list[str] | None = None
-    blockUntilSynced: bool | None = Field(default=False)
+    blockUntilSynced: bool | None = Field(default=False)  # noqa: N815
 
 
 class DeploymentVPNConfig(BaseModel):
@@ -156,8 +209,12 @@ class DeploymentDevice(BaseModel):
 
     @model_validator(mode="before")
     @staticmethod
-    def handle_empty_depends(data):
-        """Handle empty depends dictionaries by converting them to None."""
+    def handle_empty_depends(data: object) -> object:
+        """Handle empty depends dictionaries by converting them to None.
+
+        Args:
+            data: Raw resource data supplied before model validation.
+        """
         if isinstance(data, dict) and "depends" in data:
             depends = data["depends"]
             # If depends is an empty dictionary, set it to None
@@ -167,17 +224,19 @@ class DeploymentDevice(BaseModel):
 
 
 class DeploymentSpec(BaseModel):
+    """Deployment runtime, dependencies, volumes, and process overrides."""
+
     runtime: Runtime
     depends: list[DeploymentDepends] | None = None
     device: DeploymentDevice | None = None
     restart: RestartPolicy | None = None
-    envArgs: list[EnvArgsSpec] | None = None
+    envArgs: list[EnvArgsSpec] | None = None  # noqa: N815
     volumes: list[DeploymentVolume] | None = None
-    rosNetworks: list[DeploymentROSNetwork] | None = None
+    rosNetworks: list[DeploymentROSNetwork] | None = None  # noqa: N815
     features: DeploymentFeatures | None = None
-    staticRoutes: list[DeploymentStaticRoute] | None = None
-    serviceAccount: str | None = None
-    networkInterface: str | None = Field(
+    staticRoutes: list[DeploymentStaticRoute] | None = None  # noqa: N815
+    serviceAccount: str | None = None  # noqa: N815
+    networkInterface: str | None = Field(  # noqa: N815
         default=None,
         description=(
             "Network interface to use for ROS networks. "
@@ -186,34 +245,21 @@ class DeploymentSpec(BaseModel):
     )
 
     @model_validator(mode="after")
-    def validate_runtime_and_volumes(self):
-        """Validate that runtime and volume configurations are compatible."""
-        if self.runtime == "device" and self.volumes:
-            # For device runtime, volumes should not have cloud-specific depends
-            for volume in self.volumes:
-                if volume.depends and hasattr(volume.depends, "kind"):
-                    # Device volumes should depend on disks, not cloud resources
-                    if volume.depends.kind in ["managedService", "cloudService"]:
-                        raise ValueError(
-                            f"Device runtime cannot use cloud volume dependency: {volume.depends.kind}"
-                        )
-        elif self.runtime == "cloud" and self.volumes:
-            # For cloud runtime, volumes should not have device-specific fields
-            for volume in self.volumes:
-                if any(
-                    [
-                        volume.uid is not None,
-                        volume.gid is not None,
-                        volume.perm is not None,
-                    ]
-                ):
-                    raise ValueError(
-                        "Cloud runtime cannot use device-specific volume fields: uid, gid, perm"
-                    )
+    def validate_runtime_and_volumes(self) -> DeploymentSpec:
+        """Validate each volume against the selected deployment runtime."""
+        validator = {
+            "device": _validate_device_volume,
+            "cloud": _validate_cloud_volume,
+        }.get(self.runtime)
+        if validator:
+            for volume in self.volumes or []:
+                validator(volume)
         return self
 
 
 class ExecutableStatus(BaseModel):
+    """Container lifecycle, image, restart history, and exit result."""
+
     name: str | None = None
     # Container image, including tag, that this executable runs.
     image: str | None = None
@@ -225,6 +271,8 @@ class ExecutableStatus(BaseModel):
 
 
 class DependentDeploymentStatus(BaseModel):
+    """Lifecycle and errors for a prerequisite deployment."""
+
     name: str | None = None
     guid: str | None = None
     status: DeploymentStatusType | None = None
@@ -233,6 +281,8 @@ class DependentDeploymentStatus(BaseModel):
 
 
 class DependentNetworkStatus(BaseModel):
+    """Lifecycle and errors for a prerequisite network."""
+
     name: str | None = None
     guid: str | None = None
     status: DeploymentStatusType | None = None
@@ -241,6 +291,8 @@ class DependentNetworkStatus(BaseModel):
 
 
 class DependentDiskStatus(BaseModel):
+    """Lifecycle and errors for a prerequisite disk."""
+
     name: str | None = None
     guid: str | None = None
     status: str | None = None
@@ -248,12 +300,16 @@ class DependentDiskStatus(BaseModel):
 
 
 class Dependencies(BaseModel):
+    """Observed deployment, network, and disk dependency status."""
+
     deployments: list[DependentDeploymentStatus] | None = None
     networks: list[DependentNetworkStatus] | None = None
     disks: list[DependentDiskStatus] | None = Field(default=None, alias="disk")
 
 
 class DeploymentStatus(BaseModel):
+    """Deployment lifecycle and executable and dependency status."""
+
     phase: DeploymentPhase | None = None
     status: DeploymentStatusType | None = None
     error_codes: list[str] | None = None
@@ -272,51 +328,59 @@ class Deployment(BaseObject):
     status: DeploymentStatus | None = None
 
     def list_dependencies(self) -> list[str] | None:
-        dependencies: list[str] = []
-
-        # Package Dependency
-        if self.metadata.depends is not None:
-            key = f"package:{self.metadata.depends.name_or_guid}"
-            dependencies.append(key)
-
-        if self.spec.runtime == "cloud":
-            # Disk Dependency
-            if self.spec.volumes:
-                for volume in self.spec.volumes:
-                    if volume.depends is not None:
-                        key = f"disk:{volume.depends.name_or_guid}"
-                        dependencies.append(key)
-
-            # Static Route Dependency
-            if self.spec.staticRoutes:
-                for route in self.spec.staticRoutes:
-                    if route.depends is not None:
-                        key = f"staticroute:{route.depends.name_or_guid}"
-                        dependencies.append(key)
-
-        # Device Dependency
-        if self.spec.runtime == "device" and self.spec.device is not None:
-            if self.spec.device.depends:
-                key = f"device:{self.spec.device.depends.name_or_guid}"
-                dependencies.append(key)
-
-        # Deployment Dependency
-        if self.spec.depends:
-            for dep in self.spec.depends:
-                key = f"deployment:{dep.name_or_guid}"
-                dependencies.append(key)
-
-        # Network Dependency
-        if self.spec.rosNetworks:
-            for network in self.spec.rosNetworks:
-                if network.depends is not None:
-                    key = f"network:{network.depends.name_or_guid}"
-                    dependencies.append(key)
-
+        """Return package, runtime, deployment, and network dependencies in order."""
+        dependencies = _dependency_names([self.metadata.depends], "package")
+        dependencies.extend(self._runtime_dependencies())
+        dependencies.extend(_dependency_names(self.spec.depends or [], "deployment"))
+        dependencies.extend(
+            _dependency_names(
+                (network.depends for network in self.spec.rosNetworks or []), "network"
+            )
+        )
         return dependencies
+
+    def _runtime_dependencies(self) -> list[str]:
+        if self.spec.runtime == "cloud":
+            disks = _dependency_names(
+                (volume.depends for volume in self.spec.volumes or []), "disk"
+            )
+            routes = _dependency_names(
+                (route.depends for route in self.spec.staticRoutes or []), "staticroute"
+            )
+            return disks + routes
+        if self.spec.runtime == "device" and self.spec.device:
+            return _dependency_names([self.spec.device.depends], "device")
+        return []
 
 
 class DeploymentList(BaseList[Deployment]):
     """List of deployments using BaseList."""
 
-    pass
+
+def _dependency_names(
+    dependencies: Iterable[Depends | PackageDepends | None], kind: str
+) -> list[str]:
+    return [
+        f"{kind}:{dependency.name_or_guid}"
+        for dependency in dependencies
+        if dependency is not None
+    ]
+
+
+def _validate_device_volume(volume: DeploymentVolume) -> None:
+    if volume.depends and getattr(volume.depends, "kind", None) in (
+        "managedService",
+        "cloudService",
+    ):
+        message = (
+            f"Device runtime cannot use cloud volume dependency: {volume.depends.kind}"
+        )
+        raise ValueError(message)
+
+
+def _validate_cloud_volume(volume: DeploymentVolume) -> None:
+    if any(value is not None for value in (volume.uid, volume.gid, volume.perm)):
+        message = (
+            "Cloud runtime cannot use device-specific volume fields: uid, gid, perm"
+        )
+        raise ValueError(message)

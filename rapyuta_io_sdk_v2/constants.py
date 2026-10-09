@@ -16,6 +16,8 @@
 # in order to keep the configuration file name
 # consistent. The app name for the CLI as well
 # as the SDK can be changed to "rio" in the future.
+"""SDK application names and deployment environments."""
+
 APP_NAME = "rio-cli"
 
 LOGIN_API_PATH = "/user/login"

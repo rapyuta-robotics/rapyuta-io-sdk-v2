@@ -1,14 +1,25 @@
-"""
-Pydantic models for Disk resource validation.
+# Copyright 2026 Rapyuta Robotics
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""Pydantic models for Disk resource validation.
 
 This module contains Pydantic models that correspond to the Disk JSON schema,
 providing validation for Disk resources to help users identify missing or
 incorrect fields.
 """
 
-from __future__ import annotations
-
-from typing import Any, Literal
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -25,11 +36,15 @@ class DiskSpec(BaseModel):
 
 
 class DiskBound(BaseModel):
+    """Deployment currently bound to a disk."""
+
     deployment_guid: str | None
     deployment_name: str | None
 
 
 class DiskStatus(BaseModel):
+    """Disk lifecycle, capacity usage, and deployment binding."""
+
     status: Literal["Available", "Bound", "Released", "Failed", "Pending"]
     capacity_used: float | None = Field(
         default=None,
@@ -52,8 +67,12 @@ class DiskStatus(BaseModel):
 
     @field_validator("disk_bound", mode="before")
     @staticmethod
-    def normalize_disk_bound(value: Any) -> dict[str, Any] | None:
-        """Convert empty dict to None for diskBound field."""
+    def normalize_disk_bound(value: object) -> object:
+        """Convert empty dict to None for diskBound field.
+
+        Args:
+            value: Field value supplied to the validator.
+        """
         if isinstance(value, dict) and not value:
             return None
         return value
@@ -72,5 +91,3 @@ class Disk(BaseObject):
 
 class DiskList(BaseList[Disk]):
     """List of disks using BaseList."""
-
-    pass
