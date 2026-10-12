@@ -18,11 +18,12 @@ This module contains Pydantic models that correspond to the Deployment JSON sche
 providing validation for Deployment resources to help users identify missing or
 incorrect fields.
 """
+# Lifecycle helper imports remain local to keep model modules independent.
 
 from __future__ import annotations
 
 import pathlib
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, ClassVar, Literal
 
 from pydantic import (
     ConfigDict,
@@ -32,7 +33,14 @@ from pydantic import (
     model_validator,
 )
 
+from rapyuta_io_sdk_v2.models.applier import (
+    DependencyReference,
+    ResourceCapabilities,
+    ResourceReference,
+    ResourceScope,
+)
 from rapyuta_io_sdk_v2.models.base import SDKModel
+from rapyuta_io_sdk_v2.models.resource import ResourceMethods
 from rapyuta_io_sdk_v2.models.utils import (
     BaseList,
     BaseMetadata,
@@ -54,6 +62,10 @@ from rapyuta_io_sdk_v2.models.utils import (
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
+
+    from rapyuta_io_sdk_v2.async_client import AsyncClient
+    from rapyuta_io_sdk_v2.client import Client
+    from rapyuta_io_sdk_v2.models.applier import ResourceContext
 
 
 class DeploymentMetadata(BaseMetadata):
@@ -263,6 +275,105 @@ class DeploymentSpec(SDKModel):
         return self
 
 
+def _reference_dependency(
+    kind: str,
+    value: str,
+    *,
+    version: str | None = None,
+    wait: bool = False,
+    include_guid: bool = True,
+) -> DependencyReference:
+    return DependencyReference(
+        reference=ResourceReference(
+            kind=kind,
+            name=value,
+            guid=value if include_guid else None,
+            version=version,
+        ),
+        wait=wait,
+    )
+
+
+def _package_dependency(
+    package: PackageDepends | None,
+) -> tuple[DependencyReference, ...]:
+    if package is None:
+        return ()
+    return (
+        _reference_dependency("package", package.name_or_guid, version=package.version),
+    )
+
+
+def _volume_dependencies(
+    volumes: list[DeploymentVolume] | None,
+) -> tuple[DependencyReference, ...]:
+    return tuple(
+        _reference_dependency("disk", volume.depends.name_or_guid)
+        for volume in volumes or []
+        if volume.depends is not None
+    )
+
+
+def _route_dependencies(
+    routes: list[DeploymentStaticRoute] | None,
+) -> tuple[DependencyReference, ...]:
+    return tuple(
+        _reference_dependency("staticroute", route.depends.name_or_guid)
+        for route in routes or []
+        if route.depends is not None
+    )
+
+
+def _network_dependencies(
+    networks: list[DeploymentROSNetwork] | None,
+) -> tuple[DependencyReference, ...]:
+    return tuple(
+        _reference_dependency("network", network.depends.name_or_guid)
+        for network in networks or []
+    )
+
+
+def _wait_dependencies(
+    dependencies: list[DeploymentDepends] | None,
+) -> tuple[DependencyReference, ...]:
+    return tuple(
+        _reference_dependency(
+            "deployment", dependency.name_or_guid, wait=dependency.wait
+        )
+        for dependency in dependencies or []
+    )
+
+
+def _device_dependency(
+    device: DeploymentDevice | None,
+) -> tuple[DependencyReference, ...]:
+    if device is None:
+        return ()
+    return (_reference_dependency("device", device.depends.name_or_guid),)
+
+
+def _service_account_dependency(
+    service_account: str | None,
+) -> tuple[DependencyReference, ...]:
+    if not service_account:
+        return ()
+    return (
+        _reference_dependency("serviceaccount", service_account, include_guid=False),
+    )
+
+
+def _secret_key_dependencies(
+    arguments: list[EnvArgsSpec] | None,
+) -> tuple[DependencyReference, ...]:
+    return tuple(
+        _reference_dependency("secret", secret_key.name, include_guid=False)
+        for argument in arguments or []
+        if argument.value_from is not None
+        and argument.value_from.secret_key_ref is not None
+        and (secret_key := argument.value_from.secret_key_ref).name is not None
+    )
+
+
 class ExecutableStatus(SDKModel):
     """Container lifecycle, image, restart history, and exit result."""
 
@@ -323,8 +434,16 @@ class DeploymentStatus(SDKModel):
     dependencies: Dependencies | None = None
 
 
-class Deployment(BaseObject):
+class Deployment(ResourceMethods, BaseObject):
     """Deployment model."""
+
+    KIND: ClassVar[str] = "Deployment"
+    CAPABILITIES: ClassVar[ResourceCapabilities] = ResourceCapabilities(
+        create=True,
+        update=False,
+        delete=True,
+        apply_policy="create_or_exists",
+    )
 
     model_config = ConfigDict(extra="forbid")
 
@@ -332,6 +451,102 @@ class Deployment(BaseObject):
     metadata: DeploymentMetadata
     spec: DeploymentSpec
     status: DeploymentStatus | None = None
+
+    def readiness_state(self) -> tuple[str | None, bool, bool]:
+        """Return the observed state, readiness, and terminal failure flags."""
+        status = self.status
+        if status is None:
+            return None, False, False
+        state = status.status or status.phase
+        terminal = status.status in {"Error", "Stopped"} or status.phase in {
+            "FailedToStart",
+            "FailedToUpdate",
+            "Stopped",
+        }
+        return state, status.status == "Running", terminal
+
+    def resource_dependencies(
+        self, *, scope: ResourceScope | None = None
+    ) -> tuple[DependencyReference, ...]:
+        """Preserve all modeled package, runtime, network, and wait references."""
+        del scope
+        dependencies = [
+            *_package_dependency(self.metadata.depends),
+            *_volume_dependencies(self.spec.volumes),
+            *_route_dependencies(self.spec.static_routes),
+            *_network_dependencies(self.spec.ros_networks),
+            *_device_dependency(self.spec.device),
+            *_wait_dependencies(self.spec.depends),
+            *_service_account_dependency(self.spec.service_account),
+            *_secret_key_dependencies(self.spec.env_args),
+        ]
+        return tuple(dependencies)
+
+    def create_object(self, client: Client, *, context: ResourceContext) -> Deployment:
+        """Create this Deployment without invoking the update API."""
+        from rapyuta_io_sdk_v2.apply._resources.standard import (  # noqa: PLC0415
+            project_options,
+            record_write,
+            scoped_context,
+            scoped_copy,
+        )
+
+        context = scoped_context(self, context)
+        payload = scoped_copy(self, context)
+        return record_write(
+            context,
+            "created",
+            lambda: client.create_deployment(payload, **project_options(context)),
+        )
+
+    async def create_object_async(
+        self, client: AsyncClient, *, context: ResourceContext
+    ) -> Deployment:
+        """Create this Deployment with the native asynchronous SDK operation."""
+        from rapyuta_io_sdk_v2.apply._resources.standard import (  # noqa: PLC0415
+            project_options,
+            record_write_async,
+            scoped_context,
+            scoped_copy,
+        )
+
+        context = scoped_context(self, context)
+        payload = scoped_copy(self, context)
+        return await record_write_async(
+            context,
+            "created",
+            lambda: client.create_deployment(payload, **project_options(context)),
+        )
+
+    def _delete_object(self, client: Client, *, context: ResourceContext) -> None:
+        """Delete this Deployment by its scoped name."""
+        from rapyuta_io_sdk_v2.apply._resources.standard import (  # noqa: PLC0415
+            project_options,
+            record_write,
+        )
+
+        metadata = self.metadata
+        record_write(
+            context,
+            "deleted",
+            lambda: client.delete_deployment(metadata.name, **project_options(context)),
+        )
+
+    async def _delete_object_async(
+        self, client: AsyncClient, *, context: ResourceContext
+    ) -> None:
+        """Delete this Deployment through the native async client."""
+        from rapyuta_io_sdk_v2.apply._resources.standard import (  # noqa: PLC0415
+            project_options,
+            record_write_async,
+        )
+
+        metadata = self.metadata
+        await record_write_async(
+            context,
+            "deleted",
+            lambda: client.delete_deployment(metadata.name, **project_options(context)),
+        )
 
     def list_dependencies(self) -> list[str] | None:
         """Return package, runtime, deployment, and network dependencies in order."""
@@ -375,10 +590,7 @@ def _dependency_names(
 
 
 def _validate_device_volume(volume: DeploymentVolume) -> None:
-    if volume.depends and getattr(volume.depends, "kind", None) in (
-        "managedService",
-        "cloudService",
-    ):
+    if volume.depends and volume.depends.kind in ("managedService", "cloudService"):
         message = (
             f"Device runtime cannot use cloud volume dependency: {volume.depends.kind}"
         )
