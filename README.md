@@ -81,6 +81,74 @@ history and graphs, and file download URLs, are returned as Pydantic models.
 Access their fields as attributes. Authentication helpers still return tokens,
 and shared-URL redirects retain the HTTP response.
 
+### Reusable resource applier
+
+`Applier` and `AsyncApplier` prepare manifest files and typed resource instances
+locally. Inspection and dry-run previews need no client and make no platform
+requests. Live `apply` and `delete` calls receive the already configured client
+as an argument; the caller owns its authentication, scope, transport settings,
+and lifetime. A prepared facade can be reused sequentially with different
+clients and scopes. An `Applier` cannot run inside an active event loop; use
+`AsyncApplier` for native asynchronous execution. Its `workers` option bounds
+active resource work, including readiness waits, and `readiness` controls
+polling rounds and intervals.
+
+The initial lifecycle coverage is Organization (update only; deletion is
+unsupported), Project, Package, Deployment, Disk, Network, StaticRoute, Secret,
+UserGroup, Role, RoleBinding, and ServiceAccount. Package versions remain
+distinct. RoleBinding apply grants the typed role/subject/domain combination;
+delete revokes that exact grant. Delete follows reverse dependency order,
+honors `rapyuta.io/deletionPolicy: retain`, and treats an already absent resource
+as a successful outcome. Dependencies order managed resources while external
+references are resolved only during live work when needed.
+
+```python
+from rapyuta_io_sdk_v2 import Applier, Client, Configuration, ManifestSource
+
+client = Client(Configuration.from_file("/path/to/config.json"))
+applier = Applier(ManifestSource(files=("/path/to/manifest.yaml",)))
+preview = applier.apply(dry_run=True)  # no client or platform access
+result = applier.apply(client)  # the exact caller-owned client is used
+```
+
+`ApplierExecutionError.result` contains the settled input-order outcomes after a
+partial failure. Each outcome reports confirmed completed actions and whether a
+write may have taken effect without a confirmed response. A definitive rejected
+write is not counted as completed. Caller cancellation propagates as
+`CancelledError`; inspect `last_result` after settlement. Direct resource calls
+can expose the same progress by passing a fresh `MutationJournal` through
+`ResourceContext`. The journal stores action/state metadata only, not payloads,
+responses, exceptions, or clients.
+
+Secret-file decryption is an explicit optional operation. Call
+`decrypt_secret_file` or `async_decrypt_secret_file` yourself, then pass the
+returned mapping through `ManifestSource.secrets`; loading and preview never
+invoke SOPS automatically. Once supplied, decrypted mappings are ordinary input
+data. See [offline preview](examples/applier/offline_preview.py), [sync apply](examples/applier/sync_apply.py), [async apply](examples/applier/async_apply.py), and [explicit secret decryption](examples/applier/encrypted_secrets.py).
+
+For a single-resource workflow, each managed model also exposes paired
+`apply`/`apply_async`, `create_object`/`create_object_async`,
+`update_object`/`update_object_async`, and `delete_object`/`delete_object_async`
+methods where those operations are supported. Pass the client and a
+`ResourceContext` explicitly. To retain direct-call progress after a method
+raises or is cancelled, provide a fresh journal:
+
+```python
+from rapyuta_io_sdk_v2.models import MutationJournal, ResourceContext
+
+journal = MutationJournal()
+context = ResourceContext(progress=journal)
+try:
+    role.apply(client, context=context)
+except Exception:
+    print(journal.snapshot())  # action/state metadata, without payloads
+    raise
+```
+
+Async direct methods propagate the original `CancelledError`; inspect the
+journal after cancellation settles to distinguish confirmed work from a write
+whose effect is uncertain.
+
 Commit information is now supplied through a revision model:
 
 ```python

@@ -17,13 +17,24 @@
 This module mirrors the Go `ServiceAccount` and related types from the
 `package extensions` snippet provided by the user.
 """
+# Lifecycle helper imports remain local to keep model modules independent.
+
+from __future__ import annotations
 
 from datetime import datetime
-from typing import Literal
+from typing import TYPE_CHECKING, ClassVar, Literal
 
 from pydantic import Field, field_validator
 
+from rapyuta_io_sdk_v2.models.applier import (
+    DependencyReference,
+    ResourceCapabilities,
+    ResourceContext,
+    ResourceReference,
+    ResourceScope,
+)
 from rapyuta_io_sdk_v2.models.base import SDKModel
+from rapyuta_io_sdk_v2.models.resource import ResourceMethods
 from rapyuta_io_sdk_v2.models.utils import (
     BaseList,
     BaseMetadata,
@@ -31,6 +42,10 @@ from rapyuta_io_sdk_v2.models.utils import (
     Domain,
     named_resource_dependency,
 )
+
+if TYPE_CHECKING:
+    from rapyuta_io_sdk_v2.async_client import AsyncClient
+    from rapyuta_io_sdk_v2.client import Client
 
 
 class ServiceAccountBinding(SDKModel):
@@ -47,12 +62,161 @@ class ServiceAccountSpec(SDKModel):
     roles: list[ServiceAccountBinding] | None = None
 
 
-class ServiceAccount(BaseObject):
+class ServiceAccount(ResourceMethods, BaseObject):
     """ServiceAccount model."""
+
+    KIND: ClassVar[str] = "ServiceAccount"
+    CAPABILITIES: ClassVar[ResourceCapabilities] = ResourceCapabilities(
+        create=True, update=True, delete=True, apply_policy="create_or_update"
+    )
 
     kind: Literal["ServiceAccount", "serviceaccount"] | None = "ServiceAccount"
     metadata: BaseMetadata
     spec: ServiceAccountSpec | None = None
+
+    def resource_dependencies(
+        self, *, scope: ResourceScope | None = None
+    ) -> tuple[DependencyReference, ...]:
+        """Declare each bound role and authorization domain prerequisite."""
+        del scope
+        dependencies: list[DependencyReference] = []
+        for binding in (self.spec.roles or []) if self.spec is not None else []:
+            domain = binding.domain
+            if domain.kind is not None and (
+                domain.name is not None or domain.guid is not None
+            ):
+                dependencies.append(
+                    DependencyReference(
+                        reference=ResourceReference(
+                            kind=domain.kind.lower(), name=domain.name, guid=domain.guid
+                        )
+                    )
+                )
+            dependencies.extend(
+                DependencyReference(
+                    reference=ResourceReference(kind="role", name=role_name)
+                )
+                for role_name in binding.role_names
+            )
+        return tuple(dependencies)
+
+    def create_object(
+        self, client: Client, *, context: ResourceContext
+    ) -> ServiceAccount:
+        """Create a ServiceAccount in the selected organization."""
+        from rapyuta_io_sdk_v2.apply._resources.standard import (  # noqa: PLC0415
+            organization_options,
+            record_write,
+            scoped_context,
+            scoped_copy,
+        )
+
+        context = scoped_context(self, context, include_project=False)
+        payload = scoped_copy(self, context, include_project=False)
+        return record_write(
+            context,
+            "created",
+            lambda: client.create_service_account(
+                payload, **organization_options(context)
+            ),
+        )
+
+    async def create_object_async(
+        self, client: AsyncClient, *, context: ResourceContext
+    ) -> ServiceAccount:
+        """Create a ServiceAccount through the async SDK operation."""
+        from rapyuta_io_sdk_v2.apply._resources.standard import (  # noqa: PLC0415
+            organization_options,
+            record_write_async,
+            scoped_context,
+            scoped_copy,
+        )
+
+        context = scoped_context(self, context, include_project=False)
+        payload = scoped_copy(self, context, include_project=False)
+        return await record_write_async(
+            context,
+            "created",
+            lambda: client.create_service_account(
+                payload, **organization_options(context)
+            ),
+        )
+
+    def update_object(
+        self, client: Client, *, context: ResourceContext
+    ) -> ServiceAccount:
+        """Update a ServiceAccount in the selected organization."""
+        from rapyuta_io_sdk_v2.apply._resources.standard import (  # noqa: PLC0415
+            organization_options,
+            record_write,
+            scoped_context,
+            scoped_copy,
+        )
+
+        context = scoped_context(self, context, include_project=False)
+        payload = scoped_copy(self, context, include_project=False)
+        return record_write(
+            context,
+            "updated",
+            lambda: client.update_service_account(
+                payload, payload.metadata.name, **organization_options(context)
+            ),
+        )
+
+    async def update_object_async(
+        self, client: AsyncClient, *, context: ResourceContext
+    ) -> ServiceAccount:
+        """Update a ServiceAccount through the native async SDK operation."""
+        from rapyuta_io_sdk_v2.apply._resources.standard import (  # noqa: PLC0415
+            organization_options,
+            record_write_async,
+            scoped_context,
+            scoped_copy,
+        )
+
+        context = scoped_context(self, context, include_project=False)
+        payload = scoped_copy(self, context, include_project=False)
+        return await record_write_async(
+            context,
+            "updated",
+            lambda: client.update_service_account(
+                payload, payload.metadata.name, **organization_options(context)
+            ),
+        )
+
+    def _delete_object(self, client: Client, *, context: ResourceContext) -> None:
+        """Delete this ServiceAccount by its scoped name."""
+        from rapyuta_io_sdk_v2.apply._resources.standard import (  # noqa: PLC0415
+            organization_options,
+            record_write,
+        )
+
+        metadata = self.metadata
+        record_write(
+            context,
+            "deleted",
+            lambda: client.delete_service_account(
+                metadata.name, **organization_options(context)
+            ),
+        )
+
+    async def _delete_object_async(
+        self, client: AsyncClient, *, context: ResourceContext
+    ) -> None:
+        """Delete this ServiceAccount through the native async client."""
+        from rapyuta_io_sdk_v2.apply._resources.standard import (  # noqa: PLC0415
+            organization_options,
+            record_write_async,
+        )
+
+        metadata = self.metadata
+        await record_write_async(
+            context,
+            "deleted",
+            lambda: client.delete_service_account(
+                metadata.name, **organization_options(context)
+            ),
+        )
 
     def list_dependencies(self) -> list[str] | None:
         """Return bound domains and roles in manifest order."""
