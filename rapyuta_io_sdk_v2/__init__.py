@@ -73,6 +73,38 @@ from rapyuta_io_sdk_v2.utils import (
 __version__ = "0.3.0"
 
 
+from rapyuta_io_sdk_v2.apply.applier import Applier, AsyncApplier
+from rapyuta_io_sdk_v2.apply.errors import (
+    ApplierExecutionError,
+    ApplierUsageError,
+    ApplierValidationError,
+    MissingResourceContextError,
+    ReadinessError,
+    SopsDecryptionError,
+    UnsupportedResourceOperationError,
+)
+from rapyuta_io_sdk_v2.apply.secrets import (
+    async_decrypt_secret_file,
+    decrypt_secret_file,
+)
+from rapyuta_io_sdk_v2.apply.source import ManifestSource
+from rapyuta_io_sdk_v2.models.applier import (
+    ApplierOptions,
+    ApplierResult,
+    DependencyGraph,
+    DependencyReference,
+    InspectionResult,
+    OperationFailure,
+    ReadinessOptions,
+    ResourceCapabilities,
+    ResourceContext,
+    ResourceIdentity,
+    ResourceOutcome,
+    ResourceReference,
+    ResourceScope,
+    SopsOptions,
+    SourceLocation,
+)
 from rapyuta_io_sdk_v2.models.auth import (
     AuthSubject,
     AuthSubjectResponse,
@@ -106,12 +138,20 @@ from rapyuta_io_sdk_v2.models.oauth2 import (
     OAuth2Client,
     OAuth2ClientList,
 )
+from rapyuta_io_sdk_v2.models.progress import MutationAttempt, MutationJournal
 from rapyuta_io_sdk_v2.models.responses import (
     APIResponse,
 )
 
 __all__ = [
     "APIResponse",
+    "Applier",
+    "ApplierExecutionError",
+    "ApplierOptions",
+    "ApplierResult",
+    "ApplierUsageError",
+    "ApplierValidationError",
+    "AsyncApplier",
     "AsyncClient",
     "AuthSubject",
     "AuthSubjectResponse",
@@ -129,6 +169,8 @@ __all__ = [
     "ConfigValues",
     "Configuration",
     "Daemon",
+    "DependencyGraph",
+    "DependencyReference",
     "Deployment",
     "DeploymentGraph",
     "DeploymentGraphEdge",
@@ -139,6 +181,7 @@ __all__ = [
     "Disk",
     "DiskList",
     "FileUploadDownloadResponse",
+    "InspectionResult",
     "LoginRequest",
     "ManagedServiceBinding",
     "ManagedServiceBindingList",
@@ -146,16 +189,29 @@ __all__ = [
     "ManagedServiceInstanceList",
     "ManagedServiceProvider",
     "ManagedServiceProviderList",
+    "ManifestSource",
+    "MissingResourceContextError",
+    "MutationAttempt",
+    "MutationJournal",
     "Network",
     "NetworkList",
     "OAuth2Client",
     "OAuth2ClientList",
     "OAuth2UpdateURI",
+    "OperationFailure",
     "Organization",
     "Package",
     "PackageList",
     "Project",
     "ProjectList",
+    "ReadinessError",
+    "ReadinessOptions",
+    "ResourceCapabilities",
+    "ResourceContext",
+    "ResourceIdentity",
+    "ResourceOutcome",
+    "ResourceReference",
+    "ResourceScope",
     "Role",
     "RoleBinding",
     "RoleBindingList",
@@ -170,14 +226,20 @@ __all__ = [
     "ServiceAccountToken",
     "ServiceAccountTokenInfo",
     "ServiceAccountTokenList",
+    "SopsDecryptionError",
+    "SopsOptions",
+    "SourceLocation",
     "StaticRoute",
     "StaticRouteList",
     "TokenRequest",
     "TokenResponse",
+    "UnsupportedResourceOperationError",
     "User",
     "UserGroup",
     "UserGroupCreate",
     "UserGroupList",
     "UserList",
+    "async_decrypt_secret_file",
+    "decrypt_secret_file",
     "walk_pages",
 ]

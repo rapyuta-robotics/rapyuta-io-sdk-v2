@@ -18,14 +18,23 @@ This module contains Pydantic models that correspond to the Package JSON schema,
 providing validation for Package resources to help users identify missing or
 incorrect fields.
 """
+# Lifecycle helper imports remain local to keep model modules independent.
 
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, ClassVar, Literal
 
 from pydantic import Field, ValidationInfo, field_validator, model_validator
 
+from rapyuta_io_sdk_v2.models.applier import (
+    DependencyReference,
+    ResourceCapabilities,
+    ResourceIdentity,
+    ResourceReference,
+    ResourceScope,
+)
 from rapyuta_io_sdk_v2.models.base import SDKModel
+from rapyuta_io_sdk_v2.models.resource import ResourceMethods
 from rapyuta_io_sdk_v2.models.utils import (
     Architecture,
     BaseList,
@@ -35,6 +44,11 @@ from rapyuta_io_sdk_v2.models.utils import (
     SecretDepends,
     ValueFrom,
 )
+
+if TYPE_CHECKING:
+    from rapyuta_io_sdk_v2.async_client import AsyncClient
+    from rapyuta_io_sdk_v2.client import Client
+    from rapyuta_io_sdk_v2.models.applier import ResourceContext
 
 # --- Helper Models ---
 
@@ -284,13 +298,136 @@ class PackageMetadata(BaseMetadata):
     description: str | None = Field(default=None)
 
 
-class Package(SDKModel):
+class Package(ResourceMethods, SDKModel):
     """Package model."""
+
+    KIND: ClassVar[str] = "Package"
+    CAPABILITIES: ClassVar[ResourceCapabilities] = ResourceCapabilities(
+        create=True,
+        update=False,
+        delete=True,
+        apply_policy="create_or_exists",
+    )
 
     api_version: str | None = Field(alias="apiVersion", default="api.rapyuta.io/v2")
     kind: Literal["Package"] = Field(default="Package")
     metadata: PackageMetadata
     spec: PackageSpec
+
+    def resource_identity(
+        self, *, scope: ResourceScope | None = None
+    ) -> ResourceIdentity:
+        """Include the exact package version in its structured identity."""
+        selected = scope or ResourceScope()
+        return ResourceIdentity(
+            kind="package",
+            scope=ResourceScope(
+                organization_guid=(
+                    self.metadata.organization_guid or selected.organization_guid
+                ),
+                project_guid=self.metadata.project_guid or selected.project_guid,
+            ),
+            name=self.metadata.name,
+            guid=self.metadata.guid,
+            version=self.metadata.version,
+        )
+
+    def resource_dependencies(
+        self, *, scope: ResourceScope | None = None
+    ) -> tuple[DependencyReference, ...]:
+        """Declare each image-pull Secret reference in executable order."""
+        del scope
+        dependencies: list[DependencyReference] = []
+        for executable in self.spec.executables or []:
+            docker = executable.docker
+            pull_secret = docker.pull_secret if docker is not None else None
+            secret = pull_secret.depends if pull_secret is not None else None
+            if secret is not None and secret.name_or_guid is not None:
+                value = secret.name_or_guid
+                dependencies.append(
+                    DependencyReference(
+                        reference=ResourceReference(
+                            kind="secret", name=value, guid=value
+                        )
+                    )
+                )
+        return tuple(dependencies)
+
+    def create_object(self, client: Client, *, context: ResourceContext) -> Package:
+        """Create a versioned package through the typed SDK operation."""
+        from rapyuta_io_sdk_v2.apply._resources.standard import (  # noqa: PLC0415
+            project_options,
+            record_write,
+            scoped_context,
+            scoped_copy,
+        )
+
+        context = scoped_context(self, context)
+        payload = scoped_copy(self, context)
+        return record_write(
+            context,
+            "created",
+            lambda: client.create_package(payload, **project_options(context)),
+        )
+
+    async def create_object_async(
+        self, client: AsyncClient, *, context: ResourceContext
+    ) -> Package:
+        """Create a package with the native asynchronous SDK operation."""
+        from rapyuta_io_sdk_v2.apply._resources.standard import (  # noqa: PLC0415
+            project_options,
+            record_write_async,
+            scoped_context,
+            scoped_copy,
+        )
+
+        context = scoped_context(self, context)
+        payload = scoped_copy(self, context)
+        return await record_write_async(
+            context,
+            "created",
+            lambda: client.create_package(payload, **project_options(context)),
+        )
+
+    def _delete_object(self, client: Client, *, context: ResourceContext) -> None:
+        """Delete this exact Package version."""
+        from rapyuta_io_sdk_v2.apply._resources.standard import (  # noqa: PLC0415
+            project_options,
+            record_write,
+        )
+
+        metadata = self.metadata
+        if metadata.version is None:
+            msg = "Package deletion requires metadata.version"
+            raise ValueError(msg)
+        record_write(
+            context,
+            "deleted",
+            lambda: client.delete_package(
+                metadata.name, metadata.version, **project_options(context)
+            ),
+        )
+
+    async def _delete_object_async(
+        self, client: AsyncClient, *, context: ResourceContext
+    ) -> None:
+        """Delete this Package version through the async client."""
+        from rapyuta_io_sdk_v2.apply._resources.standard import (  # noqa: PLC0415
+            project_options,
+            record_write_async,
+        )
+
+        metadata = self.metadata
+        if metadata.version is None:
+            msg = "Package deletion requires metadata.version"
+            raise ValueError(msg)
+        await record_write_async(
+            context,
+            "deleted",
+            lambda: client.delete_package(
+                metadata.name, metadata.version, **project_options(context)
+            ),
+        )
 
     def list_dependencies(self) -> list[str] | None:
         """Return image pull secrets required by the package executables."""
@@ -308,5 +445,6 @@ class PackageList(BaseList[Package]):
 
 def _pull_secret_name(executable: Executable) -> str | None:
     if executable.docker and executable.docker.pull_secret:
-        return getattr(executable.docker.pull_secret.depends, "name_or_guid", None)
+        depends = executable.docker.pull_secret.depends
+        return depends.name_or_guid if depends is not None else None
     return None
