@@ -25,10 +25,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
 import yaml
-from jinja2 import StrictUndefined, UndefinedError
-from jinja2.sandbox import ImmutableSandboxedEnvironment
+from jinja2 import UndefinedError
 from pydantic import ValidationError
 
+from rapyuta_io_sdk_v2.apply._filters import create_environment
 from rapyuta_io_sdk_v2.apply._graph import GraphPlan, prepare_dependency_graph
 from rapyuta_io_sdk_v2.apply.errors import ApplierValidationError
 from rapyuta_io_sdk_v2.models.applier import (
@@ -54,7 +54,13 @@ from rapyuta_io_sdk_v2.models.staticroute import StaticRoute
 from rapyuta_io_sdk_v2.models.usergroup import UserGroup, UserGroupCreate
 
 if TYPE_CHECKING:
-    from rapyuta_io_sdk_v2.apply.source import JsonValue, ManifestSource
+    from jinja2.sandbox import ImmutableSandboxedEnvironment
+
+    from rapyuta_io_sdk_v2.apply.source import (
+        DeviceInterfaceResolver,
+        JsonValue,
+        ManifestSource,
+    )
 
 KIND_MODELS: dict[str, type[SDKModel]] = {
     "organization": Organization,
@@ -115,7 +121,9 @@ class PreparedCollection:
         return tuple(deepcopy(item.resource) for item in self.resources)
 
 
-def prepare_source(source: ManifestSource) -> PreparedCollection:
+def prepare_source(
+    source: ManifestSource, scope: ResourceScope | None = None
+) -> PreparedCollection:
     """Parse, render, and validate all supplied resources without network use."""
     value_context = _load_value_sources(source.values, purpose="values")
     secret_context = _load_value_sources(source.secrets, purpose="secrets")
@@ -126,7 +134,12 @@ def prepare_source(source: ManifestSource) -> PreparedCollection:
     context: dict[str, Any] = deepcopy(value_context)
     context["secrets"] = secret_context
     context["rio"] = deepcopy(rio_context)
-    documents = _read_manifest_files(source.files, context)
+    documents = _read_manifest_files(
+        source.files,
+        context,
+        scope=scope or ResourceScope(),
+        interface_resolver=source.interface_resolver,
+    )
     documents.extend(_copy_resource_instances(source.resources))
     resources = _prepare_resources(documents)
     canonical_resources, graph_plan = _prepare_graph(resources)
@@ -221,16 +234,21 @@ def resource_identity(resource: SDKModel, source: SourceLocation) -> ResourceIde
 
 
 def _read_manifest_files(
-    files: Sequence[str | Path], context: Mapping[str, Any]
+    files: Sequence[str | Path],
+    context: Mapping[str, Any],
+    *,
+    scope: ResourceScope,
+    interface_resolver: DeviceInterfaceResolver | None,
 ) -> list[tuple[object, SourceLocation]]:
-    environment = ImmutableSandboxedEnvironment(
-        undefined=StrictUndefined,
-        autoescape=False,
-    )
     return [
         document
         for input_path in files
-        for document in _read_manifest_file(input_path, context, environment)
+        for document in _read_manifest_file(
+            input_path,
+            context,
+            scope=scope,
+            interface_resolver=interface_resolver,
+        )
     ]
 
 
@@ -267,9 +285,20 @@ def _render_manifest(
 def _read_manifest_file(
     input_path: str | Path,
     context: Mapping[str, Any],
-    environment: ImmutableSandboxedEnvironment,
+    *,
+    scope: ResourceScope,
+    interface_resolver: DeviceInterfaceResolver | None,
 ) -> list[tuple[object, SourceLocation]]:
     path, text, location = _manifest_text(input_path)
+    try:
+        environment = create_environment(
+            scope=scope,
+            rio=context["rio"],
+            interface_resolver=interface_resolver,
+        )
+    except Exception as exc:
+        msg = f"template filter initialization failed: {exc}"
+        raise ApplierValidationError(msg, source=location, category="template") from exc
     rendered = _render_manifest(
         text,
         context=context,

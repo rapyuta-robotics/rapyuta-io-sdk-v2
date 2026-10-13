@@ -111,6 +111,33 @@ preview = applier.apply(dry_run=True)  # no client or platform access
 result = applier.apply(client)  # the exact caller-owned client is used
 ```
 
+Apply templates support the CLI's `getenv`, `get_intf_ip`, and five built in
+Ansible filter groups. Ansible is installed with the SDK. For an interface
+lookup, supply an explicit project scope and a caller owned resolver that
+returns ready interface addresses. The resolver runs only when a template
+evaluates `get_intf_ip`:
+
+```python
+from rapyuta_io_sdk_v2 import ApplierOptions, ResourceScope
+
+
+def interfaces(project_guid: str, device_name: str) -> dict[str, list[str]]:
+    return {"eth0": ["100.64.1.2"]}  # replace with your ready device snapshot
+
+
+source = ManifestSource(
+    files=("/path/to/manifest.yaml",),
+    interface_resolver=interfaces,
+)
+options = ApplierOptions(scope=ResourceScope(project_guid="project-guid"))
+documents = Applier(source, options).inspect().rendered_documents
+print(documents[0].source, documents[0].data)
+```
+
+`rendered_documents` contains independent copies of the parsed manifests before
+resource model normalization. See the [parity quickstart](specs/002-apply-render-parity/quickstart.md)
+for fixture verification.
+
 `ApplierExecutionError.result` contains the settled input-order outcomes after a
 partial failure. Each outcome reports confirmed completed actions and whether a
 write may have taken effect without a confirmed response. A definitive rejected

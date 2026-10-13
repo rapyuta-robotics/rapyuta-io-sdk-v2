@@ -1,0 +1,24 @@
+cases:
+- id: combine
+  manifest: "kind: Role\nmetadata:\n  name: combine\nspec:\n  description: \"{{ {'a':\
+    \ 1} | combine({'b': 2}) }}\"\n  rules: []\n"
+- id: urldecode
+  manifest: "kind: Role\nmetadata:\n  name: urldecode\nspec:\n  description: \"{{\
+    \ 'hello%20world' | urldecode }}\"\n  rules: []\n"
+- id: urlsplit
+  manifest: "kind: Role\nmetadata:\n  name: urlsplit\nspec:\n  description: \"{{ 'https://example.test/path?q=1'\
+    \ | urlsplit('hostname') }}\"\n  rules: []\n"
+- id: log
+  manifest: "kind: Role\nmetadata:\n  name: log\nspec:\n  description: \"{{ 100 |\
+    \ log(10) }}\"\n  rules: []\n"
+- id: vault
+  manifest: "kind: Role\nmetadata:\n  name: vault\nspec:\n  description: \"{{ 'synthetic-secret'\
+    \ | vault('synthetic-password', salt='0123456789abcdef0123456789abcdef') | replace('\\\
+    n', '|') }}\"\n  rules: []\n"
+- id: unvault
+  manifest: "kind: Role\nmetadata:\n  name: unvault\nspec:\n  description: \"{{ ('synthetic-secret'\
+    \ | vault('synthetic-password', salt='0123456789abcdef0123456789abcdef')) | unvault('synthetic-password')\
+    \ }}\"\n  rules: []\n"
+- id: default
+  manifest: "kind: Role\nmetadata:\n  name: default\nspec:\n  description: \"{{ missing_value\
+    \ | default('fallback') }}\"\n  rules: []\n"

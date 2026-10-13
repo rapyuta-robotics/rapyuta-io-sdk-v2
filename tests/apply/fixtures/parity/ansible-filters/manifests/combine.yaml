@@ -1,0 +1,6 @@
+kind: Role
+metadata:
+  name: combine
+spec:
+  description: "{{ {'a': 1} | combine({'b': 2}) }}"
+  rules: []

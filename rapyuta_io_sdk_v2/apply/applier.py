@@ -48,6 +48,7 @@ from rapyuta_io_sdk_v2.models.applier import (
     ApplierOptions,
     ApplierResult,
     InspectionResult,
+    RenderedDocument,
     ResourceIdentity,
     ResourceOutcome,
     ResourceScope,
@@ -318,7 +319,7 @@ class _PreparedFacade:
         self, source: ManifestSource, options: ApplierOptions | None = None
     ) -> None:
         self.options = options or ApplierOptions()
-        self._base = prepare_source(source)
+        self._base = prepare_source(source, self.options.scope)
         self._prepared, self._edges, self._plan = _with_resource_graph(
             _copy_collection(self._base), self.options.scope
         )
@@ -331,6 +332,10 @@ class _PreparedFacade:
             resource_identities=tuple(item.identity for item in self._prepared),
             resolved_manifests=tuple(
                 deepcopy(item.resource) for item in self._prepared
+            ),
+            rendered_documents=tuple(
+                RenderedDocument(source=item.source, data=deepcopy(item.source_data))
+                for item in self._prepared
             ),
             dependency_graph=self._plan.dependency_graph,
         )

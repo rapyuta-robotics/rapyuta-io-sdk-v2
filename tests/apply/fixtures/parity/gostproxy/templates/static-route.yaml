@@ -1,0 +1,18 @@
+{% for route in package.proxy.routes %}
+---
+apiVersion: "apiextensions.rapyuta.io/v1"
+kind: "StaticRoute"
+metadata:
+  name: "{{ route.name }}-{{ rio.project.name }}"
+  labels:
+    app: gostproxy
+{% if route.suffix and route.suffix != rio.project.name %}
+---
+apiVersion: "apiextensions.rapyuta.io/v1"
+kind: "StaticRoute"
+metadata:
+  name: "{{ route.name }}-{{ route.suffix }}"
+  labels:
+    app: gostproxy
+{% endif %}
+{% endfor %}

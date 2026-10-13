@@ -1,0 +1,6 @@
+kind: Role
+metadata:
+  name: interface-keyword
+spec:
+  description: "{{ 'edge-test' | get_intf_ip(interface='eth0,tailscale0') }}"
+  rules: []
