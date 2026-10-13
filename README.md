@@ -101,6 +101,72 @@ value (including dates and YAML binary values) or the original bytes for binary
 downloads. Bulk role-binding updates return `BulkRoleBindingUpdate`. The retired
 `update_project_owner` method has been removed.
 
+### Import and merge configuration trees
+
+These helpers use an authenticated `Client` and existing trees. Project scope is
+the default; pass `with_project=False` in the options for an organization tree.
+The client must have the corresponding organization and project GUIDs configured.
+
+```python
+from pathlib import Path
+
+from rapyuta_io_sdk_v2.configtree import (
+    ImportOptions,
+    import_configtree,
+    merge_configtree,
+)
+
+revision_id = import_configtree(
+    client,
+    "settings",
+    [Path("robot.json"), Path("site.yaml"), Path("fallback.yml")],
+    options=ImportOptions(commit=True, update_head=True),
+)
+merged_id = merge_configtree(client, "settings", "org/shared/release")
+```
+
+Import accepts named UTF-8 JSON, YAML, and YML files with mapping roots. Each
+filename stem prefixes its flattened keys. A child containing exactly `value`
+and dictionary `metadata` supplies one value and an optional metadata attachment
+at that same key. Import prepares every file before creating a revision. Its
+`commit` and `update_head` choices are independent and both default to `False`.
+The platform may reject selecting an uncommitted revision as head.
+
+Merge accepts `org/<tree>` or `proj/<tree>`, optionally followed by a selector.
+Selectors starting with `rev-` identify a revision; other selectors identify a
+milestone. Without a selector, Merge reads the source head. It rejects shared
+keys with different stored data or metadata before creating a destination
+revision. A successful Merge creates one revision, commits it, and selects it as
+head. Its parent is the destination head read at the start; concurrent head
+changes are not retried or checked again before publication.
+
+Use a revision context to edit its live pending key map. `store()` encodes a
+logical value; direct edits to `keys` must remain valid `ConfigValue` payloads.
+The context sends one batch on normal exit when the map is nonempty and can
+optionally commit. Removing an entry from `keys` removes a pending write; it
+does not delete a key inherited from the parent.
+
+```python
+from rapyuta_io_sdk_v2.configtree import Revision, RevisionOptions
+
+with Revision(client, "settings", options=RevisionOptions(commit=True)) as revision:
+    revision.store("robot/speed", 2, metadata={"unit": "m/s"})
+    revision.store("robot/remove", True)
+    del revision.keys["robot/remove"]
+print(revision.revision_id)
+```
+
+The same operations are available with `AsyncClient` as
+`import_configtree_async`, `merge_configtree_async`, and `AsyncRevision` using
+`await` and `async with`. Their local `store()` method remains synchronous.
+Invalid files, references, conflicting keys, and unsuccessful batch responses
+raise `ConfigTreeInputError`, `ConfigTreeReferenceError`,
+`ConfigTreeMergeConflictError`, and `ConfigTreeMutationError` respectively.
+Transport and validation errors retain their original types. After creation,
+failures and cancellation expose `configtree_revision_id` and
+`configtree_stage` on the exception for manual recovery. The helpers do not
+automatically roll back a revision that may have been created remotely.
+
 ## Contributing
 
 We welcome contributions. Please read our [contribution guidelines](CONTRIBUTING.md) to get started.

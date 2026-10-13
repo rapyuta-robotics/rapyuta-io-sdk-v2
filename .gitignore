@@ -8,6 +8,7 @@ wheels/
 
 # venv
 .venv*/
+venv/
 .ruff_cache
 .idea
 .vscode
@@ -15,6 +16,11 @@ main_test.py
 test_config.json
 
 *.env
+.env*
+.DS_Store
+Thumbs.db
+*.tmp
+*.swp
 ignore*
 ignore/
 .coverage

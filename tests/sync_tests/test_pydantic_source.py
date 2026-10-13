@@ -39,6 +39,7 @@ class TreeSettings(BaseSettings):
     ("value", "expected"),
     [
         ({"value": "setting", "metadata": {}}, "setting"),
+        ({"value": "setting", "metadata": {"legacy": 2}}, "setting"),
         (
             {"value": "setting", "metadata": None},
             {"value": "setting", "metadata": None},
