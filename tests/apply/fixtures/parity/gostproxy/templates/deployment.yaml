@@ -1,0 +1,42 @@
+---
+apiVersion: apiextensions.rapyuta.io/v1
+kind: Deployment
+metadata:
+  name: "generic_proxy"
+  depends:
+    kind: package
+    nameOrGUID: "gostproxy"
+    version: "{{ docker.tag.cloud_proxy | default('v1.0.0') }}"
+  labels:
+    app: gostproxy
+spec:
+  runtime: cloud
+  envArgs:
+    - name: DEVICE_NAME
+    {% if device.edge_vpn_ip %}
+      value: "{{ device.edge_vpn_ip }}"
+    {% else %}
+      {% set interface = device.edge_vpn_interface | default('tailscale0') %}
+      value: "{{ device.edge_pc | get_intf_ip(interface=interface) }}"
+    {% endif %}
+    {% for route in package.proxy.routes %}
+    - name: TARGET_PORT_{{ route.target_port }}
+      value: "{{ route.target_port }}"
+      exposed: False
+    {% endfor %}
+  staticRoutes:
+    {% for route in package.proxy.routes %}
+      - name: "{{ route.name }}"
+        depends:
+          kind: staticroute
+          nameOrGUID: "{{ route.name }}-{{ rio.project.name }}"
+    {% if route.suffix and route.suffix != rio.project.name %}
+      - name: "{{ route.name }}-suffix"
+        depends:
+          kind: staticroute
+          nameOrGUID: "{{ route.name }}-{{ route.suffix }}"
+    {% endif %}
+    {% endfor %}
+  features:
+    vpn:
+      enabled: true

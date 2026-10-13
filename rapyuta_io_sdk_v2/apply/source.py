@@ -16,10 +16,11 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Protocol
 
 from rapyuta_io_sdk_v2.models.base import SDKModel
 
@@ -29,6 +30,16 @@ type JsonValue = (
 type PathInput = str | Path
 type ValueInput = Mapping[str, JsonValue] | PathInput
 type ResourceInput = SDKModel
+
+
+class DeviceInterfaceResolver(Protocol):
+    """Return ready device interfaces for an explicit project and device."""
+
+    def __call__(
+        self, project_guid: str, device_name: str
+    ) -> Mapping[str, Sequence[str]]:
+        """Return ordered address lists keyed by interface name."""
+        ...
 
 
 def _snapshot(
@@ -54,8 +65,9 @@ class ManifestSource:
     values: tuple[ValueInput, ...]
     secrets: tuple[ValueInput, ...]
     rio: Mapping[str, JsonValue] | None
+    interface_resolver: DeviceInterfaceResolver | None
 
-    def __init__(
+    def __init__(  # noqa: PLR0913 - public source options mirror its fields
         self,
         *,
         files: object = (),
@@ -63,6 +75,7 @@ class ManifestSource:
         values: object = (),
         secrets: object = (),
         rio: Mapping[str, JsonValue] | None = None,
+        interface_resolver: DeviceInterfaceResolver | None = None,
     ) -> None:
         """Snapshot ordered input iterables without retaining mutable mappings."""
         paths = _snapshot(files, singleton_types=(str, Path))
@@ -74,9 +87,11 @@ class ManifestSource:
         object.__setattr__(self, "values", tuple(deepcopy(value_sources)))
         object.__setattr__(self, "secrets", tuple(deepcopy(secret_sources)))
         object.__setattr__(self, "rio", deepcopy(rio) if rio is not None else None)
+        object.__setattr__(self, "interface_resolver", interface_resolver)
 
 
 __all__ = [
+    "DeviceInterfaceResolver",
     "JsonValue",
     "ManifestSource",
     "PathInput",

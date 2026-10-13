@@ -1,0 +1,30 @@
+base_values: values.yaml
+cases:
+- id: base
+  overrides: {}
+  rio:
+    project:
+      name: fixture-project
+      guid: project-fixture
+    organization:
+      name: fixture-org
+      guid: org-fixture
+      short_id: fixture
+    email_id: fixture@example.test
+  project_guid: project-fixture
+- id: toxiproxy
+  overrides:
+    gateway:
+      toxiproxy:
+        enabled: true
+        version: synthetic-v1
+  rio:
+    project:
+      name: fixture-project
+      guid: project-fixture
+    organization:
+      name: fixture-org
+      guid: org-fixture
+      short_id: fixture
+    email_id: fixture@example.test
+  project_guid: project-fixture

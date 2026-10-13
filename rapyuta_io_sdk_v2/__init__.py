@@ -93,7 +93,7 @@ from rapyuta_io_sdk_v2.apply.secrets import (
     async_decrypt_secret_file,
     decrypt_secret_file,
 )
-from rapyuta_io_sdk_v2.apply.source import ManifestSource
+from rapyuta_io_sdk_v2.apply.source import DeviceInterfaceResolver, ManifestSource
 from rapyuta_io_sdk_v2.models.applier import (
     ApplierOptions,
     ApplierResult,
@@ -102,6 +102,7 @@ from rapyuta_io_sdk_v2.models.applier import (
     InspectionResult,
     OperationFailure,
     ReadinessOptions,
+    RenderedDocument,
     ResourceCapabilities,
     ResourceContext,
     ResourceIdentity,
@@ -188,6 +189,7 @@ __all__ = [
     "DeploymentHistory",
     "DeploymentHistoryList",
     "DeploymentList",
+    "DeviceInterfaceResolver",
     "Disk",
     "DiskList",
     "FileUploadDownloadResponse",
@@ -216,6 +218,7 @@ __all__ = [
     "ProjectList",
     "ReadinessError",
     "ReadinessOptions",
+    "RenderedDocument",
     "ResourceCapabilities",
     "ResourceContext",
     "ResourceIdentity",

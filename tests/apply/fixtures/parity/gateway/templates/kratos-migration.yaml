@@ -1,0 +1,48 @@
+{% if gateway.kratos_identity.enable | default(false) %}
+---
+apiVersion: "api.rapyuta.io/v2"
+kind: "Package"
+metadata:
+  name: "kratos-migrate"
+  version: "{{ gateway.kratos_identity.version | default("v1.3.1") }}"
+  description: >-
+    Database migration for the Ory Kratos identity server.
+spec:
+  runtime: "device"
+  device:
+    arch: "amd64"
+    restart: "onfailure"
+  executables:
+    - name: "migrate"
+      type: "docker"
+      docker:
+        image: "quay.io/rapyuta/kratos:{{ gateway.kratos_identity.version | default("v1.3.1") }}"
+        pullSecret:
+          depends:
+            kind: "secret"
+            nameOrGUID: "{{ gateway.image_secret }}"
+      command: [ "migrate", "sql", "-e", "--yes" ]
+      runAsBash: false
+---
+apiVersion: "api.rapyuta.io/v2"
+kind: "Deployment"
+metadata:
+  name: "kratos-migrate"
+  depends:
+    kind: "package"
+    nameOrGUID: "kratos-migrate"
+    version: "{{ gateway.kratos_identity.version | default("v1.3.1") }}"
+spec:
+  runtime: "device"
+  depends:
+  - kind: "deployment"
+    nameOrGUID: "{{ database.deployment_name | default("postgresql-primary") }}"
+    wait: true
+  device:
+    depends:
+      kind: "device"
+      nameOrGUID: "{{ gateway.device_name }}"
+  envArgs:
+    - name: "DSN"
+      value: "postgres://{{ database.username | default("postgres") }}:{{ database.password | default("postgres") }}@127.0.0.1:5432/kratos?sslmode=disable"
+{% endif %}

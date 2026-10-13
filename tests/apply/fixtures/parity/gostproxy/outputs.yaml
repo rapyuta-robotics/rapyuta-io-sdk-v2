@@ -1,0 +1,144 @@
+direct-ip:
+- apiVersion: apiextensions.rapyuta.io/v1
+  kind: Deployment
+  metadata:
+    name: generic_proxy
+    depends:
+      kind: package
+      nameOrGUID: gostproxy
+      version: v1.0.0
+    labels:
+      app: gostproxy
+  spec:
+    runtime: cloud
+    envArgs:
+    - name: DEVICE_NAME
+      value: 100.64.42.1
+    - name: TARGET_PORT_80
+      value: '80'
+      exposed: false
+    staticRoutes:
+    - name: nginx
+      depends:
+        kind: staticroute
+        nameOrGUID: nginx-fixture-project
+    features:
+      vpn:
+        enabled: true
+- apiVersion: apiextensions.rapyuta.io/v1
+  kind: Package
+  metadata:
+    name: gostproxy
+    version: v1.0.0
+    description: GostProxy is an open-source non-caching web-proxy. This package is
+      designed to work with Rapyuta.io's VPN Functionality to expose services running
+      on Device to the Public web.
+    labels:
+      app: gostproxy
+  spec:
+    runtime: cloud
+    cloud:
+      replicas: 1
+    executables:
+    - name: gostproxy
+      type: docker
+      simulation: false
+      limits:
+        cpu: 0.25
+        memory: 128
+      docker:
+        image: quay.io/rapyuta/gostproxy:v1.0.0
+    environmentVars:
+    - name: DEVICE_NAME
+      description: Device Name in Tailscale
+      exposed: false
+    endpoints:
+    - name: nginx
+      type: external-https
+      port: 443
+      targetPort: 80
+- apiVersion: apiextensions.rapyuta.io/v1
+  kind: StaticRoute
+  metadata:
+    name: nginx-fixture-project
+    labels:
+      app: gostproxy
+interface-ip:
+- apiVersion: apiextensions.rapyuta.io/v1
+  kind: Deployment
+  metadata:
+    name: generic_proxy
+    depends:
+      kind: package
+      nameOrGUID: gostproxy
+      version: v1.0.0
+    labels:
+      app: gostproxy
+  spec:
+    runtime: cloud
+    envArgs:
+    - name: DEVICE_NAME
+      value: 100.64.42.2
+    - name: TARGET_PORT_80
+      value: '80'
+      exposed: false
+    staticRoutes:
+    - name: nginx
+      depends:
+        kind: staticroute
+        nameOrGUID: nginx-fixture-project
+    - name: nginx-suffix
+      depends:
+        kind: staticroute
+        nameOrGUID: nginx-alternate
+    features:
+      vpn:
+        enabled: true
+- apiVersion: apiextensions.rapyuta.io/v1
+  kind: Package
+  metadata:
+    name: gostproxy
+    version: v1.0.0
+    description: GostProxy is an open-source non-caching web-proxy. This package is
+      designed to work with Rapyuta.io's VPN Functionality to expose services running
+      on Device to the Public web.
+    labels:
+      app: gostproxy
+  spec:
+    runtime: cloud
+    cloud:
+      replicas: 1
+    executables:
+    - name: gostproxy
+      type: docker
+      simulation: false
+      limits:
+        cpu: 0.25
+        memory: 128
+      docker:
+        image: quay.io/rapyuta/gostproxy:v1.0.0
+    environmentVars:
+    - name: DEVICE_NAME
+      description: Device Name in Tailscale
+      exposed: false
+    endpoints:
+    - name: nginx
+      type: external-https
+      port: 443
+      targetPort: 80
+    - name: nginx-suffix
+      type: external-https
+      port: 443
+      targetPort: 80
+- apiVersion: apiextensions.rapyuta.io/v1
+  kind: StaticRoute
+  metadata:
+    name: nginx-fixture-project
+    labels:
+      app: gostproxy
+- apiVersion: apiextensions.rapyuta.io/v1
+  kind: StaticRoute
+  metadata:
+    name: nginx-alternate
+    labels:
+      app: gostproxy

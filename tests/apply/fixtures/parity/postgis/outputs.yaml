@@ -1,0 +1,257 @@
+base:
+- apiVersion: apiextensions.rapyuta.io/v1
+  kind: Package
+  metadata:
+    name: postgresql-primary
+    version: '16.4'
+    labels:
+      app: postgres
+  spec:
+    runtime: device
+    device:
+      arch: amd64
+      restart: always
+    executables:
+    - name: database
+      type: docker
+      docker:
+        image: quay.io/rapyuta/chart-postgis:16.4
+        imagePullPolicy: Always
+    environmentVars:
+    - name: POSTGRES_USER
+      default: postgres
+      description: The Default PostgreSQL User
+      exposed: true
+      exposedName: POSTGRES_USER
+    - name: POSTGRES_PASSWORD
+      default: postgres
+      description: The Default PostgreSQL Password
+      exposed: true
+      exposedName: POSTGRES_PASSWORD
+    - name: POSTGRES_MULTIPLE_DATABASES
+      default: postgres
+      description: The comma-separated list of Databases to configure
+      exposed: false
+    - name: RAPYUTA_REPLICATION_USER
+      default: replicator
+      description: The Default Streaming Replication User
+      exposed: true
+      exposedName: RAPYUTA_REPLICATION_USER
+    - name: RAPYUTA_REPLICATION_PASSWORD
+      default: replicator
+      description: The Default Streaming Replication User Password
+      exposed: true
+      exposedName: RAPYUTA_REPLICATION_PASSWORD
+    - name: POSTGRES_SHARED_BUFFERS
+      default: 512MB
+      description: sets the amount of memory PostgreSQL uses for caching table and
+        index data
+      exposed: false
+- apiVersion: apiextensions.rapyuta.io/v1
+  kind: Deployment
+  metadata:
+    name: postgresql-primary
+    depends:
+      kind: package
+      nameOrGUID: postgresql-primary
+      version: '16.4'
+    labels:
+      app: postgres
+  spec:
+    runtime: device
+    device:
+      depends:
+        kind: device
+        nameOrGUID: postgres-primary
+    restart: always
+    volumes:
+    - execName: database
+      mountPath: /var/lib/postgresql/data
+      subPath: /opt/rapyuta/volumes/postgres
+    - execName: database
+      mountPath: /dev/shm
+      subPath: /dev/shm
+    envArgs:
+    - name: POSTGRES_USER
+      value: rr_user
+    - name: POSTGRES_PASSWORD
+      value: rr_pass
+    - name: POSTGRES_MULTIPLE_DATABASES
+      value: rr_db_1,rr_db_2,rr_db_3
+    - name: POSTGRES_WAL_LEVEL
+      value: replica
+    - name: POSTGRES_MAX_WAL_SENDERS
+      value: '10'
+    - name: POSTGRES_MAX_REPLICATION_SLOTS
+      value: '10'
+    - name: POSTGRES_HOT_STANDBY_FEEDBACK
+      value: 'off'
+    - name: RAPYUTA_REPLICATION_USER
+      value: rr_replicator
+    - name: RAPYUTA_REPLICATION_PASSWORD
+      value: rr_replicator_pass
+    - name: POSTGRES_SHARED_BUFFERS
+      value: 512MB
+standby:
+- apiVersion: apiextensions.rapyuta.io/v1
+  kind: Package
+  metadata:
+    name: postgresql-primary
+    version: '16.4'
+    labels:
+      app: postgres
+  spec:
+    runtime: device
+    device:
+      arch: amd64
+      restart: always
+    executables:
+    - name: database
+      type: docker
+      docker:
+        image: quay.io/rapyuta/chart-postgis:16.4
+        imagePullPolicy: Always
+    environmentVars:
+    - name: POSTGRES_USER
+      default: postgres
+      description: The Default PostgreSQL User
+      exposed: true
+      exposedName: POSTGRES_USER
+    - name: POSTGRES_PASSWORD
+      default: postgres
+      description: The Default PostgreSQL Password
+      exposed: true
+      exposedName: POSTGRES_PASSWORD
+    - name: POSTGRES_MULTIPLE_DATABASES
+      default: postgres
+      description: The comma-separated list of Databases to configure
+      exposed: false
+    - name: RAPYUTA_REPLICATION_USER
+      default: replicator
+      description: The Default Streaming Replication User
+      exposed: true
+      exposedName: RAPYUTA_REPLICATION_USER
+    - name: RAPYUTA_REPLICATION_PASSWORD
+      default: replicator
+      description: The Default Streaming Replication User Password
+      exposed: true
+      exposedName: RAPYUTA_REPLICATION_PASSWORD
+    - name: POSTGRES_SHARED_BUFFERS
+      default: 512MB
+      description: sets the amount of memory PostgreSQL uses for caching table and
+        index data
+      exposed: false
+- apiVersion: apiextensions.rapyuta.io/v1
+  kind: Deployment
+  metadata:
+    name: postgresql-primary
+    depends:
+      kind: package
+      nameOrGUID: postgresql-primary
+      version: '16.4'
+    labels:
+      app: postgres
+  spec:
+    runtime: device
+    device:
+      depends:
+        kind: device
+        nameOrGUID: postgres-primary
+    restart: always
+    volumes:
+    - execName: database
+      mountPath: /var/lib/postgresql/data
+      subPath: /opt/rapyuta/volumes/postgres
+    - execName: database
+      mountPath: /dev/shm
+      subPath: /dev/shm
+    envArgs:
+    - name: POSTGRES_USER
+      value: rr_user
+    - name: POSTGRES_PASSWORD
+      value: rr_pass
+    - name: POSTGRES_MULTIPLE_DATABASES
+      value: synthetic_db
+    - name: POSTGRES_WAL_LEVEL
+      value: replica
+    - name: POSTGRES_MAX_WAL_SENDERS
+      value: '10'
+    - name: POSTGRES_MAX_REPLICATION_SLOTS
+      value: '10'
+    - name: POSTGRES_HOT_STANDBY_FEEDBACK
+      value: 'off'
+    - name: RAPYUTA_REPLICATION_USER
+      value: rr_replicator
+    - name: RAPYUTA_REPLICATION_PASSWORD
+      value: rr_replicator_pass
+    - name: POSTGRES_SHARED_BUFFERS
+      value: 512MB
+    - name: RAPYUTA_STANDBY_CIDR
+      value: 10.224.0.0/12
+    - name: POSTGRES_SYNCHRONOUS_COMMIT
+      value: 'on'
+    - name: POSTGRES_SYNCHRONOUS_STANDBY_NAMES
+      value: ''
+- apiVersion: apiextensions.rapyuta.io/v1
+  kind: Package
+  metadata:
+    name: postgresql-standby
+    version: '16.4'
+    labels:
+      app: postgres
+  spec:
+    runtime: device
+    device:
+      arch: amd64
+      restart: always
+    executables:
+    - name: database
+      type: docker
+      docker:
+        image: quay.io/rapyuta/chart-postgis:16.4
+        imagePullPolicy: Always
+    environmentVars:
+    - name: RAPYUTA_ENABLE_STANDBY
+      default: 'true'
+      description: Flag to enable Hot Standby
+      exposed: false
+    - name: POSTGRES_SHARED_BUFFERS
+      default: 512MB
+      description: sets the amount of memory PostgreSQL uses for caching table and
+        index data
+      exposed: false
+- apiVersion: apiextensions.rapyuta.io/v1
+  kind: Deployment
+  metadata:
+    name: postgresql-standby
+    depends:
+      kind: package
+      nameOrGUID: postgresql-standby
+      version: '16.4'
+    labels:
+      app: postgres
+  spec:
+    runtime: device
+    device:
+      depends:
+        kind: device
+        nameOrGUID: postgres-replica
+    depends:
+    - kind: deployment
+      nameOrGUID: postgresql-primary
+      wait: true
+    restart: always
+    volumes:
+    - execName: database
+      mountPath: /var/lib/postgresql/data
+      subPath: /opt/rapyuta/volumes/postgres
+    - execName: database
+      mountPath: /dev/shm
+      subPath: /dev/shm
+    envArgs:
+    - name: RAPYUTA_ENABLE_STANDBY
+      value: 'true'
+    - name: POSTGRES_HOST
+      value: 10.0.21.200
+    - name: POSTGRES_SHARED_BUFFERS
+      value: 512MB

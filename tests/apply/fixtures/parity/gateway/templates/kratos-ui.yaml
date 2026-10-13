@@ -1,0 +1,48 @@
+{% if gateway.kratos_identity.enable and gateway.kratos_identity.self_service_ui.enable | default(false) %}
+---
+apiVersion: "api.rapyuta.io/v2"
+kind: "Package"
+metadata:
+  name: "kratos-ui"
+  version: "v1.2.0"
+  description: >-
+    A Sample Self-Service UI for Kratos Identity server.
+spec:
+  runtime: "device"
+  device:
+    arch: "amd64"
+    restart: "always"
+  executables:
+    - name: "kratos-ui"
+      type: "docker"
+      docker:
+        image: "oryd/kratos-selfservice-ui-node:v1.2.0"
+---
+apiVersion: "api.rapyuta.io/v2"
+kind: "Deployment"
+metadata:
+  name: "kratos-ui"
+  depends:
+    kind: "package"
+    nameOrGUID: "kratos-ui"
+    version: "v1.2.0"
+spec:
+  runtime: "device"
+  device:
+    depends:
+      kind: "device"
+      nameOrGUID: "{{ gateway.device_name }}"
+  envArgs:
+    - name: "BASE_URL"
+      value: "{{ gateway.entrypoint or ("https://gateway-" ~ rio.project.name ~ "-" ~ rio.organization.short_id ~ ".ep-r.io") }}/kratos-ui/"
+    - name: "PORT"
+      value: "4455"
+    - name: "KRATOS_BROWSER_URL"
+      value: "{{ gateway.entrypoint or ("https://gateway-" ~ rio.project.name ~ "-" ~ rio.organization.short_id ~ ".ep-r.io") }}/kratos/"
+    - name: "KRATOS_PUBLIC_URL"
+      value: "http://127.0.0.1:4433/"
+    - name: "CSRF_COOKIE_NAME"
+      value: "ory_csrf_ui"
+    - name: "CSRF_COOKIE_SECRET"
+      value: "{{ gateway.kratos_identity.self_service_ui.cookie_secret or secrets.gateway.kratos_identity.self_service_ui.cookie_secret }}"
+{% endif %}

@@ -1,0 +1,49 @@
+combine:
+- kind: Role
+  metadata:
+    name: combine
+  spec:
+    description: '{''a'': 1, ''b'': 2}'
+    rules: []
+urldecode:
+- kind: Role
+  metadata:
+    name: urldecode
+  spec:
+    description: hello world
+    rules: []
+urlsplit:
+- kind: Role
+  metadata:
+    name: urlsplit
+  spec:
+    description: example.test
+    rules: []
+log:
+- kind: Role
+  metadata:
+    name: log
+  spec:
+    description: '2.0'
+    rules: []
+vault:
+- kind: Role
+  metadata:
+    name: vault
+  spec:
+    description: $ANSIBLE_VAULT;1.2;AES256;filter_default|33303331333233333334333533363337333833393631363236333634363536363330333133323333|3334333533363337333833393631363236333634363536360a376333336563376238306461326365|64666162323739316665363535363263346361346261333162393633386366346266356139323065|3136616237646266340a306334366564393137616537616239626235373035656535626661616631|32373434376636333966653831386130613336363432643035636332613131356535|
+    rules: []
+unvault:
+- kind: Role
+  metadata:
+    name: unvault
+  spec:
+    description: synthetic-secret
+    rules: []
+default:
+- kind: Role
+  metadata:
+    name: default
+  spec:
+    description: fallback
+    rules: []
