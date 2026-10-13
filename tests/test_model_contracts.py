@@ -29,6 +29,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from rapyuta_io_sdk_v2 import AsyncClient, Client, Configuration, models
 from rapyuta_io_sdk_v2 import _client_options as client_options
+from rapyuta_io_sdk_v2.configtree import ConfigTreeInputError
+from rapyuta_io_sdk_v2.configtree._values import encode_value, snapshot_values
 from rapyuta_io_sdk_v2.exceptions import HttpNotFoundError
 from rapyuta_io_sdk_v2.models import (
     APIResponse,
@@ -392,6 +394,21 @@ def test_python_names_and_api_aliases_round_trip(
     assert from_names == from_json
     assert from_json.model_dump(by_alias=True, exclude_unset=True) == json_values
     assert from_names.model_dump(by_alias=True, exclude_unset=True) == json_values
+
+
+def test_config_values_snapshot_preserves_field_presence_and_rejects_mutation() -> None:
+    omitted = encode_value("value")
+    explicit_empty = encode_value("value", metadata={})
+    batch = snapshot_values({"omitted": omitted, "empty": explicit_empty})
+    wire = batch.model_dump(by_alias=True, exclude_unset=True)
+    assert "metadata" not in wire["omitted"]
+    assert wire["empty"]["metadata"] == {}
+    assert wire["empty"]["contentType"] == "kv"
+    assert wire["empty"]["contentLength"] == len("value")
+    omitted.content_length = "invalid"
+    with pytest.raises(ConfigTreeInputError) as captured:
+        snapshot_values({"omitted": omitted})
+    assert captured.value.key == "omitted"
 
 
 @pytest.mark.parametrize("alias", ["nameOrGUID", "nameOrGuid", "name_or_guid"])

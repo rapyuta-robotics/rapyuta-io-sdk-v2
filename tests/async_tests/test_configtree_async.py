@@ -155,6 +155,7 @@ async def test_get_configtree_success(
     # Validate the response
     assert response.metadata.guid == "test_configtree_guid"
     assert response.metadata.name == "test_configtree"
+    assert mock_get.call_args.kwargs["params"] == {}
 
 
 @pytest.mark.asyncio
@@ -296,11 +297,19 @@ async def test_put_keys_in_revision_success(
         name="mock_configtree_name",
         revision_id="mock_revision_id",
         config_values=ConfigValues({"mock_key": ConfigValue(data="dmFsdWU=")}),
+        with_project=False,
+        organization_guid="explicit-org",
     )
 
     # Validate the response
     assert response.success is True
     assert response.success is True
+    assert mock_put.call_args.kwargs["url"].endswith(
+        "/v2/configtrees/mock_configtree_name/revisions/mock_revision_id/"
+    )
+    assert mock_put.call_args.kwargs["json"] == {"mock_key": {"data": "dmFsdWU="}}
+    assert mock_put.call_args.kwargs["headers"]["organizationguid"] == "explicit-org"
+    assert "project" not in mock_put.call_args.kwargs["headers"]
 
 
 @pytest.mark.asyncio

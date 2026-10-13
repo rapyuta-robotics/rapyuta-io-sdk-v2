@@ -106,9 +106,15 @@ def test_get_configtree_success(*, client: Client, mocker: MockFixture) -> None:
             "metadata": {"guid": "test_configtree_guid", "name": "test_configtree"},
         },
     )
-    response = client.get_configtree(name="mock_configtree_name")
+    response = client.get_configtree(
+        name="mock_configtree_name",
+        with_project=False,
+        organization_guid="explicit-org",
+    )
     assert response.metadata.guid == "test_configtree_guid"
     assert response.metadata.name == "test_configtree"
+    assert mock_get.call_args.kwargs["headers"]["organizationguid"] == "explicit-org"
+    assert "project" not in mock_get.call_args.kwargs["headers"]
 
 
 def test_set_configtree_revision_success(
@@ -124,9 +130,11 @@ def test_set_configtree_revision_success(
     response = client.set_configtree_revision(
         name="mock_configtree_name",
         configtree=ConfigTree.model_validate(configtree_body),
+        project_guid="explicit-project",
     )
     assert response.metadata.guid == "test_configtree_guid"
     assert response.metadata.name == "test_configtree"
+    assert mock_put.call_args.kwargs["headers"]["project"] == "explicit-project"
 
 
 def test_update_configtree_success(
@@ -172,9 +180,15 @@ def test_list_revisions_success(*, client: Client, mocker: MockFixture) -> None:
             ],
         },
     )
-    response = client.list_revisions(tree_name="mock_configtree_name")
+    response = client.list_revisions(
+        tree_name="mock_configtree_name",
+        with_project=False,
+        organization_guid="explicit-org",
+    )
     assert response.items[0].metadata.name == "test-configtree"
     assert response.items[0].metadata.guid == "mock_configtree_guid"
+    assert mock_get.call_args.kwargs["headers"]["organizationguid"] == "explicit-org"
+    assert "project" not in mock_get.call_args.kwargs["headers"]
 
 
 def test_create_revision_success(
@@ -190,8 +204,10 @@ def test_create_revision_success(
     response = client.create_revision(
         name="mock_configtree_name",
         body=ConfigTreeRevision.model_validate(configtree_body),
+        project_guid="explicit-project",
     )
     assert response.metadata.guid == "test_revision_guid"
+    assert mock_post.call_args.kwargs["headers"]["project"] == "explicit-project"
 
 
 def test_put_keys_in_revision_success(*, client: Client, mocker: MockFixture) -> None:
@@ -204,9 +220,17 @@ def test_put_keys_in_revision_success(*, client: Client, mocker: MockFixture) ->
         name="mock_configtree_name",
         revision_id="mock_revision_id",
         config_values=ConfigValues({"mock_key": ConfigValue(data="dmFsdWU=")}),
+        with_project=False,
+        organization_guid="explicit-org",
     )
     assert response.success is True
     assert response.success is True
+    assert mock_put.call_args.kwargs["url"].endswith(
+        "/v2/configtrees/mock_configtree_name/revisions/mock_revision_id/"
+    )
+    assert mock_put.call_args.kwargs["json"] == {"mock_key": {"data": "dmFsdWU="}}
+    assert mock_put.call_args.kwargs["headers"]["organizationguid"] == "explicit-org"
+    assert "project" not in mock_put.call_args.kwargs["headers"]
 
 
 def test_commit_revision_success(*, client: Client, mocker: MockFixture) -> None:
@@ -221,9 +245,11 @@ def test_commit_revision_success(*, client: Client, mocker: MockFixture) -> None
         tree_name="mock_configtree_name",
         revision_id="mock_revision_id",
         body=ConfigTreeRevision(),
+        project_guid="explicit-project",
     )
     assert response.metadata.guid == "test_revision_guid"
     assert response.metadata.name == "test_revision"
+    assert mock_patch.call_args.kwargs["headers"]["project"] == "explicit-project"
 
 
 def test_commit_revision_with_labels(*, client: Client, mocker: MockFixture) -> None:
