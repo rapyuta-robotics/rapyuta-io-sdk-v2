@@ -1795,15 +1795,19 @@ class AsyncClient:
         Returns:
             Config tree details as a Pydantic model.
         """
+        parameters = {}
+        if content_types:
+            parameters["contentTypes"] = content_types
+        if include_data:
+            parameters["includeData"] = include_data
+        if key_prefixes:
+            parameters["keyPrefixes"] = key_prefixes
+        if revision:
+            parameters["revision"] = revision
         result = await self.c.get(
             url=f"{self.v2api_host}/v2/configtrees/{name}/",
             headers=self.config.get_headers(with_project=with_project, **kwargs),
-            params={
-                "contentTypes": content_types,
-                "includeData": include_data,
-                "keyPrefixes": key_prefixes,
-                "revision": revision,
-            },
+            params=parameters,
         )
         handle_server_errors(result)
         return ConfigTree(**result.json())
@@ -1983,7 +1987,7 @@ class AsyncClient:
             APIResponse: Mutation success status.
         """
         result = await self.c.put(
-            url=f"{self.v2api_host}/v2/configtrees/{name}/revisions/{revision_id}/keys/",
+            url=f"{self.v2api_host}/v2/configtrees/{name}/revisions/{revision_id}/",
             headers=self.config.get_headers(**kwargs),
             json=config_values.model_dump(
                 by_alias=True, exclude_unset=True, mode="json"
