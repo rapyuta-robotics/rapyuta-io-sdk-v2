@@ -25,6 +25,7 @@ from benedict import benedict
 from pydantic_settings import BaseSettings, PydanticBaseSettingsSource
 
 from rapyuta_io_sdk_v2 import Client, Configuration
+from rapyuta_io_sdk_v2.configtree._documents import is_metadata_wrapper, split_content
 
 if TYPE_CHECKING:
     from pydantic.fields import FieldInfo
@@ -143,21 +144,11 @@ class ConfigTreeSource(PydanticBaseSettingsSource):
 
     def _split_metadata(self, data: object) -> object:
         """Remove metadata wrappers while preserving scalar and collection values."""
-        if not isinstance(data, dict):
-            return data
-        content = {}
-        for key, value in data.items():
-            if isinstance(value, dict) and self._is_metadata_wrapper(value):
-                content[key] = value["value"]
-            else:
-                content[key] = self._split_metadata(value)
-        return content
+        return split_content(data)
 
     @staticmethod
     def _is_metadata_wrapper(value: dict[str, Any]) -> bool:
-        return set(value) == {"value", "metadata"} and isinstance(
-            value["metadata"], dict
-        )
+        return is_metadata_wrapper(value)
 
     def _process_config_tree(self, raw_data: dict[str, Any]) -> dict[str, Any]:
         """Remove the configured tree prefix from flattened keys."""
