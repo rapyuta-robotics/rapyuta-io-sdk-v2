@@ -16,11 +16,15 @@
 
 import asyncio
 import json
+import os
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
 
+from rapyuta_io_sdk_v2 import ApplierOptions, ResourceScope
+from rapyuta_io_sdk_v2.apply import _filters
 from rapyuta_io_sdk_v2.apply._loader import prepare_source
 from rapyuta_io_sdk_v2.apply.applier import Applier, AsyncApplier
 from rapyuta_io_sdk_v2.apply.errors import ApplierValidationError
@@ -315,3 +319,275 @@ def test_rolebinding_instance_missing_reference_kind_has_source_context(
     assert error.value.source is not None
     assert error.value.source.instance_index == 0
     assert error.value.category == "identity"
+
+
+def _filter_manifest(path: Path, expression: str) -> Path:
+    path.write_text(
+        "kind: Role\nmetadata:\n  name: filter-test\nspec:\n"
+        f'  description: "{{{{ {expression} }}}}"\n  rules: []\n'
+    )
+    return path
+
+
+@pytest.mark.parametrize("facade", [Applier, AsyncApplier])
+def test_interface_resolver_only_runs_for_evaluated_filter(
+    tmp_path: Path, facade: type, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def unexpected(*_args: object, **_kwargs: object) -> None:
+        msg = "offline rendering attempted platform access"
+        raise AssertionError(msg)
+
+    monkeypatch.setattr(Client, "__init__", unexpected)
+    monkeypatch.setattr(AsyncClient, "__init__", unexpected)
+    plain = _filter_manifest(tmp_path / "plain.yaml", "'plain'")
+    called: list[tuple[str, str]] = []
+
+    def resolve(project: str, device: str) -> dict[str, list[str]]:
+        called.append((project, device))
+        return {"eth0": ["10.1.1.1", "10.1.1.2"]}
+
+    source = ManifestSource(files=(plain,), interface_resolver=resolve)
+    facade(source).inspect()
+    assert called == []
+    filtered = _filter_manifest(
+        tmp_path / "filtered.yaml", "'edge' | get_intf_ip('eth0')"
+    )
+    source = ManifestSource(files=(filtered,), interface_resolver=resolve)
+    options = ApplierOptions(scope=ResourceScope(project_guid="project-fixture"))
+    result = facade(source, options).inspect()
+    assert result.rendered_documents[0].data["spec"]["description"] == "10.1.1.1"
+    assert called == [("project-fixture", "edge")]
+
+
+@pytest.mark.parametrize("facade", [Applier, AsyncApplier])
+def test_skipped_device_branch_does_not_resolve(tmp_path: Path, facade: type) -> None:
+    manifest = tmp_path / "conditional.yaml"
+    manifest.write_text(
+        "kind: Role\nmetadata:\n  name: conditional\nspec:\n"
+        "  description: \"{% if use_device %}{{ 'edge' | get_intf_ip('eth0') }}"
+        '{% else %}plain{% endif %}"\n  rules: []\n'
+    )
+    calls: list[tuple[str, str]] = []
+
+    def resolve(project: str, device: str) -> dict[str, list[str]]:
+        calls.append((project, device))
+        return {"eth0": ["192.0.2.1"]}
+
+    options = ApplierOptions(scope=ResourceScope(project_guid="project-fixture"))
+    skipped = facade(
+        ManifestSource(
+            files=(manifest,),
+            values=({"use_device": False},),
+            interface_resolver=resolve,
+        ),
+        options,
+    ).inspect()
+    assert skipped.rendered_documents[0].data["spec"]["description"] == "plain"
+    assert calls == []
+
+    selected = facade(
+        ManifestSource(
+            files=(manifest,),
+            values=({"use_device": True},),
+            interface_resolver=resolve,
+        ),
+        options,
+    ).inspect()
+    assert selected.rendered_documents[0].data["spec"]["description"] == "192.0.2.1"
+    assert calls == [("project-fixture", "edge")]
+
+
+@pytest.mark.parametrize("facade", [Applier, AsyncApplier])
+def test_jinja_d_alias_keeps_undefined_fallback(tmp_path: Path, facade: type) -> None:
+    manifest = _filter_manifest(
+        tmp_path / "alias.yaml", "missing_value | d('fallback')"
+    )
+    result = facade(ManifestSource(files=(manifest,))).inspect()
+    assert result.rendered_documents[0].data["spec"]["description"] == "fallback"
+
+
+@pytest.mark.parametrize("configured", [False, True])
+def test_ansible_filters_render_with_unwritable_home(
+    tmp_path: Path, *, configured: bool
+) -> None:
+    blocked_home = tmp_path / "blocked-home"
+    blocked_home.write_text("not a directory")
+    manifest = _filter_manifest(tmp_path / "plain.yaml", "'plain'")
+    environment = os.environ.copy()
+    environment.pop("ANSIBLE_LOCAL_TEMP", None)
+    environment["HOME"] = str(blocked_home)
+    if configured:
+        environment["ANSIBLE_LOCAL_TEMP"] = str(tmp_path / "caller-ansible-temp")
+    script = (
+        "import os, sys\n"
+        "from pathlib import Path\n"
+        "from rapyuta_io_sdk_v2 import Applier, ManifestSource\n"
+        "result = Applier(ManifestSource(files=(Path(sys.argv[1]),))).inspect()\n"
+        "from ansible import constants as C\n"
+        "assert result.rendered_documents[0].data['spec']['description'] == 'plain'\n"
+        "configured = sys.argv[2] == 'True'\n"
+        "if configured:\n"
+        "    assert Path(C.DEFAULT_LOCAL_TMP).is_relative_to("
+        "os.environ['ANSIBLE_LOCAL_TEMP'])\n"
+        "else:\n"
+        "    assert 'ANSIBLE_LOCAL_TEMP' not in os.environ\n"
+    )
+    result = subprocess.run(  # noqa: S603 - isolated SDK import probe
+        [sys.executable, "-c", script, str(manifest), str(configured)],
+        cwd=Path(__file__).resolve().parents[2],
+        env=environment,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.parametrize(
+    "failure",
+    [
+        (ResourceScope(), lambda _p, _d: {}, None, "scope.project_guid"),
+        (ResourceScope(project_guid="one"), None, None, "interface_resolver"),
+        (
+            ResourceScope(project_guid="one"),
+            lambda _p, _d: {},
+            {"project": {"guid": "two"}},
+            "rio.project.guid",
+        ),
+        (
+            ResourceScope(project_guid="one"),
+            lambda _p, _d: {"eth0": []},
+            None,
+            'interface "eth0" not found on device "edge"',
+        ),
+        (
+            ResourceScope(project_guid="one"),
+            lambda _p, _d: {"eth0": "bad"},
+            None,
+            "address lists",
+        ),
+    ],
+)
+def test_interface_failures_are_source_aware(
+    tmp_path: Path,
+    failure: tuple[ResourceScope, object, dict | None, str],
+) -> None:
+    scope, resolver, rio, message = failure
+    manifest = _filter_manifest(
+        tmp_path / "filtered.yaml", "'edge' | get_intf_ip('eth0')"
+    )
+    source = ManifestSource(files=(manifest,), rio=rio, interface_resolver=resolver)
+    with pytest.raises(ApplierValidationError) as error:
+        Applier(source, ApplierOptions(scope=scope))
+    assert error.value.category == "template"
+    assert error.value.source.path == str(manifest)
+    assert message in str(error.value)
+
+
+@pytest.mark.parametrize("reason", ["lookup failed", "device not ready"])
+def test_resolver_failures_keep_manifest_source(tmp_path: Path, reason: str) -> None:
+    manifest = _filter_manifest(
+        tmp_path / "device.yaml", "'edge' | get_intf_ip('eth0')"
+    )
+
+    def fail(_project: str, _device: str) -> dict[str, list[str]]:
+        raise RuntimeError(reason)
+
+    source = ManifestSource(files=(manifest,), interface_resolver=fail)
+    options = ApplierOptions(scope=ResourceScope(project_guid="project-fixture"))
+    with pytest.raises(ApplierValidationError) as error:
+        Applier(source, options)
+    assert error.value.category == "template"
+    assert error.value.source.path == str(manifest)
+    assert reason in str(error.value)
+
+
+def test_no_address_matches_cli_reference_identifiers(tmp_path: Path) -> None:
+    records = json.loads(
+        (Path(__file__).parent / "fixtures/parity/rio-filters/errors.json").read_text()
+    )
+    reference = next(item for item in records if item["id"] == "interface-no-address")
+    manifest = _filter_manifest(
+        tmp_path / "device.yaml", "'edge-test' | get_intf_ip('eth0,tailscale0')"
+    )
+    source = ManifestSource(
+        files=(manifest,),
+        interface_resolver=lambda _p, _d: {"eth0": [], "tailscale0": [""]},
+    )
+    options = ApplierOptions(scope=ResourceScope(project_guid="project-fixture"))
+    with pytest.raises(ApplierValidationError) as error:
+        Applier(source, options)
+    assert error.value.source.path == str(manifest)
+    assert error.value.category == "template"
+    for identifier in ("edge-test", "eth0,tailscale0"):
+        assert identifier in reference["message"]
+        assert identifier in str(error.value)
+
+
+@pytest.mark.parametrize(
+    "expression",
+    ["'x' | unknown_filter", "1 | log(0, 2)", "'fallback' | getenv(42)"],
+)
+def test_filter_errors_prevent_resource_operations(
+    tmp_path: Path, expression: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    manifest = _filter_manifest(tmp_path / "invalid.yaml", expression)
+
+    def unexpected(*_args: object, **_kwargs: object) -> None:
+        msg = "resource operation began during rendering"
+        raise AssertionError(msg)
+
+    monkeypatch.setattr(Client, "__init__", unexpected)
+    monkeypatch.setattr(AsyncClient, "__init__", unexpected)
+    with pytest.raises(ApplierValidationError) as error:
+        Applier(ManifestSource(files=(manifest,)))
+    assert error.value.category == "template"
+    assert error.value.source.path == str(manifest)
+
+
+def test_ansible_initialization_failure_is_source_aware(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    manifest = _filter_manifest(tmp_path / "filter.yaml", "'x'")
+
+    def fail(_environment: object) -> None:
+        msg = "Ansible filter import failed"
+        raise ImportError(msg)
+
+    monkeypatch.setattr(_filters, "_register_ansible", fail)
+    with pytest.raises(ApplierValidationError) as error:
+        Applier(ManifestSource(files=(manifest,)))
+    assert error.value.category == "template"
+    assert error.value.source.path == str(manifest)
+    assert "Ansible filter import failed" in str(error.value)
+
+
+@pytest.mark.parametrize("facade", [Applier, AsyncApplier])
+def test_rendered_documents_are_ordered_and_independent(
+    tmp_path: Path, facade: type
+) -> None:
+    first = tmp_path / "first.yaml"
+    first.write_text(
+        "kind: Role\nmetadata:\n  name: first\nspec:\n  rules: []\n"
+        "---\n\n---\nkind: Role\nmetadata:\n  name: second\nspec:\n  rules: []\n"
+    )
+    second = _filter_manifest(tmp_path / "second.yaml", "'third'")
+    instance = _role("instance")
+    inspector = facade(ManifestSource(files=(first, second), resources=(instance,)))
+    documents = inspector.inspect().rendered_documents
+    assert [item.data["metadata"]["name"] for item in documents] == [
+        "first",
+        "second",
+        "filter-test",
+        "instance",
+    ]
+    assert [item.source.document_index for item in documents[:3]] == [0, 2, 0]
+    assert [item.source.path for item in documents[:3]] == [
+        str(first),
+        str(first),
+        str(second),
+    ]
+    assert documents[3].source.instance_index == 0
+    assert len(inspector.inspect().resolved_manifests) == len(documents)
+    documents[0].data["metadata"]["name"] = "changed"
+    assert inspector.inspect().rendered_documents[0].data["metadata"]["name"] == "first"

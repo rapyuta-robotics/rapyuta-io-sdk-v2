@@ -1,0 +1,117 @@
+{% if database.recovery.enable %}
+apiVersion: "apiextensions.rapyuta.io/v1"
+kind: "Package"
+metadata:
+  name: barman-recovery
+  version: "{{ database.recovery.version | default("16-3.4-3.11.1") }}"
+  labels:
+    app: barman
+spec:
+  runtime: device
+  device:
+    arch: amd64
+    restart: never
+  executables:
+    - name: "barman-recover"
+      type: docker
+      docker:
+        image: "quay.io/rapyuta/chart-barman-recover:{{ database.recovery.version | default("16-3.4-3.11.1") }}"
+        imagePullPolicy: "Always"
+  environmentVars:
+    - name: "AZURE_STORAGE_ACCOUNT"
+      default: ""
+      description: "Name of the Azure StorageAccount for uploading backups."
+      exposed: False
+    - name: "AZURE_STORAGE_CONTAINER"
+      default: ""
+      description: "Name of the Blob Container under Azure StorageAccount for uploading backups."
+      exposed: False
+    - name: "AZURE_STORAGE_KEY"
+      default: ""
+      description: "Secret Key for the Azure StorageAccount"
+      exposed: False
+    - name: "BARMAN_BACKUP_DIR"
+      default: "/data"
+      description: "Directory for storing backed-up data."
+      exposed: False
+    - name: "BARMAN_LOG_DIR"
+      default: "/log"
+      description: "Directory for storing Barman logs."
+      exposed: False
+    - name: "BARMAN_DATABASE_NAME"
+      default: "postgres"
+      description: "Name used for the Database in Barman."
+      exposed: False
+    - name: "BARMAN_RESTORE_BACKUP_ID"
+      default: "latest"
+      description: "Barman's Backup ID for the Base Backup, to be restored."
+      exposed: False
+    - name: "BARMAN_RESTORE_TIMESTAMP"
+      default: ""
+      description: "Timestamp for Point-in-Time Recovery. This is only valid for non-disaster recoveries."
+      exposed: False
+    - name: "BARMAN_RESTORE_DISASTER"
+      default: "false"
+      description: "Flag to toggle Disaster Recovery."
+      exposed: False
+    - name: "PGDATA"
+      default: "/restore"
+      description: "Directory where backup will be restored."
+      exposed: False
+---
+apiVersion: apiextensions.rapyuta.io/v1
+kind: Deployment
+metadata:
+  name: barman-recovery
+  depends:
+    kind: package
+    nameOrGUID: barman-recovery
+    version: "{{ database.recovery.version | default("16-3.4-3.11.1") }}"
+  labels:
+    app: barman
+spec:
+  runtime: device
+  device:
+    depends:
+      kind: device
+      nameOrGUID: {{ devices.primary }}
+  restart: never
+  volumes:
+    - execName: "barman-recover"
+      mountPath: "/data"
+      subPath: "{{ database.backup.data_dir | default('/opt/rapyuta/volumes/barman/data') }}"
+    - execName: "barman-recover"
+      mountPath: "/log"
+      subPath: "{{ database.backup.log_dir | default('/opt/rapyuta/volumes/barman/log') }}"
+    - execName: "barman-recover"
+      mountPath: "/restore"
+      subPath: "{{ database.data_dir | default('/opt/rapyuta/volumes/postgres') }}"
+  envArgs:
+    - name: "AZURE_STORAGE_ACCOUNT"
+      value: "{{ database.backup.azure_storage_account
+                 or secrets.package.barman.azure.storage_account }}"
+    - name: "AZURE_STORAGE_CONTAINER"
+      value: "{{ database.backup.azure_storage_container 
+                 or secrets.package.barman.azure.storage_account }}"
+    - name: "AZURE_STORAGE_KEY"
+      value: "{{ database.backup.azure_storage_key
+                 or secrets.package.barman.azure.storage_key }}"
+    - name: "BARMAN_BACKUP_DIR"
+      value: "/data"
+    - name: "BARMAN_LOG_DIR"
+      value: "/log"
+    - name: "PGDATA"
+      value: "/restore"
+    - name: "BARMAN_DATABASE_NAME"
+      value: "{{ database.backup.backup_name | default("postgres") }}"
+    - name: "BARMAN_RETENTION_POLICY"
+      value: "{{ database.backup.retention_policy | default("REDUNDANCY 7")}}"
+    - name: "POSTGRES_HOST"
+      value: "127.0.0.1"
+    - name: "BARMAN_RESTORE_BACKUP_ID"
+      value: "{{ database.recovery.backup_id | default("latest") }}"
+    - name: "BARMAN_RESTORE_TIMESTAMP"
+      value: "{{ database.recovery.restore_timestamp | default("") }}"
+    - name: "BARMAN_RESTORE_DISASTER"
+      value: "{{ database.recovery.disaster_recovery | default("false") }}"
+{% endif %}

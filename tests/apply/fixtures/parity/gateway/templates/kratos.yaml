@@ -1,0 +1,115 @@
+{% if gateway.kratos_identity.enable | default(false) %}
+---
+apiVersion: "api.rapyuta.io/v2"
+kind: "Package"
+metadata:
+  name: "kratos"
+  version: "{{ gateway.kratos_identity.version | default("v1.3.1") }}"
+  description: >-
+    Ory Kratos identity server. Uses quay.io/rapyuta/kratos which bundles
+    identity schemas and Jsonnet config files. All scalar config values are
+    overridden via Kratos native environment variables.
+spec:
+  runtime: "device"
+  device:
+    arch: "amd64"
+    restart: "always"
+  executables:
+    - name: "kratos"
+      type: "docker"
+      docker:
+        image: "quay.io/rapyuta/kratos:{{ gateway.kratos_identity.version | default("v1.3.1") }}"
+        pullSecret:
+          depends:
+            kind: "secret"
+            nameOrGUID: "{{ gateway.image_secret }}"
+      command:
+      - "serve"
+      - "--config"
+      - "/etc/config/kratos/kratos.yml"
+      runAsBash: false
+---
+apiVersion: "api.rapyuta.io/v2"
+kind: "Deployment"
+metadata:
+  name: "kratos"
+  depends:
+    kind: "package"
+    nameOrGUID: "kratos"
+    version: "{{ gateway.kratos_identity.version | default("v1.3.1") }}"
+spec:
+  runtime: "device"
+  depends:
+  - kind: "deployment"
+    nameOrGUID: "{{ database.deployment_name | default("postgresql-primary") }}"
+    wait: true
+  - kind: "deployment"
+    nameOrGUID: "kratos-migrate"
+  device:
+    depends:
+      kind: "device"
+      nameOrGUID: "{{ gateway.device_name }}"
+  restart: "always"
+  envArgs:
+  - name: "DSN"
+    value: "postgres://{{ database.username | default("postgres") }}:{{ database.password | default("postgres") }}@127.0.0.1:5432/kratos?sslmode=disable"
+  - name: "SECRETS_COOKIE"
+    value: "{{ gateway.kratos_identity.cookie_secret or secrets.gateway.kratos_identity.cookie_secret }}"
+  - name: "SECRETS_CIPHER"
+    value: "{{ gateway.kratos_identity.cookie_cipher or secrets.gateway.kratos_identity.cookie_cipher }}"
+  - name: "KRATOS_USER_SCHEMA_REQUIRE_BARCODE"
+    value: "{{ gateway.kratos_identity.user_schema.require_barcode | default(false) | lower }}"
+  - name: "SELFSERVICE_ALLOWED_RETURN_URLS_0"
+    value: "https://*.ep-r.io"
+  - name: "SELFSERVICE_ALLOWED_RETURN_URLS_1"
+    value: "https://*.rapyuta.io"
+  - name: "SELFSERVICE_ALLOWED_RETURN_URLS_2"
+    value: "https://*.rapyuta.internal"
+  {% for origin in gateway.allowed_origins %}
+  - name: "SELFSERVICE_ALLOWED_RETURN_URLS_{{ loop.index + 2 }}"
+    value: "{{ origin }}"
+  {% endfor %}
+  - name: "SELFSERVICE_DEFAULT_BROWSER_RETURN_URL"
+    value: "{{ gateway.entrypoint or ("https://gateway-" ~ rio.project.name ~ "-" ~ rio.organization.short_id ~ ".ep-r.io") }}/kratos-ui/"
+  - name: "SELFSERVICE_FLOWS_LOGIN_UI_URL"
+    value: "{{ gateway.entrypoint or ("https://gateway-" ~ rio.project.name ~ "-" ~ rio.organization.short_id ~ ".ep-r.io") }}/system-ui/login"
+  - name: "SELFSERVICE_FLOWS_LOGOUT_AFTER_DEFAULT_BROWSER_RETURN_URL"
+    value: "{{ gateway.entrypoint or ("https://gateway-" ~ rio.project.name ~ "-" ~ rio.organization.short_id ~ ".ep-r.io") }}/system-ui/login"
+  - name: "SELFSERVICE_FLOWS_REGISTRATION_UI_URL"
+    value: "{{ gateway.entrypoint or ("https://gateway-" ~ rio.project.name ~ "-" ~ rio.organization.short_id ~ ".ep-r.io") }}/system-ui/redirect"
+  - name: "SELFSERVICE_FLOWS_SETTINGS_UI_URL"
+    value: "{{ gateway.entrypoint or ("https://gateway-" ~ rio.project.name ~ "-" ~ rio.organization.short_id ~ ".ep-r.io") }}/kratos-ui/settings"
+  - name: "SELFSERVICE_FLOWS_RECOVERY_UI_URL"
+    value: "{{ gateway.entrypoint or ("https://gateway-" ~ rio.project.name ~ "-" ~ rio.organization.short_id ~ ".ep-r.io") }}/kratos-ui/recovery"
+  - name: "SELFSERVICE_FLOWS_VERIFICATION_UI_URL"
+    value: "{{ gateway.entrypoint or ("https://gateway-" ~ rio.project.name ~ "-" ~ rio.organization.short_id ~ ".ep-r.io") }}/kratos-ui/verify"
+  - name: "SELFSERVICE_FLOWS_ERROR_UI_URL"
+    value: "{{ gateway.entrypoint or ("https://gateway-" ~ rio.project.name ~ "-" ~ rio.organization.short_id ~ ".ep-r.io") }}/kratos-ui/error"
+  - name: "SELFSERVICE_FLOWS_REGISTRATION_AFTER_OIDC_HOOKS_0_CONFIG_URL"
+    value: "{{ gateway.entrypoint or ("https://gateway-" ~ rio.project.name ~ "-" ~ rio.organization.short_id ~ ".ep-r.io") }}/kratos-hooks/registration"
+  - name: "SELFSERVICE_FLOWS_REGISTRATION_AFTER_PASSWORD_HOOKS_0_CONFIG_URL"
+    value: "{{ gateway.entrypoint or ("https://gateway-" ~ rio.project.name ~ "-" ~ rio.organization.short_id ~ ".ep-r.io") }}/kratos-hooks/registration"
+  - name: "SELFSERVICE_FLOWS_REGISTRATION_AFTER_OIDC_HOOKS_0_CONFIG_AUTH_CONFIG_VALUE"
+    value: "{{ gateway.kratos_identity.registration_hook_api_key or secrets.gateway.kratos_identity.registration_hook_api_key }}"
+  - name: "SELFSERVICE_FLOWS_REGISTRATION_AFTER_PASSWORD_HOOKS_0_CONFIG_AUTH_CONFIG_VALUE"
+    value: "{{ gateway.kratos_identity.registration_hook_api_key or secrets.gateway.kratos_identity.registration_hook_api_key }}"
+  - name: "SELFSERVICE_METHODS_OIDC_CONFIG_PROVIDERS_0_CLIENT_ID"
+    value: "{{ gateway.kratos_identity.oidc_client_id or secrets.gateway.kratos_identity.oidc_client_id }}"
+  - name: "SELFSERVICE_METHODS_OIDC_CONFIG_PROVIDERS_0_CLIENT_SECRET"
+    value: "{{ gateway.kratos_identity.oidc_client_secret or secrets.gateway.kratos_identity.oidc_client_secret }}"
+  - name: "SELFSERVICE_METHODS_OIDC_CONFIG_PROVIDERS_0_ISSUER_URL"
+    value: "{{ gateway.kratos_identity.oidc_issuer_url or secrets.gateway.kratos_identity.oidc_issuer_url | default("https://oidc.rapyuta.io") }}"
+  - name: "SELFSERVICE_METHODS_WEBAUTHN_CONFIG_RP_ORIGIN"
+    value: "{{ gateway.entrypoint or ("https://gateway-" ~ rio.project.name ~ "-" ~ rio.organization.short_id ~ ".ep-r.io") }}/kratos-ui/"
+  - name: "SERVE_PUBLIC_BASE_URL"
+    value: "{{ gateway.entrypoint or ("https://gateway-" ~ rio.project.name ~ "-" ~ rio.organization.short_id ~ ".ep-r.io") }}/kratos/"
+  - name: "SERVE_ADMIN_BASE_URL"
+    value: "{{ gateway.entrypoint or ("https://gateway-" ~ rio.project.name ~ "-" ~ rio.organization.short_id ~ ".ep-r.io") }}/kratos-admin/"
+  {% if gateway.kratos_identity.cookie_same_site_disable is defined and gateway.kratos_identity.cookie_same_site_disable == true %}
+  - name: "COOKIES_SAME_SITE"
+    value: "None"
+  - name: "SESSION_COOKIE_SAME_SITE"
+    value: "None"
+  {% endif %}
+
+{% endif %}

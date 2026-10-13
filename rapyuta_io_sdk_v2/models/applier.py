@@ -16,7 +16,7 @@
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import (
     ConfigDict,
@@ -288,6 +288,15 @@ class DependencyGraph(SDKModel):
     external_references: tuple[DependencyReference, ...] = ()
 
 
+class RenderedDocument(SDKModel):
+    """Independent parsed manifest before resource model normalization."""
+
+    model_config = ConfigDict(frozen=True, populate_by_name=True)
+
+    source: SourceLocation
+    data: dict[str, Any]
+
+
 class InspectionResult(SDKModel):
     """Independent prepared manifests and graph metadata for inspection."""
 
@@ -295,6 +304,7 @@ class InspectionResult(SDKModel):
 
     resource_identities: tuple[ResourceIdentity, ...] = ()
     resolved_manifests: tuple[SerializeAsAny[SDKModel], ...] = ()
+    rendered_documents: tuple[RenderedDocument, ...] = ()
     dependency_graph: DependencyGraph = Field(default_factory=DependencyGraph)
 
 
@@ -315,6 +325,7 @@ __all__ = [
     "InspectionResult",
     "OperationFailure",
     "ReadinessOptions",
+    "RenderedDocument",
     "ResourceCapabilities",
     "ResourceContext",
     "ResourceIdentity",

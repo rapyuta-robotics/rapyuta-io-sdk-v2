@@ -17,6 +17,8 @@
 from __future__ import annotations
 
 import asyncio
+import os
+import tempfile
 import textwrap
 from typing import TYPE_CHECKING, get_args
 
@@ -49,6 +51,20 @@ from rapyuta_io_sdk_v2.models.rolebinding import (
     RoleRef,
 )
 from rapyuta_io_sdk_v2.models.utils import Domain, Subject
+
+_ansible_temp = tempfile.TemporaryDirectory(prefix="sdk-ansible-")
+_prior_ansible_temp = os.environ.get("ANSIBLE_LOCAL_TEMP")
+os.environ["ANSIBLE_LOCAL_TEMP"] = _ansible_temp.name
+
+
+def pytest_sessionfinish() -> None:
+    """Restore the caller's Ansible temporary directory after the test session."""
+    if _prior_ansible_temp is None:
+        os.environ.pop("ANSIBLE_LOCAL_TEMP", None)
+    else:
+        os.environ["ANSIBLE_LOCAL_TEMP"] = _prior_ansible_temp
+    _ansible_temp.cleanup()
+
 
 if TYPE_CHECKING:
     from collections.abc import Callable

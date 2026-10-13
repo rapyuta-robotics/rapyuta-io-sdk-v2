@@ -1,0 +1,81 @@
+cases:
+- id: getenv-set
+  manifest: "kind: Role\nmetadata:\n  name: getenv-set\nspec:\n  description: \"{{\
+    \ 'fallback' | getenv('PARITY_VALUE') }}\"\n  rules: []\n"
+  env:
+    PARITY_VALUE: present
+  rio:
+    project:
+      guid: project-fixture
+      name: fixture
+  project_guid: project-fixture
+- id: getenv-empty
+  manifest: "kind: Role\nmetadata:\n  name: getenv-empty\nspec:\n  description: \"\
+    {{ 'fallback' | getenv('PARITY_VALUE') }}\"\n  rules: []\n"
+  env:
+    PARITY_VALUE: ''
+  rio:
+    project:
+      guid: project-fixture
+      name: fixture
+  project_guid: project-fixture
+- id: getenv-unset
+  manifest: "kind: Role\nmetadata:\n  name: getenv-unset\nspec:\n  description: \"\
+    {{ 'fallback' | getenv('PARITY_VALUE') }}\"\n  rules: []\n"
+  env:
+    PARITY_VALUE: null
+  rio:
+    project:
+      guid: project-fixture
+      name: fixture
+  project_guid: project-fixture
+- id: interface-positional
+  manifest: "kind: Role\nmetadata:\n  name: interface-positional\nspec:\n  description:\
+    \ \"{{ 'edge-test' | get_intf_ip('eth0,tailscale0') }}\"\n  rules: []\n"
+  device:
+    eth0: []
+    tailscale0:
+    - 100.64.1.2
+    - 100.64.1.3
+  rio:
+    project:
+      guid: project-fixture
+      name: fixture
+  project_guid: project-fixture
+- id: interface-keyword
+  manifest: "kind: Role\nmetadata:\n  name: interface-keyword\nspec:\n  description:\
+    \ \"{{ 'edge-test' | get_intf_ip(interface='eth0,tailscale0') }}\"\n  rules: []\n"
+  device:
+    eth0:
+    - ''
+    - 10.0.0.1
+    tailscale0:
+    - 100.64.1.2
+    - 100.64.1.3
+  rio:
+    project:
+      guid: project-fixture
+      name: fixture
+  project_guid: project-fixture
+- id: interface-no-address
+  manifest: "kind: Role\nmetadata:\n  name: interface-no-address\nspec:\n  description:\
+    \ \"{{ 'edge-test' | get_intf_ip('eth0,tailscale0') }}\"\n  rules: []\n"
+  device:
+    eth0: []
+    tailscale0:
+    - ''
+  expected_error: true
+  rio:
+    project:
+      guid: project-fixture
+      name: fixture
+  project_guid: project-fixture
+- id: getenv-invalid
+  manifest: "kind: Role\nmetadata:\n  name: getenv-invalid\nspec:\n  description:\
+    \ \"{{ 'fallback' | getenv(42) }}\"\n  rules: []\n"
+  expected_error: true
+  rio:
+    project:
+      guid: project-fixture
+      name: fixture
+  project_guid: project-fixture

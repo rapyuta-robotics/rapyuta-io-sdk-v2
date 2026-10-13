@@ -1,0 +1,6 @@
+kind: Role
+metadata:
+  name: urldecode
+spec:
+  description: "{{ 'hello%20world' | urldecode }}"
+  rules: []

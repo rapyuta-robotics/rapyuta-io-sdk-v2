@@ -1,0 +1,67 @@
+{% if database.standby.enable and not database.recovery.enable %}
+apiVersion: "apiextensions.rapyuta.io/v1"
+kind: "Package"
+metadata:
+  name: postgresql-standby
+  version: "{{ database.postgresql_version }}"
+  labels:
+    app: postgres
+spec:
+  runtime: device
+  device:
+    arch: amd64
+    restart: always
+  executables:
+    - name: "database"
+      type: docker
+      docker:
+        image: "quay.io/rapyuta/chart-postgis:{{ database.postgresql_version }}"
+        imagePullPolicy: "Always"
+  environmentVars:
+    - name: "RAPYUTA_ENABLE_STANDBY"
+      default: "true"
+      description: "Flag to enable Hot Standby"
+      exposed: False
+    - name: "POSTGRES_SHARED_BUFFERS"
+      default: "512MB"
+      description: "sets the amount of memory PostgreSQL uses for caching table and index data"
+      exposed: False
+
+---
+apiVersion: apiextensions.rapyuta.io/v1
+kind: Deployment
+metadata:
+  name: postgresql-standby
+  depends:
+    kind: package
+    nameOrGUID: postgresql-standby
+    version: "{{ database.postgresql_version }}"
+  labels:
+    app: postgres
+spec:
+  runtime: device
+  device:
+    depends:
+      kind: device
+      nameOrGUID: {{ devices.standby }}
+  depends:
+  - kind: deployment
+    nameOrGUID: postgresql-primary
+    wait: True
+  restart: always
+  volumes:
+    - execName: database
+      mountPath: "/var/lib/postgresql/data"
+      subPath: "{{ database.data_dir | default('/opt/rapyuta/volumes/postgres') }}"
+    - execName: database
+      mountPath: "/dev/shm"
+      subPath: "/dev/shm"
+
+  envArgs:
+    - name: "RAPYUTA_ENABLE_STANDBY"
+      value: "true"
+    - name: "POSTGRES_HOST"
+      value: {{ database.standby.primary_host }}
+    - name: "POSTGRES_SHARED_BUFFERS"
+      value: "{{ database.shared_buffers | default("512MB") }}"
+{% endif %}
