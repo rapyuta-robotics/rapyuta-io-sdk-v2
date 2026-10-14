@@ -366,3 +366,54 @@ def test_set_environment_invalid_direct_call_raises_validation_error() -> None:
     config = Configuration(environment="ga")
     with pytest.raises(ValidationError):
         config.set_environment("not_a_valid_env")
+
+
+@pytest.mark.parametrize("environment", ["ga", "qa", "dev", "pr42"])
+def test_core_endpoint_defaults(environment: str) -> None:
+    config = Configuration(environment=environment)
+    domain = "prod" if environment == "ga" else "okd4beta"
+    assert config.hosts["core_api_host"] == (
+        f"https://{environment}apiserver.apps.okd4v2.{domain}.rapyuta.io"
+    )
+    config.set_environment("dev")
+    assert "devapiserver" in config.hosts["core_api_host"]
+
+
+def test_local_core_precedence(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("LOCAL_COREAPI_HOST", raising=False)
+    assert Configuration(environment="local").hosts["core_api_host"] is None
+    monkeypatch.setenv("LOCAL_COREAPI_HOST", "http://core:8080/")
+    assert (
+        Configuration(environment="local").hosts["core_api_host"] == "http://core:8080"
+    )
+    config = Configuration(environment="local", core_api_host=" https://custom/ ")
+    config.set_environment("qa")
+    assert config.hosts["core_api_host"] == "https://custom"
+    assert Configuration(core_api_host="  ").core_api_host is None
+
+
+@pytest.mark.parametrize(
+    "host",
+    [
+        "relative",
+        "ftp://host",
+        "http://host/path",
+        "https://u:p@host",
+        "https://host?x=1",
+        "http://[invalid",
+        "http://host:invalid",
+    ],
+)
+def test_core_endpoint_rejects_invalid_origins(host: str) -> None:
+    with pytest.raises(ValidationError):
+        Configuration(core_api_host=host)
+
+
+def test_core_file_and_positional_compatibility(tmp_path: Path) -> None:
+    path = tmp_path / "config.json"
+    path.write_text(json.dumps({"core_api_host": "http://core/"}), encoding="utf-8")
+    assert Configuration.from_file(str(path)).hosts["core_api_host"] == "http://core"
+    config = Configuration(
+        None, None, None, None, None, "local", "http://v2", "http://rip"
+    )
+    assert config.hosts["v2api_host"] == "http://v2"
