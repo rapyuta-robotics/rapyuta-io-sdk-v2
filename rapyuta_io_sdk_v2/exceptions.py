@@ -13,7 +13,18 @@
 # limitations under the License.
 
 
-"""Exceptions raised for rapyuta.io HTTP errors."""
+"""Exceptions raised for rapyuta.io HTTP errors and upload failures."""
+
+from __future__ import annotations
+
+from asyncio import CancelledError
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from rapyuta_io_sdk_v2.models.parameter import (
+        ParameterUploadFailure,
+        ParameterUploadResult,
+    )
 
 
 class AuthenticationError(Exception):
@@ -184,3 +195,38 @@ class UnknownError(Exception):
         """
         self.message = message
         super().__init__(self.message)
+
+
+class ParameterUploadError(Exception):
+    """An upload failed after the operations recorded in partial_result."""
+
+    def __init__(
+        self, failure: ParameterUploadFailure, partial_result: ParameterUploadResult
+    ) -> None:
+        """Retain typed failure/progress; the helper chains the original cause.
+
+        Args:
+            failure: Attributable path/stage and redacted message.
+            partial_result: Immutable snapshot of acknowledged operations.
+        """
+        self.failure = failure
+        self.partial_result = partial_result
+        super().__init__(f"{failure.stage}: {failure.path}: {failure.message}")
+
+
+# Public cancellation name follows asyncio conventions and the SDK contract.
+class ParameterUploadCancelled(CancelledError):  # noqa: N818
+    """Cancellation preserving known upload progress and task semantics."""
+
+    def __init__(
+        self, failure: ParameterUploadFailure, partial_result: ParameterUploadResult
+    ) -> None:
+        """Retain cancellation context and the immutable acknowledged progress.
+
+        Args:
+            failure: Last path/stage observed when cancellation arrived.
+            partial_result: Snapshot including completed identities and skips.
+        """
+        self.failure = failure
+        self.partial_result = partial_result
+        super().__init__(f"{failure.stage}: {failure.path}: {failure.message}")
