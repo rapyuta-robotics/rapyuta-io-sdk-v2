@@ -41,6 +41,12 @@ from rapyuta_io_sdk_v2.models.auth import (
     TokenRequest,
     TokenResponse,
 )
+from rapyuta_io_sdk_v2.models.chart import (
+    ChartEntry,
+    ChartIndex,
+    ChartMetadata,
+    ChartSource,
+)
 from rapyuta_io_sdk_v2.models.configtree import (
     ConfigKeyContent,
     ConfigKeyRename,
@@ -158,6 +164,10 @@ __all__ = [
     "AuthSubject",
     "AuthSubjectResponse",
     "BulkRoleBindingUpdate",
+    "ChartEntry",
+    "ChartIndex",
+    "ChartMetadata",
+    "ChartSource",
     "ConfigKeyContent",
     "ConfigKeyRename",
     "ConfigKeyUpload",
