@@ -81,6 +81,101 @@ history and graphs, and file download URLs, are returned as Pydantic models.
 Access their fields as attributes. Authentication helpers still return tokens,
 and shared-URL redirects retain the HTTP response.
 
+### Reusable resource applier
+
+`Applier` and `AsyncApplier` prepare manifest files and typed resource instances
+locally. Inspection and dry-run previews need no client and make no platform
+requests. Live `apply` and `delete` calls receive the already configured client
+as an argument; the caller owns its authentication, scope, transport settings,
+and lifetime. A prepared facade can be reused sequentially with different
+clients and scopes. An `Applier` cannot run inside an active event loop; use
+`AsyncApplier` for native asynchronous execution. Its `workers` option bounds
+active resource work, including readiness waits, and `readiness` controls
+polling rounds and intervals.
+
+The initial lifecycle coverage is Organization (update only; deletion is
+unsupported), Project, Package, Deployment, Disk, Network, StaticRoute, Secret,
+UserGroup, Role, RoleBinding, and ServiceAccount. Package versions remain
+distinct. RoleBinding apply grants the typed role/subject/domain combination;
+delete revokes that exact grant. Delete follows reverse dependency order,
+honors `rapyuta.io/deletionPolicy: retain`, and treats an already absent resource
+as a successful outcome. Dependencies order managed resources while external
+references are resolved only during live work when needed.
+
+```python
+from rapyuta_io_sdk_v2 import Applier, Client, Configuration, ManifestSource
+
+client = Client(Configuration.from_file("/path/to/config.json"))
+applier = Applier(ManifestSource(files=("/path/to/manifest.yaml",)))
+preview = applier.apply(dry_run=True)  # no client or platform access
+result = applier.apply(client)  # the exact caller-owned client is used
+```
+
+Apply templates support the CLI's `getenv`, `get_intf_ip`, and five built in
+Ansible filter groups. Ansible is installed with the SDK. For an interface
+lookup, supply an explicit project scope and a caller owned resolver that
+returns ready interface addresses. The resolver runs only when a template
+evaluates `get_intf_ip`:
+
+```python
+from rapyuta_io_sdk_v2 import ApplierOptions, ResourceScope
+
+
+def interfaces(project_guid: str, device_name: str) -> dict[str, list[str]]:
+    return {"eth0": ["100.64.1.2"]}  # replace with your ready device snapshot
+
+
+source = ManifestSource(
+    files=("/path/to/manifest.yaml",),
+    interface_resolver=interfaces,
+)
+options = ApplierOptions(scope=ResourceScope(project_guid="project-guid"))
+documents = Applier(source, options).inspect().rendered_documents
+print(documents[0].source, documents[0].data)
+```
+
+`rendered_documents` contains independent copies of the parsed manifests before
+resource model normalization. See the [parity quickstart](specs/002-apply-render-parity/quickstart.md)
+for fixture verification.
+
+`ApplierExecutionError.result` contains the settled input-order outcomes after a
+partial failure. Each outcome reports confirmed completed actions and whether a
+write may have taken effect without a confirmed response. A definitive rejected
+write is not counted as completed. Caller cancellation propagates as
+`CancelledError`; inspect `last_result` after settlement. Direct resource calls
+can expose the same progress by passing a fresh `MutationJournal` through
+`ResourceContext`. The journal stores action/state metadata only, not payloads,
+responses, exceptions, or clients.
+
+Secret-file decryption is an explicit optional operation. Call
+`decrypt_secret_file` or `async_decrypt_secret_file` yourself, then pass the
+returned mapping through `ManifestSource.secrets`; loading and preview never
+invoke SOPS automatically. Once supplied, decrypted mappings are ordinary input
+data. See [offline preview](examples/applier/offline_preview.py), [sync apply](examples/applier/sync_apply.py), [async apply](examples/applier/async_apply.py), and [explicit secret decryption](examples/applier/encrypted_secrets.py).
+
+For a single-resource workflow, each managed model also exposes paired
+`apply`/`apply_async`, `create_object`/`create_object_async`,
+`update_object`/`update_object_async`, and `delete_object`/`delete_object_async`
+methods where those operations are supported. Pass the client and a
+`ResourceContext` explicitly. To retain direct-call progress after a method
+raises or is cancelled, provide a fresh journal:
+
+```python
+from rapyuta_io_sdk_v2.models import MutationJournal, ResourceContext
+
+journal = MutationJournal()
+context = ResourceContext(progress=journal)
+try:
+    role.apply(client, context=context)
+except Exception:
+    print(journal.snapshot())  # action/state metadata, without payloads
+    raise
+```
+
+Async direct methods propagate the original `CancelledError`; inspect the
+journal after cancellation settles to distinguish confirmed work from a write
+whose effect is uncertain.
+
 Commit information is now supplied through a revision model:
 
 ```python
@@ -100,6 +195,95 @@ content is returned as `ConfigKeyContent`; its `.root` holds the decoded JSON/YA
 value (including dates and YAML binary values) or the original bytes for binary
 downloads. Bulk role-binding updates return `BulkRoleBindingUpdate`. The retired
 `update_project_owner` method has been removed.
+
+## Chart support
+
+`Chart` and `AsyncChart` package existing Apply templates with metadata and
+bundled values. They wrap the SDK Appliers and support local directories,
+compressed tar archives, and published or branch-preview repositories.
+
+```python
+from rapyuta_io_sdk_v2 import Chart, ChartInputs, ChartSource
+
+chart = Chart.load(
+    ChartSource.from_directory("./my-chart"),
+    inputs=ChartInputs(values={"name": "my-application"}),
+)
+print(chart.metadata.name, chart.metadata.version)
+inspection = chart.inspect()
+plan = chart.apply(dry_run=True)
+# Execute with your configured, caller-owned SDK Client:
+# result = chart.apply(client)
+# result = chart.delete(client)
+# result = chart.apply(client, delete_existing=True)
+```
+
+A chart directory contains `Chart.yaml`, `templates/`, and `values.yaml` when
+bundled defaults are needed. Supported manifest files under `templates/` are
+selected recursively in deterministic order, excluding hidden paths as in the CLI. No explicit values sources means
+use `values.yaml`; any supplied mapping or ordered YAML/JSON source sequence
+replaces those defaults. An explicit `{}` therefore does not load defaults.
+Explicit sources merge using the existing Apply rules. Supply complete values,
+secrets, and `rio` context through `ChartInputs`; encrypted secret files must be
+decrypted explicitly with the existing secret-file helper first.
+
+```python
+from rapyuta_io_sdk_v2 import AsyncChart, ChartInputs, ChartSource
+
+# Inside your application's async function:
+chart = await AsyncChart.load(
+    ChartSource.from_repository("gateway:1.0.0", branch="feature/my-chart"),
+    inputs=ChartInputs(values="./complete-values.yaml", rio=rio_context),
+)
+inspection = chart.inspect()  # Already prepared; no I/O.
+plan = await chart.apply(dry_run=True)
+# result = await chart.apply(async_client)
+```
+
+The standard repository index and branch base are fixed constants. Branch URL
+construction preserves `/` and encodes spaces and reserved characters just as
+the rio CLI does. A non-empty branch overrides an explicit repository URL. An
+unversioned chart selects the first repository entry and warns if several match;
+an exact version selects its first matching entry. Only the first advertised
+package URL is used. Catalog helpers expose metadata without terminal parsing:
+
+```python
+from rapyuta_io_sdk_v2 import ChartRepository
+
+repository = ChartRepository(branch="feature/my-chart")
+entries = repository.find_chart("gateway")
+all_entries = repository.list_charts()
+```
+
+`AsyncChartRepository` provides awaitable `fetch_index`, `find_chart`, and
+`list_charts`. Repository requests use a separate HTTPX transport; callers can
+supply `http_client=` for private repositories, custom timeout policy, or mocks.
+The SDK closes only acquisition clients it creates. Platform clients are supplied
+only to live operations and remain open, unchanged, and caller-owned.
+
+Loading validates metadata and confines extraction to an owned temporary root.
+Extracted files are removed before loading returns. Prepared charts remain
+usable after their source files disappear; load again to pick up changed inputs.
+Local preparation and previews need no platform account. Remote loading contacts
+only the selected repository/package source. Device-interface filters require
+an explicit resolver; asynchronous preparation invokes that synchronous resolver
+on a worker thread, so provide thread-safe resolution or prefetched data.
+
+Recreation runs delete before apply under one operation guard. It returns the
+final `ApplierResult`, while `chart.phase_results` retains both settled phases,
+including partial failures or cancellation. A failed deletion never starts apply.
+`chart.last_result` follows the existing Applier semantics; rejected preflight
+publishes no new result. Existing Apply errors propagate unchanged, supplemented
+with chart origin notes where needed. Acquisition errors expose
+`ChartLoadError.stage`, `.category`, `.source`, and optional `.selector`.
+Async cancellation settles active preparation and owned cleanup before returning;
+it can wait for a caller-supplied resolver to finish. No rollback is claimed.
+
+Standalone sync/async usage, explicit encrypted-secret inputs, and offline
+preview commands are demonstrated in [sync_chart.py](examples/chart/sync_chart.py)
+and [async_chart.py](examples/chart/async_chart.py). Run the focused regression
+suite with `uv run pytest tests/chart -q`. The [Chart validation guide](specs/003-chart-support/quickstart.md)
+describes CLI fixture replay and the six postgis/gateway/gostproxy parity cases.
 
 ## Contributing
 

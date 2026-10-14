@@ -1,0 +1,7 @@
+apiVersion: v1
+name: gostproxy
+version: 1.0.0
+description: >-
+  Gostproxy is an open-source simple security tunnel written in golang. This chart is designed to
+  work with Rapyuta.io's VPN Functionality to expose services running on Device
+  to the Public web.

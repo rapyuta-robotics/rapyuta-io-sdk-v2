@@ -1,0 +1,6 @@
+kind: Role
+metadata:
+  name: interface-positional
+spec:
+  description: "{{ 'edge-test' | get_intf_ip('eth0,tailscale0') }}"
+  rules: []

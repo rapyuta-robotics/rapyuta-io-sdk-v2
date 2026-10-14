@@ -1,0 +1,103 @@
+{% if not database.recovery.enable %}
+apiVersion: "apiextensions.rapyuta.io/v1"
+kind: "Package"
+metadata:
+  name: postgresql-primary
+  version: "{{ database.postgresql_version }}"
+  labels:
+    app: postgres
+spec:
+  runtime: device
+  device:
+    arch: amd64
+    restart: always
+  executables:
+    - name: "database"
+      type: docker
+      docker:
+        image: "quay.io/rapyuta/chart-postgis:{{ database.postgresql_version }}"
+        imagePullPolicy: "Always"
+  environmentVars:
+    - name: "POSTGRES_USER"
+      default: "postgres"
+      description: "The Default PostgreSQL User"
+      exposed: True
+      exposedName: "POSTGRES_USER"
+    - name: "POSTGRES_PASSWORD"
+      default: "postgres"
+      description: "The Default PostgreSQL Password"
+      exposed: True
+      exposedName: "POSTGRES_PASSWORD"
+    - name: "POSTGRES_MULTIPLE_DATABASES"
+      default: "postgres"
+      description: "The comma-separated list of Databases to configure"
+      exposed: False
+    - name: "RAPYUTA_REPLICATION_USER"
+      default: "replicator"
+      description: "The Default Streaming Replication User"
+      exposed: True
+      exposedName: "RAPYUTA_REPLICATION_USER"
+    - name: "RAPYUTA_REPLICATION_PASSWORD"
+      default: "replicator"
+      description: "The Default Streaming Replication User Password"
+      exposed: True
+      exposedName: "RAPYUTA_REPLICATION_PASSWORD"
+    - name: "POSTGRES_SHARED_BUFFERS"
+      default: "512MB"
+      description: "sets the amount of memory PostgreSQL uses for caching table and index data"
+      exposed: False
+---
+apiVersion: apiextensions.rapyuta.io/v1
+kind: Deployment
+metadata:
+  name: postgresql-primary
+  depends:
+    kind: package
+    nameOrGUID: postgresql-primary
+    version: "{{ database.postgresql_version }}"
+  labels:
+    app: postgres
+spec:
+  runtime: device
+  device:
+    depends:
+      kind: device
+      nameOrGUID: {{ devices.primary }}
+  restart: always
+  volumes:
+    - execName: database
+      mountPath: "/var/lib/postgresql/data"
+      subPath: "{{ database.data_dir | default('/opt/rapyuta/volumes/postgres') }}"
+    - execName: database
+      mountPath: "/dev/shm"
+      subPath: "/dev/shm"
+  envArgs:
+    - name: "POSTGRES_USER"
+      value: "{{ database.username | default("postgres") }}"
+    - name: "POSTGRES_PASSWORD"
+      value: "{{ database.password | default("postgres") }}"
+    - name: "POSTGRES_MULTIPLE_DATABASES"
+      value: "{{ database.dbname | default("postgres") }}"
+    - name: "POSTGRES_WAL_LEVEL"
+      value: "{{ database.wal_level | default("replica") }}"
+    - name: "POSTGRES_MAX_WAL_SENDERS"
+      value: "{{ database.max_wal_senders | default("10") }}"
+    - name: "POSTGRES_MAX_REPLICATION_SLOTS"
+      value: "{{ database.max_replication_slots | default("10") }}"
+    - name: "POSTGRES_HOT_STANDBY_FEEDBACK"
+      value: "{{ database.hot_standby_feedback | default("off") }}"
+    - name: "RAPYUTA_REPLICATION_USER"
+      value: "{{ database.replication_user | default("replicator") }}"
+    - name: "RAPYUTA_REPLICATION_PASSWORD"
+      value: "{{ database.replication_password | default("replicator") }}"
+    - name: "POSTGRES_SHARED_BUFFERS"
+      value: "{{ database.shared_buffers | default("512MB") }}"
+    {% if database.standby.enable %}
+    - name: "RAPYUTA_STANDBY_CIDR"
+      value: "{{ database.standby.cidr }}"
+    - name: "POSTGRES_SYNCHRONOUS_COMMIT"
+      value: "{{ database.synchronous_commit | default("on") }}"
+    - name: "POSTGRES_SYNCHRONOUS_STANDBY_NAMES"
+      value: "{{ database.synchronous_standby_names | default("") }}"
+    {% endif %}
+{% endif %}

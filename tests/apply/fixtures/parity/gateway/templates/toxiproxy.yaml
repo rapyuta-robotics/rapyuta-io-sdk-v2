@@ -1,0 +1,63 @@
+{% set _toxi = gateway.toxiproxy | default({}) %}
+{% if _toxi.enabled | default(false) and _toxi.services | default({}) %}
+apiVersion: "apiextensions.rapyuta.io/v1"
+kind: "Package"
+metadata:
+  name: "toxiproxy"
+  version: "{{ gateway.toxiproxy.version }}"
+spec:
+  runtime: device
+  device:
+    arch: amd64
+    restart: always
+  executables:
+    - name: "server"
+      type: docker
+      runAsBash: false
+      docker:
+        image: "quay.io/rapyuta/toxiproxy:{{ gateway.toxiproxy.version }}"
+        imagePullPolicy: "IfNotPresent"
+---
+apiVersion: apiextensions.rapyuta.io/v1
+kind: Deployment
+metadata:
+  name: toxiproxy
+  depends:
+    kind: package
+    nameOrGUID: "toxiproxy"
+    version: "{{ gateway.toxiproxy.version }}"
+spec:
+  runtime: device
+  device:
+    depends:
+      kind: device
+      nameOrGUID: "{{ gateway.device_name }}"
+  restart: always
+  envArgs:
+    - name: "TOXIPROXY_API_PORT"
+      value: "{{ gateway.toxiproxy.api_port | default(8474) }}"
+    {% for service, toxics in gateway.toxiproxy.services.items() %}
+    - name: "TOXIPROXY_PROXY_{{ loop.index0 }}_NAME"
+      value: "{{ service }}"
+    - name: "TOXIPROXY_PROXY_{{ loop.index0 }}_LISTEN"
+      value: "0.0.0.0:{{ gateway.ports[service] + gateway.toxiproxy.port_offset | default(10000) }}"
+    - name: "TOXIPROXY_PROXY_{{ loop.index0 }}_UPSTREAM"
+      value: "localhost:{{ gateway.ports[service] }}"
+    - name: "TOXIPROXY_PROXY_{{ loop.index0 }}_LATENCY"
+      value: "{{ toxics.latency | default(0) }}"
+    - name: "TOXIPROXY_PROXY_{{ loop.index0 }}_JITTER"
+      value: "{{ toxics.jitter | default(0) }}"
+    - name: "TOXIPROXY_PROXY_{{ loop.index0 }}_BANDWIDTH"
+      value: "{{ toxics.bandwidth | default(0) }}"
+    - name: "TOXIPROXY_PROXY_{{ loop.index0 }}_TIMEOUT"
+      value: "{{ toxics.timeout | default(0) }}"
+    - name: "TOXIPROXY_PROXY_{{ loop.index0 }}_SLOW_CLOSE"
+      value: "{{ toxics.slow_close | default(0) }}"
+    - name: "TOXIPROXY_PROXY_{{ loop.index0 }}_SLICER_AVERAGE_SIZE"
+      value: "{{ toxics.slicer_average_size | default(0) }}"
+    - name: "TOXIPROXY_PROXY_{{ loop.index0 }}_SLICER_DELAY"
+      value: "{{ toxics.slicer_delay | default(0) }}"
+    - name: "TOXIPROXY_PROXY_{{ loop.index0 }}_SLICER_SIZE_VARIATION"
+      value: "{{ toxics.slicer_size_variation | default(0) }}"
+    {% endfor %}
+{% endif %}

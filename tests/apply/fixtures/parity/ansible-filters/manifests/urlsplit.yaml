@@ -1,0 +1,6 @@
+kind: Role
+metadata:
+  name: urlsplit
+spec:
+  description: "{{ 'https://example.test/path?q=1' | urlsplit('hostname') }}"
+  rules: []

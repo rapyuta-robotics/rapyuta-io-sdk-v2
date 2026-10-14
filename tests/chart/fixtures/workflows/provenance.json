@@ -1,0 +1,22 @@
+{
+  "versions": {
+    "python": "3.13.9",
+    "ansible": "2.21.5",
+    "jinja": "3.1.6",
+    "cli_version": "10.10.0",
+    "cli_revision": "27bb77bb912705b58a5de0a2e99848dc023ba322"
+  },
+  "sources": {
+    "cases.yaml": "9d7fd6d36176318a3136e35504f9bd5959340bda5eb60be09e12354a33acd0a2",
+    "riocli/chart/util.py": "7c7f3de1e265a1fabb17c57ad58a637e4c90828c2bc83d49a6981e910bf949f5",
+    "riocli/chart/chart.py": "c123a234c7b04b87083eba93f0277f1c486180fdc2ea3667300f18105f4ed4ad",
+    "riocli/chart/apply.py": "d5889704fba5343aca480f422fbac6e6161b6ab8a3a569e24667e2260521d63c",
+    "riocli/apply/__init__.py": "9068218cefcfe062e093cb13d41dcb84a140cdd44ae91fa23cc82a5573a76d92",
+    "oracle.py": "e6dab5fdd1afc03bbd746859cebcfccfa86bee29f0c76fbb917d190f8917a4c4",
+    "metadata/provenance.json": "c4849dceba0b8d6a4ecff6d571efd303c93f067adfbb88865285ef360eb9f698",
+    "metadata/postgis/Chart.yaml": "d049853a0c02d4610ba58777d3ed2c2f7f18d5a6381c4796da9adc8bebd70bc2",
+    "metadata/gateway/Chart.yaml": "5419bd9b3fe94d6ca2d73a825649e6158806351e6b3c3e1f4ff987407c6f2d92",
+    "metadata/gostproxy/Chart.yaml": "2b599ba832837b9e66ac37f0c12695d618faf7fd26b4c6bcabbfcf2d7a09170b"
+  },
+  "command": "scripts/capture_apply_parity.py --suite chart-workflows --write"
+}

@@ -18,14 +18,23 @@ This module contains Pydantic models that correspond to the Secret JSON schema,
 providing validation for Secret resources to help users identify missing or
 incorrect fields.
 """
+# Lifecycle helper imports remain local to keep model modules independent.
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import TYPE_CHECKING, ClassVar, Literal
 
 from pydantic import Field, model_validator
 
+from rapyuta_io_sdk_v2.models.applier import (
+    DependencyReference,
+    ResourceCapabilities,
+    ResourceContext,
+    ResourceReference,
+    ResourceScope,
+)
 from rapyuta_io_sdk_v2.models.base import SDKModel
+from rapyuta_io_sdk_v2.models.resource import ResourceMethods
 from rapyuta_io_sdk_v2.models.utils import (
     BaseList,
     BaseMetadata,
@@ -33,6 +42,10 @@ from rapyuta_io_sdk_v2.models.utils import (
     DeviceDepends,
     Runtime,
 )
+
+if TYPE_CHECKING:
+    from rapyuta_io_sdk_v2.async_client import AsyncClient
+    from rapyuta_io_sdk_v2.client import Client
 
 
 class DockerSpec(SDKModel):
@@ -94,12 +107,142 @@ class SecretSpecCreate(SDKModel):
     depends: DeviceDepends | None = None
 
 
-class Secret(BaseObject):
+class Secret(ResourceMethods, BaseObject):
     """Secret model."""
+
+    KIND: ClassVar[str] = "Secret"
+    CAPABILITIES: ClassVar[ResourceCapabilities] = ResourceCapabilities(
+        create=True, update=True, delete=True, apply_policy="create_or_update"
+    )
 
     kind: Literal["Secret"] | None = "Secret"
     metadata: BaseMetadata
     spec: SecretSpec = Field(description="Specification for the Secret resource")
+
+    def resource_dependencies(
+        self, *, scope: ResourceScope | None = None
+    ) -> tuple[DependencyReference, ...]:
+        """Declare an external Device only for explicit device runtime."""
+        del scope
+        if self.spec.runtime != "device" or self.spec.depends is None:
+            return ()
+        value = self.spec.depends.name_or_guid
+        return (
+            DependencyReference(
+                reference=ResourceReference(kind="device", name=value, guid=value)
+            ),
+        )
+
+    def create_object(self, client: Client, *, context: ResourceContext) -> Secret:
+        """Create a Secret without dropping SecretCreate credentials."""
+        from rapyuta_io_sdk_v2.apply._resources.standard import (  # noqa: PLC0415
+            project_options,
+            record_write,
+            scoped_context,
+        )
+
+        context = scoped_context(self, context)
+        payload = self._create_payload(context)
+        return record_write(
+            context,
+            "created",
+            lambda: client.create_secret(payload, **project_options(context)),
+        )
+
+    async def create_object_async(
+        self, client: AsyncClient, *, context: ResourceContext
+    ) -> Secret:
+        """Create a Secret through the native asynchronous endpoint."""
+        from rapyuta_io_sdk_v2.apply._resources.standard import (  # noqa: PLC0415
+            project_options,
+            record_write_async,
+            scoped_context,
+        )
+
+        context = scoped_context(self, context)
+        payload = self._create_payload(context)
+        return await record_write_async(
+            context,
+            "created",
+            lambda: client.create_secret(payload, **project_options(context)),
+        )
+
+    def update_object(self, client: Client, *, context: ResourceContext) -> Secret:
+        """Update a Secret with its credential-bearing request variant."""
+        from rapyuta_io_sdk_v2.apply._resources.standard import (  # noqa: PLC0415
+            project_options,
+            record_write,
+            scoped_context,
+        )
+
+        context = scoped_context(self, context)
+        payload = self._create_payload(context)
+        return record_write(
+            context,
+            "updated",
+            lambda: client.update_secret(
+                payload.metadata.name, payload, **project_options(context)
+            ),
+        )
+
+    async def update_object_async(
+        self, client: AsyncClient, *, context: ResourceContext
+    ) -> Secret:
+        """Update a Secret through the native asynchronous endpoint."""
+        from rapyuta_io_sdk_v2.apply._resources.standard import (  # noqa: PLC0415
+            project_options,
+            record_write_async,
+            scoped_context,
+        )
+
+        context = scoped_context(self, context)
+        payload = self._create_payload(context)
+        return await record_write_async(
+            context,
+            "updated",
+            lambda: client.update_secret(
+                payload.metadata.name, payload, **project_options(context)
+            ),
+        )
+
+    def _delete_object(self, client: Client, *, context: ResourceContext) -> None:
+        """Delete this Secret without requiring create credentials."""
+        from rapyuta_io_sdk_v2.apply._resources.standard import (  # noqa: PLC0415
+            project_options,
+            record_write,
+        )
+
+        record_write(
+            context,
+            "deleted",
+            lambda: client.delete_secret(
+                self.metadata.name, **project_options(context)
+            ),
+        )
+
+    async def _delete_object_async(
+        self, client: AsyncClient, *, context: ResourceContext
+    ) -> None:
+        """Delete this Secret through the native async client."""
+        from rapyuta_io_sdk_v2.apply._resources.standard import (  # noqa: PLC0415
+            project_options,
+            record_write_async,
+        )
+
+        await record_write_async(
+            context,
+            "deleted",
+            lambda: client.delete_secret(
+                self.metadata.name, **project_options(context)
+            ),
+        )
+
+    def _create_payload(self, context: ResourceContext) -> SecretCreate:
+        """Build a private creation request preserving caller-supplied fields."""
+        from rapyuta_io_sdk_v2.apply._resources.standard import scoped_copy  # noqa: PLC0415
+
+        payload = scoped_copy(self, context)
+        return SecretCreate.model_validate(payload.model_dump(mode="python"))
 
 
 class SecretCreate(Secret):

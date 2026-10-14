@@ -1,0 +1,50 @@
+{
+  "versions": {
+    "python": "3.13.9",
+    "ansible": "2.21.5",
+    "jinja": "3.1.6",
+    "cli_version": "10.10.0",
+    "cli_revision": "27bb77bb912705b58a5de0a2e99848dc023ba322"
+  },
+  "sources": {
+    "cases.yaml": "214c44f82f9abadd55a0ddbd8f89995338158ad6a1e3f8014b15ef2219d29cef",
+    "combine": "69fb7c1fa7e9b41f295e4ced49f076e4ab57509554dde4953af7a3918e41bd69",
+    "urldecode": "0b3e1b8fa438537ef4b092f89f698be423c6ea2fe6f343cc47b10cface6b1406",
+    "urlsplit": "e81a9ee20f6dd4fea6f598c21a80954fb441bd1a407ec575d59bd6b1047328c4",
+    "log": "7f8e052713ce7e0351b87f3063f692fe6c25c610506830a8ea20bb3a6e9a4934",
+    "vault": "110d5f1b96674f53431a1e5b990944e756240efbd73863ea6d706ff0ad7fd502",
+    "unvault": "0a3a5ffd83a66f8cd608b96db06a3b8403d12f028202e39b149a7277bdc6ef61",
+    "default": "43aedc2dc5b49e118e98ccf88f92ec608fc69c9aefaf1341808645c7c6be0538"
+  },
+  "cases": [
+    {
+      "id": "combine",
+      "manifest": "kind: Role\nmetadata:\n  name: combine\nspec:\n  description: \"{{ {'a': 1} | combine({'b': 2}) }}\"\n  rules: []\n"
+    },
+    {
+      "id": "urldecode",
+      "manifest": "kind: Role\nmetadata:\n  name: urldecode\nspec:\n  description: \"{{ 'hello%20world' | urldecode }}\"\n  rules: []\n"
+    },
+    {
+      "id": "urlsplit",
+      "manifest": "kind: Role\nmetadata:\n  name: urlsplit\nspec:\n  description: \"{{ 'https://example.test/path?q=1' | urlsplit('hostname') }}\"\n  rules: []\n"
+    },
+    {
+      "id": "log",
+      "manifest": "kind: Role\nmetadata:\n  name: log\nspec:\n  description: \"{{ 100 | log(10) }}\"\n  rules: []\n"
+    },
+    {
+      "id": "vault",
+      "manifest": "kind: Role\nmetadata:\n  name: vault\nspec:\n  description: \"{{ 'synthetic-secret' | vault('synthetic-password', salt='0123456789abcdef0123456789abcdef') | replace('\\n', '|') }}\"\n  rules: []\n"
+    },
+    {
+      "id": "unvault",
+      "manifest": "kind: Role\nmetadata:\n  name: unvault\nspec:\n  description: \"{{ ('synthetic-secret' | vault('synthetic-password', salt='0123456789abcdef0123456789abcdef')) | unvault('synthetic-password') }}\"\n  rules: []\n"
+    },
+    {
+      "id": "default",
+      "manifest": "kind: Role\nmetadata:\n  name: default\nspec:\n  description: \"{{ missing_value | default('fallback') }}\"\n  rules: []\n"
+    }
+  ],
+  "command": "scripts/capture_apply_parity.py --suite ansible-filters --write"
+}

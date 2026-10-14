@@ -1,0 +1,82 @@
+{% if gateway.kratos_identity.enable %}
+{% set migration = (gateway.kratos_identity.migration | default({})) %}
+{% set bootstrap = (gateway.kratos_identity.bootstrap | default({})) %}
+{% if migration.enable or bootstrap.enable %}
+
+---
+apiVersion: "api.rapyuta.io/v2"
+kind: "Package"
+metadata:
+  name: "auth-migrate"
+  version: "{{ gateway.version }}"
+  description: >-
+    Migration for Auth data from legacy rr_amr_auth to Ory Kratos.
+spec:
+  runtime: "device"
+  device:
+    arch: "amd64"
+    restart: "onfailure"
+  executables:
+    - name: "auth-migrate"
+      type: "docker"
+      docker:
+        image: "quay.io/rapyuta/auth-migration:{{ gateway.version }}"
+        pullSecret:
+          depends:
+            kind: "secret"
+            nameOrGUID: "{{ gateway.image_secret }}"
+---
+apiVersion: "api.rapyuta.io/v2"
+kind: "Deployment"
+metadata:
+  name: "auth-migrate"
+  depends:
+    kind: "package"
+    nameOrGUID: "auth-migrate"
+    version: "{{ gateway.version }}"
+spec:
+  runtime: "device"
+  depends:
+  - kind: "deployment"
+    nameOrGUID: "kratos"
+    wait: true
+  - kind: "deployment"
+    nameOrGUID: "kratos-migrate"
+  device:
+    depends:
+      kind: "device"
+      nameOrGUID: "{{ gateway.device_name }}"
+  {% if migration is defined and migration.enable %}
+  volumes:
+    - execName: "auth-migrate"
+      mountPath: "/data"
+      subPath: "{{ migration.data_dir | default("/var/lib/auth_data/auth_data") }}"
+  {% endif %}
+  envArgs:
+    {% if migration is defined %}
+    - name: "DATA_DIR"
+      value: "/data"
+    - name: "MIGRATE"
+      value: "{{ migration.enable }}"
+    - name: "SYSTEM_TOKEN"
+      value: "{{ migration.system_token or secrets.gateway.kratos_identity.migration.system_token }}"
+    {% for token in migration.tokens or secrets.gateway.kratos_identity.migration.tokens %}
+    - name: "API_TOKEN_{{loop.index0}}"
+      value: "{{ token }}"
+    {% endfor %}
+    {% endif %}
+
+    {% if bootstrap is defined %}
+    - name: "BOOTSTRAP"
+      value: "{{ bootstrap.enable }}"
+    {% for user in bootstrap.users %}
+    - name: "BOOTSTRAP_USER_{{loop.index0}}"
+      value: '{{ user.name }}:{{ user.password }}:{{ user.group }}'
+    {% endfor %}
+    {% for token in bootstrap.tokens %}
+    - name: "BOOTSTRAP_TOKEN_{{loop.index0}}"
+      value: "{{ token.name }}:{{ token.value }}:{{ token.sha256 }}"
+    {% endfor %}
+    {% endif %}
+{% endif %}
+{% endif %}

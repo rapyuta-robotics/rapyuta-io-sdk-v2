@@ -1,0 +1,100 @@
+---
+apiVersion: "api.rapyuta.io/v2"
+kind: "Package"
+metadata:
+  name: "caddy-gateway"
+  version: "{{ gateway.version }}"
+  description: >-
+    Gateway is the entrypoint for the services running on the Edge. It
+    authenticates and authorizes the requests before proxying them to the
+    designated server.
+spec:
+  runtime: "device"
+  device:
+    arch: "amd64"
+    restarts: "always"
+  executables:
+    - name: "gateway"
+      type: "docker"
+      docker:
+        image: "quay.io/rapyuta/caddy-gateway:{{ gateway.version }}"
+        pullSecret:
+          depends:
+            kind: "secret"
+            nameOrGUID: "{{ gateway.image_secret }}"
+      runAsBash: false
+---
+apiVersion: "api.rapyuta.io/v2"
+kind: "Deployment"
+metadata:
+  name: "caddy-gateway"
+  depends:
+    kind: "package"
+    nameOrGUID: "caddy-gateway"
+    version: "{{ gateway.version }}"
+spec:
+  runtime: "device"
+  depends:
+  {% if not gateway.kratos_identity.enable %}
+  - kind: "deployment"
+    nameOrGUID: "auth"
+  {% endif %}
+  - kind: "deployment"
+    nameOrGUID: "{{ database.deployment_name | default("postgresql-primary") }}"
+  device:
+    depends:
+      kind: "device"
+      nameOrGUID: "{{ gateway.device_name }}"
+  features:
+    params:
+      enabled: true
+      trees:
+        - "{{ gateway.param_tree }}"
+  volumes:
+    - execName: "gateway"
+      mountPath: "/etc/caddy/config.yaml"
+      subPath: "/opt/rapyuta/configs/{{ gateway.param_tree | default("gateway") }}/config.yaml"
+    - execName: "gateway"
+      mountPath: "/preseed.yaml"
+      subPath: "/opt/rapyuta/configs/{{ gateway.param_tree | default("gateway") }}/preseed.yaml"
+  envArgs:
+    - name: "ALLOWED_ORIGIN_0"
+      value: "https://gateway-{{ rio.project.name }}-{{ rio.organization.short_id}}.ep-r.io"
+    - name: "ALLOWED_ORIGIN_1"
+      value: "https://sui-{{ rio.project.name }}-{{ rio.organization.short_id}}.ep-r.io"  
+    - name: "ALLOWED_ORIGIN_2"
+      value: "https://sui-wos-kqdbp.ep-r.io"
+    - name: "ALLOWED_ORIGIN_3"
+      value: "https://sui.prod.rapyuta.io"
+    - name: "ALLOWED_ORIGIN_4"
+      value: "https://console.rapyuta.io"
+    {% for origin in gateway.allowed_origins | default([], true) %}
+    - name: "ALLOWED_ORIGIN_{{ loop.index + 4 }}"
+      value: "{{ origin }}"
+    {% endfor %}
+    - name: MIGRATION
+      value: "true"
+    - name: FORCE_PRESEED
+      value: "{{ gateway.spicedb_authz.force_preseed | default('false') }}"
+    - name: PRESEED_FILE
+      value: "/opt/rapyuta/configs/{{ gateway.param_tree | default("gateway") }}/preseed.yaml"
+    - name: PG_DSN
+      value: "postgres://{{ database.username | default("postgres") }}:{{ database.password | default("postgres") }}@127.0.0.1:5432/spicedb?sslmode=disable"
+    - name: USE_KRATOS
+      value: "{{ gateway.kratos_identity.enable }}"
+    - name: KRATOS_HOOK_TOKEN
+      value: "{{ gateway.kratos_identity.registration_hook_api_key or (secrets.gateway.kratos_identity.registration_hook_api_key if secrets else '') }}"
+    - name: ADMIN_PORT
+      value: "9500"
+    {% for service, port in (gateway.ports | default({})).items() %}
+    {% set _toxi = gateway.toxiproxy | default({}) %}
+    {% set toxi_services = _toxi.services | default({}) if _toxi.enabled | default(false) else {} %}
+    - name: "{{ service | upper }}_PORT"
+      value: "{{ port + _toxi.port_offset | default(10000) if toxi_services and service in toxi_services else port }}"
+    {% endfor %}
+    {% if gateway.image_proxy.secret_key %}
+    - name: AWS_SECRET_KEY
+      value: {{ gateway.image_proxy.secret_key }}
+    - name: AWS_ACCESS_KEY_ID
+      value: {{ gateway.image_proxy.access_key_id }}
+    {% endif %}
