@@ -20,6 +20,7 @@ import os
 import pathlib
 from dataclasses import dataclass
 from typing import TypedDict, Unpack
+from urllib.parse import urlsplit
 
 from rapyuta_io_sdk_v2.constants import (
     APP_NAME,
@@ -49,6 +50,7 @@ class Configuration:
     environment: str = "ga"  # Default environment is prod
     v2_api_host: str | None = None
     rip_host: str | None = None
+    core_api_host: str | None = None
 
     def __post_init__(self) -> None:
         # Normalize empty or whitespace-only host strings to None so that they
@@ -58,6 +60,7 @@ class Configuration:
             self.v2_api_host = self.v2_api_host.strip() or None
         if isinstance(self.rip_host, str):
             self.rip_host = self.rip_host.strip() or None
+        self.core_api_host = _normalize_core_origin(self.core_api_host)
 
         self.hosts = {}
         self.set_environment(self.environment)
@@ -90,6 +93,7 @@ class Configuration:
                 organization_guid=data.get("organization_id"),
                 environment=data.get("environment"),
                 auth_token=data.get("auth_token"),
+                core_api_host=data.get("core_api_host"),
             )
 
     # Preserve the positional signature used by existing SDK callers.
@@ -193,6 +197,7 @@ class Configuration:
             raise ValidationError(message)
 
         self.hosts["environment"] = name
+        self.hosts["core_api_host"] = self.core_api_host or _core_default(name)
 
         if name == "local":
             self.hosts["v2api_host"] = self.v2_api_host or (
@@ -214,3 +219,29 @@ class Configuration:
             self.hosts["v2api_host"] = (
                 self.v2_api_host or f"https://{name}api.{STAGING_ENVIRONMENT_SUBDOMAIN}"
             )
+
+
+def _normalize_core_origin(value: str | None) -> str | None:
+    if not value or not value.strip():
+        return None
+    value = value.strip().rstrip("/")
+    try:
+        parsed = urlsplit(value)
+        _ = parsed.port
+    except ValueError as error:
+        raise ValidationError(str(error)) from error
+    if parsed.scheme not in {"http", "https"} or not parsed.hostname:
+        message = "core_api_host must be an absolute HTTP(S) origin"
+        raise ValidationError(message)
+    if any((parsed.path, parsed.query, parsed.fragment, parsed.username)):
+        message = "core_api_host must not contain a path, credentials or query"
+        raise ValidationError(message)
+    return value
+
+
+def _core_default(environment: str) -> str | None:
+    if environment == "local":
+        return _normalize_core_origin(os.getenv("LOCAL_COREAPI_HOST"))
+    if environment == "ga":
+        return "https://gaapiserver.apps.okd4v2.prod.rapyuta.io"
+    return f"https://{environment}apiserver.{STAGING_ENVIRONMENT_SUBDOMAIN}"

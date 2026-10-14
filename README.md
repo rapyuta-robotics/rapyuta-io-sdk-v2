@@ -101,6 +101,114 @@ value (including dates and YAML binary values) or the original bytes for binary
 downloads. Bulk role-binding updates return `BulkRoleBindingUpdate`. The retired
 `update_project_owner` method has been removed.
 
+### v1 Parameters and directory uploads
+
+`Client` and `AsyncClient` expose typed v1 Parameter operations. Parameter calls
+use `Configuration.core_api_host`, independently of the v2 API gateway. Production
+and staging endpoints resolve from the environment. For local use, set
+`core_api_host="http://localhost:8080"` or `LOCAL_COREAPI_HOST`; local v2 calls still
+work when no core endpoint is configured. The override must be an HTTP(S) origin.
+`Configuration.from_file()` also accepts the optional `core_api_host` key.
+
+Each method performs one platform request and returns a named Pydantic response
+whose `.data` contains the result. Async counterparts have the same arguments
+and result models; await their calls.
+
+| Method | Input | Response `.data` |
+| --- | --- | --- |
+| `list_parameter_trees` | Optional `ParameterTreeQuery(instances=("config.*",))` | Tree-name list |
+| `create_parameter_tree` | Tree name; no body | Created name |
+| `get_parameter_tree` | Tree name; no body | Recursive `ParameterNode` |
+| `put_parameter_node` | Child path and `ParameterNodeWrite` | Written node |
+| `delete_parameter_tree` | Tree name; no body | `"ok"` |
+| `delete_parameter_node` | Child path and `ParameterNodeDelete` | `"ok"` |
+| `list_parameter_blobs` | `ParameterBlobQuery(tree_names=("settings",))` | Completion flag and blob references |
+| `prepare_parameter_upload` | Child path and `ParameterUploadMetadata` headers; no body | File node with reference and optional signed URL |
+| `commit_parameter_upload` | Tree name and decimal reference string; no body | `ParameterCommitData(upload=True)` |
+
+Tree names start with an alphanumeric character and contain up to 50 characters
+from letters, digits, `.`, `_`, and `-`. Paths retain literal names; unsupported
+backend names and traversal are rejected. Root creation fails if a root exists.
+Child version `0` creates a new node. Use the version from a recursive tree read
+for an existing child's update or deletion; the SDK does not refresh it silently.
+
+```python
+from rapyuta_io_sdk_v2 import ParameterNodeType, ParameterNodeWrite
+
+client.create_parameter_tree("settings")
+client.put_parameter_node(
+    "settings/folder", ParameterNodeWrite(node_type=ParameterNodeType.FOLDER)
+)
+tree = client.get_parameter_tree("settings").data
+print(tree.children[0].version)
+```
+
+The separate helpers submit directories using these public operations. Immediate
+child directories become trees; loose root files, symbolic links and special
+entries are reported as skipped. Defaults select every tree, create folder
+nodes below the roots, and preserve existing remote trees by failing on a
+conflicting root. Selection matches exact local directory names.
+
+```python
+from rapyuta_io_sdk_v2 import ParameterUploadOptions
+from rapyuta_io_sdk_v2.exceptions import ParameterUploadError
+from rapyuta_io_sdk_v2.helpers import upload_parameters
+
+try:
+    result = upload_parameters(
+        client,
+        "/path/to/source",
+        options=ParameterUploadOptions(tree_names=("settings",)),
+    )
+    print(result.completed_trees)
+except ParameterUploadError as error:
+    print(error.failure.path, error.failure.stage)
+    print(error.partial_result.completed_files)
+```
+
+Set `delete_existing_trees=True` to delete and recreate only selected trees.
+Set `as_folder=False` for the legacy value/attribute hierarchy. Legacy mode
+reports files under attribute directories as skipped and validates the
+one-attribute-child restriction for value directories before making changes.
+Legacy directory names cannot have extensions or repeat an attribute in a branch.
+
+Small `.yaml` files must contain mappings; `.json` files must contain valid JSON.
+Their original UTF-8 text, including line endings, stays inline if the reference
+serialized-payload estimate plus 200 bytes fits 128 KiB. Invalid small candidates
+fail before the stored-size decision. Files larger than 128 KiB and other
+extensions use blobs without structured parsing. Blob transfers use bounded
+4 MiB blocks and original-byte MD5 checksums, with a maximum file size of
+209715200000 bytes. Oversized files fail preflight before remote mutation.
+
+`upload_parameters_async` has the same options and immutable results. It awaits
+network I/O and offloads local disk work. Cancellation raises
+`ParameterUploadCancelled`, an `asyncio.CancelledError` subtype with `.failure`
+and `.partial_result`; inspect these fields and re-raise cancellation. Ordinary
+failures and cancellation can leave remote changes. Partial results identify
+confirmed files, directories, deletions and skips; unfinished files are not
+reported as complete. Helpers provide no automatic rollback or retry.
+
+Helpers keep caller-supplied platform and storage clients open and close storage
+clients they create. An injected storage client must have no auth, cookies or
+custom headers and must disable redirects. Storage requests carry no platform
+credentials. Duplicate content counts as complete only after its matching
+reference, checksum and `Uploaded` status are verified.
+
+Runnable [synchronous](examples/parameters/upload.py) and
+[asyncio](examples/parameters/upload_async.py) examples use
+`RAPYUTA_AUTH_TOKEN`, `RAPYUTA_PROJECT_GUID`, and optional
+`RAPYUTA_ENVIRONMENT`/`RAPYUTA_CORE_API_HOST` environment variables:
+
+```bash
+uv run python examples/parameters/upload.py /path/to/source --tree settings
+uv run python examples/parameters/upload_async.py /path/to/source --tree settings --inspect
+```
+
+Both accept `--recreate` and `--legacy`. See the
+[validation quickstart](specs/001-parameter-uploads/quickstart.md) for the pinned
+SDK v1 downloader round-trip and test commands. Existing v2 ConfigTree APIs and
+`ConfigTreeSource` remain available with their existing contracts.
+
 ## Contributing
 
 We welcome contributions. Please read our [contribution guidelines](CONTRIBUTING.md) to get started.
