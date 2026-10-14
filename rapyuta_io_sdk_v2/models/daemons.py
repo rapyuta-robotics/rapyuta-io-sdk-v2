@@ -1,18 +1,30 @@
-"""
-Pydantic models for Daemon resource validation.
+# Copyright 2026 Rapyuta Robotics
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""Pydantic models for Daemon resource validation.
 
 This module contains Pydantic models that correspond to the Daemon JSON schema,
 providing validation for Daemon resources to help users identify missing or
 incorrect fields.
 """
 
-from __future__ import annotations
-
 from typing import Literal
-from pydantic import BaseModel, Field
 
+from pydantic import Field
+
+from rapyuta_io_sdk_v2.models.base import SDKModel
 from rapyuta_io_sdk_v2.models.utils import BaseMetadata
-
 
 # --- Daemon Status Types ---
 DaemonStatusType = Literal[
@@ -21,7 +33,7 @@ DaemonStatusType = Literal[
 
 
 # --- Configuration Models ---
-class TracingConfig(BaseModel):
+class TracingConfig(SDKModel):
     """Tracing configuration for daemons."""
 
     enable: bool = Field(description="Enable tracing")
@@ -30,17 +42,21 @@ class TracingConfig(BaseModel):
     )
 
 
-class AuthConfig(BaseModel):
+class AuthConfig(SDKModel):
     """Authentication configuration for pull secrets."""
 
     # This is a simplified AuthConfig for daemon pull secrets
     # Add specific fields as needed based on actual requirements
-    username: str | None = Field(default=None, description="Username for authentication")
-    password: str | None = Field(default=None, description="Password for authentication")
+    username: str | None = Field(
+        default=None, description="Username for authentication"
+    )
+    password: str | None = Field(
+        default=None, description="Password for authentication"
+    )
     registry: str | None = Field(default=None, description="Registry URL")
 
 
-class VPNConfig(BaseModel):
+class VPNConfig(SDKModel):
     """VPN configuration for daemons."""
 
     enable: bool = Field(description="Enable VPN")
@@ -49,10 +65,12 @@ class VPNConfig(BaseModel):
     )
     headscale_url: str | None = Field(default=None, description="Headscale URL")
     headscale_acl_tag: str | None = Field(default=None, description="Headscale ACL tag")
-    advertise_routes: str | None = Field(default=None, description="Routes to advertise")
+    advertise_routes: str | None = Field(
+        default=None, description="Routes to advertise"
+    )
 
 
-class DockerProxyConfig(BaseModel):
+class DockerProxyConfig(SDKModel):
     """Docker proxy configuration."""
 
     registry: str | None = Field(default=None, description="Registry URL")
@@ -62,16 +80,20 @@ class DockerProxyConfig(BaseModel):
     password: str | None = Field(
         default=None, description="Password for proxy authentication"
     )
-    dataDirectory: str | None = Field(default=None, description="Data directory path")
+    data_directory: str | None = Field(
+        alias="dataDirectory",
+        default=None,
+        description="Data directory path",
+    )
 
 
-class DockerMirrorConfig(BaseModel):
+class DockerMirrorConfig(SDKModel):
     """Docker mirror configuration."""
 
     url: str | None = Field(default=None, description="Mirror URL")
 
 
-class DockerCacheConfig(BaseModel):
+class DockerCacheConfig(SDKModel):
     """Docker cache configuration for daemons."""
 
     enable: bool = Field(description="Enable Docker cache")
@@ -84,7 +106,7 @@ class DockerCacheConfig(BaseModel):
 
 
 # --- Daemon Specification ---
-class DaemonSpec(BaseModel):
+class DaemonSpec(SDKModel):
     """Specification for Daemon resource."""
 
     tracing_config: TracingConfig | None = Field(
@@ -100,13 +122,15 @@ class DaemonSpec(BaseModel):
 
 
 # --- Daemon Status ---
-class DaemonStatus(BaseModel):
+class DaemonStatus(SDKModel):
     """Status information for a daemon."""
 
     enable: bool = Field(description="Whether daemon is enabled or not")
     status: DaemonStatusType | None = Field(
         default=None,
-        description="Status of the daemon (pending, running, error, terminating, terminated)",
+        description=(
+            "Status of the daemon (pending, running, error, terminating, terminated)"
+        ),
     )
     error_code: str | None = Field(
         default=None, description="Error code associated with the daemon"
@@ -123,17 +147,24 @@ class DaemonStatus(BaseModel):
 
 
 # --- Main Daemon Model ---
-class Daemon(BaseModel):
+class Daemon(SDKModel):
     """Daemon model."""
 
     # TypeMeta fields (inline)
-    apiVersion: str | None = Field(
+    api_version: str | None = Field(
+        alias="apiVersion",
         default="api.rapyuta.io/v2",
-        description="APIVersion defines the versioned schema of this representation of an object",
+        description=(
+            "APIVersion defines the versioned schema of this "
+            "representation of an object"
+        ),
     )
     kind: str = Field(
         default="Daemon",
-        description="Kind is a string value representing the REST resource this object represents",
+        description=(
+            "Kind is a string value representing the REST resource this "
+            "object represents"
+        ),
     )
 
     # ObjectMeta

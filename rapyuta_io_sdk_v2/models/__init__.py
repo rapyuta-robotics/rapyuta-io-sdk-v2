@@ -1,122 +1,220 @@
-"""
-Models package for Rapyuta IO SDK v2.
+# Copyright 2026 Rapyuta Robotics
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""Models package for Rapyuta IO SDK v2.
 
 This module provides flattened imports for all model classes.
 """
 
-# Deployment models
+from rapyuta_io_sdk_v2.models.auth import (
+    AuthSubject,
+    AuthSubjectResponse,
+    LoginRequest,
+    TokenRequest,
+    TokenResponse,
+)
+from rapyuta_io_sdk_v2.models.configtree import (
+    ConfigKeyContent,
+    ConfigKeyRename,
+    ConfigKeyUpload,
+    ConfigTree,
+    ConfigTreeList,
+    ConfigTreeRevision,
+    ConfigTreeRevisionList,
+    ConfigTreeRevisionMetadata,
+    ConfigValue,
+    ConfigValues,
+)
+from rapyuta_io_sdk_v2.models.configtree_operations import (
+    ConfigContent,
+    ImportOptions,
+    MergeOptions,
+    RevisionOptions,
+)
+from rapyuta_io_sdk_v2.models.daemons import (
+    Daemon,
+)
 from rapyuta_io_sdk_v2.models.deployment import (
-    Deployment as Deployment,
-    DeploymentList as DeploymentList,
+    Deployment,
+    DeploymentGraph,
+    DeploymentGraphEdge,
+    DeploymentGraphNode,
+    DeploymentHistory,
+    DeploymentHistoryList,
+    DeploymentList,
 )
-
-# Disk models
 from rapyuta_io_sdk_v2.models.disk import (
-    Disk as Disk,
-    DiskList as DiskList,
+    Disk,
+    DiskList,
 )
-
-# Managed Service models
-from rapyuta_io_sdk_v2.models.managedservice import (
-    ManagedServiceBinding as ManagedServiceBinding,
-    ManagedServiceBindingList as ManagedServiceBindingList,
-    ManagedServiceInstance as ManagedServiceInstance,
-    ManagedServiceInstanceList as ManagedServiceInstanceList,
-    ManagedServiceProvider as ManagedServiceProvider,
-    ManagedServiceProviderList as ManagedServiceProviderList,
-)
-
-# Network models
-from rapyuta_io_sdk_v2.models.network import (
-    Network as Network,
-    NetworkList as NetworkList,
-)
-
-# OAuth2 models
-from rapyuta_io_sdk_v2.models.oauth2 import (
-    OAuth2UpdateURI as OAuth2UpdateURI,
-)
-
-# Organization models
-from rapyuta_io_sdk_v2.models.organization import (
-    Organization as Organization,
-)
-
-# Package models
-from rapyuta_io_sdk_v2.models.package import (
-    Package as Package,
-    PackageList as PackageList,
-)
-
-# Project models
-from rapyuta_io_sdk_v2.models.project import (
-    Project as Project,
-    ProjectList as ProjectList,
-)
-
-# Role models
-from rapyuta_io_sdk_v2.models.role import (
-    Role as Role,
-    RoleList as RoleList,
-)
-
-# Role Binding models
-from rapyuta_io_sdk_v2.models.rolebinding import (
-    RoleBinding as RoleBinding,
-    RoleBindingList as RoleBindingList,
-    BulkRoleBindingUpdate as BulkRoleBindingUpdate,
-)
-
-# Secret models
-from rapyuta_io_sdk_v2.models.secret import (
-    Secret as Secret,
-    SecretList as SecretList,
-    SecretCreate as SecretCreate,
-)
-
-# Static Route models
-from rapyuta_io_sdk_v2.models.staticroute import (
-    StaticRoute as StaticRoute,
-    StaticRouteList as StaticRouteList,
-)
-
-# User models
-from rapyuta_io_sdk_v2.models.user import (
-    User as User,
-    UserList as UserList,
-    UserPermissions as UserPermissions,
-)
-
-# User Group models
-from rapyuta_io_sdk_v2.models.usergroup import (
-    UserGroup as UserGroup,
-    UserGroupCreate as UserGroupCreate,
-    UserGroupList as UserGroupList,
-)
-
-from rapyuta_io_sdk_v2.models.daemons import Daemon as Daemon
-
-from rapyuta_io_sdk_v2.models.serviceaccount import (
-    ServiceAccount as ServiceAccount,
-    ServiceAccountList as ServiceAccountList,
-    ServiceAccountTokenList as ServiceAccountTokenList,
-    ServiceAccountToken as ServiceAccountToken,
-    ServiceAccountTokenInfo as ServiceAccountTokenInfo,
-)
-
-# FileUpload models
 from rapyuta_io_sdk_v2.models.fileupload import (
-    FileUpload as FileUpload,
-    FileUploadList as FileUploadList,
-    FileUploadSpec as FileUploadSpec,
-    FileUploadStatus as FileUploadStatus,
-    SharedURL as SharedURL,
-    SharedURLList as SharedURLList,
-    SharedURLSpec as SharedURLSpec,
+    FileUpload,
+    FileUploadDownloadResponse,
+    FileUploadList,
+    FileUploadSpec,
+    FileUploadStatus,
+    SharedURL,
+    SharedURLList,
+    SharedURLSpec,
+)
+from rapyuta_io_sdk_v2.models.managedservice import (
+    ManagedServiceBinding,
+    ManagedServiceBindingList,
+    ManagedServiceInstance,
+    ManagedServiceInstanceList,
+    ManagedServiceProvider,
+    ManagedServiceProviderList,
+)
+from rapyuta_io_sdk_v2.models.network import (
+    Network,
+    NetworkList,
+)
+from rapyuta_io_sdk_v2.models.oauth2 import (
+    OAuth2Client,
+    OAuth2ClientList,
+    OAuth2UpdateURI,
+)
+from rapyuta_io_sdk_v2.models.organization import (
+    Organization,
+)
+from rapyuta_io_sdk_v2.models.package import (
+    Package,
+    PackageList,
+)
+from rapyuta_io_sdk_v2.models.project import (
+    Project,
+    ProjectList,
+)
+from rapyuta_io_sdk_v2.models.responses import (
+    APIResponse,
+)
+from rapyuta_io_sdk_v2.models.role import (
+    Role,
+    RoleList,
+)
+from rapyuta_io_sdk_v2.models.rolebinding import (
+    BulkRoleBindingUpdate,
+    RoleBinding,
+    RoleBindingList,
+)
+from rapyuta_io_sdk_v2.models.secret import (
+    Secret,
+    SecretCreate,
+    SecretList,
+)
+from rapyuta_io_sdk_v2.models.serviceaccount import (
+    ServiceAccount,
+    ServiceAccountList,
+    ServiceAccountToken,
+    ServiceAccountTokenInfo,
+    ServiceAccountTokenList,
+)
+from rapyuta_io_sdk_v2.models.sshkey import (
+    SSHKeySignRequest,
+    SSHKeySignResponse,
+)
+from rapyuta_io_sdk_v2.models.staticroute import (
+    StaticRoute,
+    StaticRouteList,
+)
+from rapyuta_io_sdk_v2.models.user import (
+    User,
+    UserList,
+    UserPermissions,
+)
+from rapyuta_io_sdk_v2.models.usergroup import (
+    UserGroup,
+    UserGroupCreate,
+    UserGroupList,
 )
 
-# SSH Key models
-from rapyuta_io_sdk_v2.models.sshkey import (
-    SSHKeySignRequest as SSHKeySignRequest,
-    SSHKeySignResponse as SSHKeySignResponse,
-)
+__all__ = [
+    "APIResponse",
+    "AuthSubject",
+    "AuthSubjectResponse",
+    "BulkRoleBindingUpdate",
+    "ConfigContent",
+    "ConfigKeyContent",
+    "ConfigKeyRename",
+    "ConfigKeyUpload",
+    "ConfigTree",
+    "ConfigTreeList",
+    "ConfigTreeRevision",
+    "ConfigTreeRevisionList",
+    "ConfigTreeRevisionMetadata",
+    "ConfigValue",
+    "ConfigValues",
+    "Daemon",
+    "Deployment",
+    "DeploymentGraph",
+    "DeploymentGraphEdge",
+    "DeploymentGraphNode",
+    "DeploymentHistory",
+    "DeploymentHistoryList",
+    "DeploymentList",
+    "Disk",
+    "DiskList",
+    "FileUpload",
+    "FileUploadDownloadResponse",
+    "FileUploadList",
+    "FileUploadSpec",
+    "FileUploadStatus",
+    "ImportOptions",
+    "LoginRequest",
+    "ManagedServiceBinding",
+    "ManagedServiceBindingList",
+    "ManagedServiceInstance",
+    "ManagedServiceInstanceList",
+    "ManagedServiceProvider",
+    "ManagedServiceProviderList",
+    "MergeOptions",
+    "Network",
+    "NetworkList",
+    "OAuth2Client",
+    "OAuth2ClientList",
+    "OAuth2UpdateURI",
+    "Organization",
+    "Package",
+    "PackageList",
+    "Project",
+    "ProjectList",
+    "RevisionOptions",
+    "Role",
+    "RoleBinding",
+    "RoleBindingList",
+    "RoleList",
+    "SSHKeySignRequest",
+    "SSHKeySignResponse",
+    "Secret",
+    "SecretCreate",
+    "SecretList",
+    "ServiceAccount",
+    "ServiceAccountList",
+    "ServiceAccountToken",
+    "ServiceAccountTokenInfo",
+    "ServiceAccountTokenList",
+    "SharedURL",
+    "SharedURLList",
+    "SharedURLSpec",
+    "StaticRoute",
+    "StaticRouteList",
+    "TokenRequest",
+    "TokenResponse",
+    "User",
+    "UserGroup",
+    "UserGroupCreate",
+    "UserGroupList",
+    "UserList",
+    "UserPermissions",
+]

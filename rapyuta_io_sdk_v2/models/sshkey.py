@@ -1,14 +1,29 @@
-"""
-Pydantic models for SSH certificate signing.
+# Copyright 2026 Rapyuta Robotics
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""Pydantic models for SSH certificate signing.
 
 This module contains Pydantic models for SSH public key signing requests
 and responses, used by the /v2/certs/ssh/sign/ endpoint.
 """
 
-from pydantic import BaseModel, Field
+from pydantic import Field
+
+from rapyuta_io_sdk_v2.models.base import SDKModel
 
 
-class SSHKeySignRequest(BaseModel):
+class SSHKeySignRequest(SDKModel):
     """Request body for signing an SSH public key."""
 
     public_key: str = Field(
@@ -17,7 +32,7 @@ class SSHKeySignRequest(BaseModel):
     )
 
 
-class SSHKeySignResponse(BaseModel):
+class SSHKeySignResponse(SDKModel):
     """Response from the SSH public key signing endpoint."""
 
     certificate: str = Field(

@@ -1,12 +1,34 @@
+# Copyright 2026 Rapyuta Robotics
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import httpx
 import pytest
-from pytest_mock import MockFixture
 
-# ruff: noqa: F811, F401
-from tests.utils.fixtures import client
+from rapyuta_io_sdk_v2.exceptions import UnauthorizedAccessError
+
+if TYPE_CHECKING:
+    from pytest_mock import MockFixture
+
+    from rapyuta_io_sdk_v2 import Client
 
 
-def test_get_auth_token_success(client, mocker: MockFixture):
+def test_get_auth_token_success(*, client: Client, mocker: MockFixture) -> None:
     # Mock the httpx.Client.post method
     mock_post = mocker.patch("httpx.Client.post")
 
@@ -27,7 +49,7 @@ def test_get_auth_token_success(client, mocker: MockFixture):
     assert response == "mock_token"
 
 
-def test_login_success(client, mocker: MockFixture):
+def test_login_success(*, client: Client, mocker: MockFixture) -> None:
     # Mock the httpx.Client.post method
     mock_post = mocker.patch("httpx.Client.post")
 
@@ -43,7 +65,7 @@ def test_login_success(client, mocker: MockFixture):
     assert client.config.auth_token == "mock_token_2"
 
 
-def test_login_failure(client, mocker: MockFixture):
+def test_login_failure(*, client: Client, mocker: MockFixture) -> None:
     # Mock the httpx.Client.post method
     mock_post = mocker.patch("httpx.Client.post")
 
@@ -53,11 +75,11 @@ def test_login_failure(client, mocker: MockFixture):
     mocker.patch.object(
         client,
         "get_auth_token",
-        side_effect=Exception("unauthorized permission access"),
+        side_effect=UnauthorizedAccessError("unauthorized permission access"),
     )
 
     # Call the login method
-    with pytest.raises(Exception) as e:
+    with pytest.raises(UnauthorizedAccessError) as e:
         client.login(email="mock_email", password="mock_password")
 
     assert str(e.value) == "unauthorized permission access"
