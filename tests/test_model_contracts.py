@@ -28,8 +28,40 @@ from pydantic import BaseModel, ValidationError
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 import rapyuta_io_sdk_v2 as sdk
-from rapyuta_io_sdk_v2 import AsyncClient, Client, Configuration, models
+from rapyuta_io_sdk_v2 import (
+    Applier,
+    ApplierOptions,
+    ApplierResult,
+    AsyncApplier,
+    AsyncClient,
+    Client,
+    Configuration,
+    ManifestSource,
+    MutationAttempt,
+    MutationJournal,
+    ResourceContext,
+    ResourceIdentity,
+    SopsOptions,
+    async_decrypt_secret_file,
+    decrypt_secret_file,
+    models,
+)
 from rapyuta_io_sdk_v2 import _client_options as client_options
+from rapyuta_io_sdk_v2.apply import (
+    Applier as ApplyPackageApplier,
+)
+from rapyuta_io_sdk_v2.apply import (
+    AsyncApplier as ApplyPackageAsyncApplier,
+)
+from rapyuta_io_sdk_v2.apply import (
+    ManifestSource as ApplyPackageManifestSource,
+)
+from rapyuta_io_sdk_v2.apply import (
+    async_decrypt_secret_file as package_async_decrypt_secret_file,
+)
+from rapyuta_io_sdk_v2.apply import (
+    decrypt_secret_file as package_decrypt_secret_file,
+)
 from rapyuta_io_sdk_v2.configtree import ConfigTreeInputError
 from rapyuta_io_sdk_v2.configtree._values import encode_value, snapshot_values
 from rapyuta_io_sdk_v2.exceptions import HttpNotFoundError
@@ -76,6 +108,22 @@ class TreeSettings(BaseSettings):
     """Accept all keys when verifying the modeled configuration-tree source."""
 
     model_config = SettingsConfigDict(extra="allow")
+
+
+def test_applier_public_imports_are_additive_and_typed() -> None:
+    assert ApplyPackageApplier is Applier
+    assert ApplyPackageAsyncApplier is AsyncApplier
+    assert ApplyPackageManifestSource is ManifestSource
+    assert package_decrypt_secret_file is decrypt_secret_file
+    assert package_async_decrypt_secret_file is async_decrypt_secret_file
+    expected_workers = 6
+    assert ApplierOptions().workers == expected_workers
+    assert ApplierResult(operation="apply").successful
+    assert ResourceContext().progress is None
+    assert ResourceIdentity(kind="role", name="reader").kind == "role"
+    assert MutationAttempt(sequence=1, action="created", state="started")
+    assert MutationJournal().snapshot() == ()
+    assert SopsOptions().executable == "sops"
 
 
 async def _call(

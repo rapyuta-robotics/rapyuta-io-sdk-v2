@@ -1,0 +1,35 @@
+getenv-set:
+- kind: Role
+  metadata:
+    name: getenv-set
+  spec:
+    description: present
+    rules: []
+getenv-empty:
+- kind: Role
+  metadata:
+    name: getenv-empty
+  spec:
+    description: ''
+    rules: []
+getenv-unset:
+- kind: Role
+  metadata:
+    name: getenv-unset
+  spec:
+    description: fallback
+    rules: []
+interface-positional:
+- kind: Role
+  metadata:
+    name: interface-positional
+  spec:
+    description: 100.64.1.2
+    rules: []
+interface-keyword:
+- kind: Role
+  metadata:
+    name: interface-keyword
+  spec:
+    description: 100.64.1.2
+    rules: []

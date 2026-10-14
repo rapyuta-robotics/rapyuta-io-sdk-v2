@@ -1,0 +1,6 @@
+kind: Role
+metadata:
+  name: getenv-unset
+spec:
+  description: "{{ 'fallback' | getenv('PARITY_VALUE') }}"
+  rules: []

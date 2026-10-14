@@ -17,12 +17,35 @@
 This module provides flattened imports for all model classes.
 """
 
+from rapyuta_io_sdk_v2.models.applier import (
+    ApplierOptions,
+    ApplierResult,
+    DependencyGraph,
+    DependencyReference,
+    InspectionResult,
+    OperationFailure,
+    ReadinessOptions,
+    ResourceCapabilities,
+    ResourceContext,
+    ResourceIdentity,
+    ResourceOutcome,
+    ResourceReference,
+    ResourceScope,
+    SopsOptions,
+    SourceLocation,
+)
 from rapyuta_io_sdk_v2.models.auth import (
     AuthSubject,
     AuthSubjectResponse,
     LoginRequest,
     TokenRequest,
     TokenResponse,
+)
+from rapyuta_io_sdk_v2.models.chart import (
+    ChartEntry,
+    ChartIndex,
+    ChartMetadata,
+    ChartSource,
 )
 from rapyuta_io_sdk_v2.models.configtree import (
     ConfigKeyContent,
@@ -188,6 +211,7 @@ from rapyuta_io_sdk_v2.models.parameter import (
     ParameterUploadResult,
     ParameterUploadStage,
 )
+from rapyuta_io_sdk_v2.models.progress import MutationAttempt, MutationJournal
 from rapyuta_io_sdk_v2.models.project import (
     Project,
     ProjectList,
@@ -237,9 +261,15 @@ from rapyuta_io_sdk_v2.models.usergroup import (
 
 __all__ = [
     "APIResponse",
+    "ApplierOptions",
+    "ApplierResult",
     "AuthSubject",
     "AuthSubjectResponse",
     "BulkRoleBindingUpdate",
+    "ChartEntry",
+    "ChartIndex",
+    "ChartMetadata",
+    "ChartSource",
     "ConfigContent",
     "ConfigKeyContent",
     "ConfigKeyRename",
@@ -252,6 +282,8 @@ __all__ = [
     "ConfigValue",
     "ConfigValues",
     "Daemon",
+    "DependencyGraph",
+    "DependencyReference",
     "Deployment",
     "DeploymentGraph",
     "DeploymentGraphEdge",
@@ -329,6 +361,7 @@ __all__ = [
     "FileUploadSpec",
     "FileUploadStatus",
     "ImportOptions",
+    "InspectionResult",
     "LoginRequest",
     "ManagedServiceBinding",
     "ManagedServiceBindingList",
@@ -337,11 +370,14 @@ __all__ = [
     "ManagedServiceProvider",
     "ManagedServiceProviderList",
     "MergeOptions",
+    "MutationAttempt",
+    "MutationJournal",
     "Network",
     "NetworkList",
     "OAuth2Client",
     "OAuth2ClientList",
     "OAuth2UpdateURI",
+    "OperationFailure",
     "Organization",
     "Package",
     "PackageList",
@@ -374,6 +410,13 @@ __all__ = [
     "ParameterUploadStage",
     "Project",
     "ProjectList",
+    "ReadinessOptions",
+    "ResourceCapabilities",
+    "ResourceContext",
+    "ResourceIdentity",
+    "ResourceOutcome",
+    "ResourceReference",
+    "ResourceScope",
     "RevisionOptions",
     "Role",
     "RoleBinding",
@@ -393,6 +436,8 @@ __all__ = [
     "SharedURL",
     "SharedURLList",
     "SharedURLSpec",
+    "SopsOptions",
+    "SourceLocation",
     "StaticRoute",
     "StaticRouteList",
     "TokenRequest",

@@ -18,15 +18,28 @@ This module contains Pydantic models that correspond to the StaticRoute JSON sch
 providing validation for StaticRoute resources to help users identify missing or
 incorrect fields.
 """
+# Lifecycle helper imports remain local to keep model modules independent.
+
+from __future__ import annotations
 
 import re
-from typing import Literal
+from typing import TYPE_CHECKING, ClassVar, Literal
 
 from pydantic import Field, field_validator
 
+from rapyuta_io_sdk_v2.models.applier import (
+    ResourceCapabilities,
+    ResourceContext,
+    ResourceOutcome,
+)
 from rapyuta_io_sdk_v2.models.base import SDKModel
+from rapyuta_io_sdk_v2.models.resource import ResourceMethods
 
 from .utils import BaseList, BaseMetadata, BaseObject
+
+if TYPE_CHECKING:
+    from rapyuta_io_sdk_v2.async_client import AsyncClient
+    from rapyuta_io_sdk_v2.client import Client
 
 
 class StaticRouteSpec(SDKModel):
@@ -79,13 +92,21 @@ class StaticRouteStatus(SDKModel):
     )
 
 
-class StaticRoute(BaseObject):
+class StaticRoute(ResourceMethods, BaseObject):
     """StaticRoute resource model for validation.
 
     This model validates StaticRoute resources according to the JSON schema,
     helping users identify missing or incorrect configuration.
     A named route for the Deployment endpoint.
     """
+
+    KIND: ClassVar[str] = "StaticRoute"
+    CAPABILITIES: ClassVar[ResourceCapabilities] = ResourceCapabilities(
+        create=True,
+        update=True,
+        delete=True,
+        apply_policy="create_or_update",
+    )
 
     kind: Literal["StaticRoute"] = Field(
         default="StaticRoute", description="Resource kind, must be 'StaticRoute'"
@@ -97,6 +118,92 @@ class StaticRoute(BaseObject):
     status: StaticRouteStatus | None = Field(
         default=None, description="Status of the StaticRoute resource"
     )
+
+    def create_object(self, client: Client, *, context: ResourceContext) -> StaticRoute:
+        """Create a route using its logical manifest name."""
+        from rapyuta_io_sdk_v2.apply._resources.standard import (  # noqa: PLC0415
+            project_options,
+            record_write,
+            scoped_copy,
+        )
+        from rapyuta_io_sdk_v2.apply._resources.staticroute import (  # noqa: PLC0415
+            _selected_context,
+        )
+
+        context = _selected_context(self, client, context)
+        payload = scoped_copy(self, context)
+        return record_write(
+            context,
+            "created",
+            lambda: client.create_staticroute(payload, **project_options(context)),
+        )
+
+    async def create_object_async(
+        self, client: AsyncClient, *, context: ResourceContext
+    ) -> StaticRoute:
+        """Create a route with the native asynchronous endpoint."""
+        from rapyuta_io_sdk_v2.apply._resources.standard import (  # noqa: PLC0415
+            project_options,
+            record_write_async,
+            scoped_copy,
+        )
+        from rapyuta_io_sdk_v2.apply._resources.staticroute import (  # noqa: PLC0415
+            _selected_context,
+        )
+
+        context = _selected_context(self, client, context)
+        payload = scoped_copy(self, context)
+        return await record_write_async(
+            context,
+            "created",
+            lambda: client.create_staticroute(payload, **project_options(context)),
+        )
+
+    def update_object(self, client: Client, *, context: ResourceContext) -> StaticRoute:
+        """Update using the canonical server-side routing name."""
+        from rapyuta_io_sdk_v2.apply._resources.staticroute import update_staticroute  # noqa: PLC0415
+
+        return update_staticroute(client, self, context=context)
+
+    async def update_object_async(
+        self, client: AsyncClient, *, context: ResourceContext
+    ) -> StaticRoute:
+        """Update a route with native async resolution and write calls."""
+        from rapyuta_io_sdk_v2.apply._resources.staticroute import (  # noqa: PLC0415
+            update_staticroute_async,
+        )
+
+        return await update_staticroute_async(client, self, context=context)
+
+    def apply(self, client: Client, *, context: ResourceContext) -> ResourceOutcome:
+        """Apply a route with common create/update conflict policy."""
+        from rapyuta_io_sdk_v2.apply._lifecycle import apply_resource  # noqa: PLC0415
+
+        return apply_resource(self, client, context=context)
+
+    async def apply_async(
+        self, client: AsyncClient, *, context: ResourceContext
+    ) -> ResourceOutcome:
+        """Apply a route with common native async create/update policy."""
+        from rapyuta_io_sdk_v2.apply._lifecycle import apply_resource_async  # noqa: PLC0415
+
+        return await apply_resource_async(self, client, context=context)
+
+    def _delete_object(self, client: Client, *, context: ResourceContext) -> None:
+        """Resolve and delete this route's canonical platform name."""
+        from rapyuta_io_sdk_v2.apply._resources.staticroute import delete_staticroute  # noqa: PLC0415
+
+        delete_staticroute(client, self, context=context)
+
+    async def _delete_object_async(
+        self, client: AsyncClient, *, context: ResourceContext
+    ) -> None:
+        """Resolve and delete the route through native async calls."""
+        from rapyuta_io_sdk_v2.apply._resources.staticroute import (  # noqa: PLC0415
+            delete_staticroute_async,
+        )
+
+        await delete_staticroute_async(client, self, context=context)
 
 
 class StaticRouteList(BaseList[StaticRoute]):

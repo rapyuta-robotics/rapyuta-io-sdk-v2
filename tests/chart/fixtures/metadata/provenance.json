@@ -1,0 +1,8 @@
+{
+  "chart_revision": "94e456aea0dcdd7d4493aa57662cc0b8815df0ef",
+  "sources": {
+    "incubator/postgis/Chart.yaml": "d049853a0c02d4610ba58777d3ed2c2f7f18d5a6381c4796da9adc8bebd70bc2",
+    "incubator/gateway/Chart.yaml": "5419bd9b3fe94d6ca2d73a825649e6158806351e6b3c3e1f4ff987407c6f2d92",
+    "incubator/gostproxy/Chart.yaml": "2b599ba832837b9e66ac37f0c12695d618faf7fd26b4c6bcabbfcf2d7a09170b"
+  }
+}
