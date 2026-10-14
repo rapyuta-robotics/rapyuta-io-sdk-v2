@@ -21,6 +21,7 @@ from typing import TYPE_CHECKING, Any, Unpack
 
 import httpx
 
+from rapyuta_io_sdk_v2 import _device_api as device_api
 from rapyuta_io_sdk_v2._parameter_api import (
     blob_id,
     child_path,
@@ -93,6 +94,32 @@ from rapyuta_io_sdk_v2.models import (
     UserList,
     UserPermissions,
 )
+from rapyuta_io_sdk_v2.models.device import (
+    DeviceConfigVariableCreate,
+    DeviceConfigVariableListResponse,
+    DeviceConfigVariableResponse,
+    DeviceConfigVariableUpdate,
+    DeviceCreate,
+    DeviceLabelListResponse,
+    DeviceLabelsCreate,
+    DeviceLabelsCreateResponse,
+    DeviceLabelUpdate,
+    DeviceListQuery,
+    DeviceListResponse,
+    DeviceMigration,
+    DeviceMutationResponse,
+    DeviceOnboardingResponse,
+    DeviceParameterApply,
+    DeviceParameterApplyResponse,
+    DeviceRegistrationResponse,
+    DeviceResponse,
+    DeviceSelection,
+    DeviceSelectionResponse,
+    DeviceUpdate,
+    DeviceUpdateResponse,
+    DeviceVPNResponse,
+    DeviceVPNUpdate,
+)
 from rapyuta_io_sdk_v2.models.parameter import (
     ParameterBlobListResponse,
     ParameterBlobQuery,
@@ -123,6 +150,7 @@ if TYPE_CHECKING:
 
     from rapyuta_io_sdk_v2._client_options import (
         ClientOptions,
+        DeviceCommandCallOptions,
         GroupHeaderOptions,
         HeaderOptions,
         IdentityHeaderOptions,
@@ -130,6 +158,13 @@ if TYPE_CHECKING:
         OrganizationOverrideHeaderOptions,
         ProjectHeaderOptions,
         ProjectOverrideHeaderOptions,
+    )
+    from rapyuta_io_sdk_v2.models.device_command import (
+        DeviceCommand,
+        DeviceCommandPendingResponse,
+        DeviceCommandResultQuery,
+        DeviceCommandResultResponse,
+        DeviceCommandSubmissionResponse,
     )
 
 
@@ -3407,3 +3442,575 @@ class AsyncClient:
             follow_redirects=False,
         )
         return parameter_response(response, ParameterCommitResponse)
+
+    async def list_devices(
+        self, *, query: DeviceListQuery | None = None, **kwargs: Unpack[HeaderOptions]
+    ) -> DeviceListResponse:
+        """List devices with an optional exact name filter.
+
+        Args:
+            query: Typed optional filter or explicit result-lookup target devices.
+            **kwargs: Authentication/context header overrides.
+
+        Returns:
+            Device summaries; absent details are not fetched.
+
+        Raises:
+            ValidationError: If core routing configuration or scalar IDs are invalid.
+            DeviceContractError: If the platform response violates the contract.
+            MethodNotAllowedError: For service refusals, including HTTP400/403.
+            UnknownError: For other unmapped HTTP failures or redirects.
+        """
+        response = await self.c.request(
+            "GET",
+            f"{device_api.device_base(self.config)}/devices/",
+            params=device_api.list_query(query),
+            headers=self.config.get_headers(**kwargs),
+            follow_redirects=False,
+        )
+        return device_api.device_response(response, DeviceListResponse)
+
+    async def select_devices(
+        self, body: DeviceSelection, **kwargs: Unpack[HeaderOptions]
+    ) -> DeviceSelectionResponse:
+        """Select devices with an explicit platform predicate.
+
+        Args:
+            body: Validated typed payload; explicit values retain their wire meanings.
+            **kwargs: Authentication/context header overrides.
+
+        Returns:
+            Compact records with separate numeric IDs and routing UUIDs.
+
+        Raises:
+            ValidationError: If core routing configuration or scalar IDs are invalid.
+            DeviceContractError: If the platform response violates the contract.
+            MethodNotAllowedError: For service refusals, including HTTP400/403.
+            UnknownError: For other unmapped HTTP failures or redirects.
+        """
+        response = await self.c.request(
+            "POST",
+            f"{device_api.device_base(self.config)}/selection/query",
+            json=device_api.wire_payload(body, DeviceSelection),
+            headers=self.config.get_headers(**kwargs),
+            follow_redirects=False,
+        )
+        return device_api.device_response(response, DeviceSelectionResponse)
+
+    async def get_device(
+        self, device_guid: str, **kwargs: Unpack[HeaderOptions]
+    ) -> DeviceResponse:
+        """Read one device using its routing UUID.
+
+        Args:
+            device_guid: Device routing UUID, not a name or numeric selection ID.
+            **kwargs: Authentication/context header overrides.
+
+        Returns:
+            Reported device details and optional health information.
+
+        Raises:
+            ValidationError: If core routing configuration or scalar IDs are invalid.
+            DeviceContractError: If the platform response violates the contract.
+            MethodNotAllowedError: For service refusals, including HTTP400/403.
+            UnknownError: For other unmapped HTTP failures or redirects.
+        """
+        response = await self.c.request(
+            "GET",
+            f"{device_api.device_base(self.config)}/devices/{device_api.routing_id(device_guid)}",
+            headers=self.config.get_headers(**kwargs),
+            follow_redirects=False,
+        )
+        return device_api.device_response(response, DeviceResponse)
+
+    async def create_device(
+        self, body: DeviceCreate, **kwargs: Unpack[HeaderOptions]
+    ) -> DeviceRegistrationResponse:
+        """Register a Python 3 device with an enabled runtime.
+
+        Args:
+            body: Validated typed payload; explicit values retain their wire meanings.
+            **kwargs: Authentication/context header overrides.
+
+        Returns:
+            Onboarding token and sibling device ID/script command, not details.
+
+        Raises:
+            ValidationError: If core routing configuration or scalar IDs are invalid.
+            DeviceContractError: If the platform response violates the contract.
+            MethodNotAllowedError: For service refusals, including HTTP400/403.
+            UnknownError: For other unmapped HTTP failures or redirects.
+        """
+        response = await self.c.request(
+            "POST",
+            f"{device_api.device_base(self.config)}/auth-keys/",
+            json=device_api.wire_payload(body, DeviceCreate),
+            params={"download_type": "script"},
+            headers=self.config.get_headers(**kwargs),
+            follow_redirects=False,
+        )
+        return device_api.device_response(response, DeviceRegistrationResponse)
+
+    async def get_device_onboarding(
+        self, device_guid: str, **kwargs: Unpack[HeaderOptions]
+    ) -> DeviceOnboardingResponse:
+        """Request onboarding authorization for one device.
+
+        Args:
+            device_guid: Device routing UUID, not a name or numeric selection ID.
+            **kwargs: Authentication/context header overrides.
+
+        Returns:
+            Private token and script metadata; the installer is not executed.
+
+        Raises:
+            ValidationError: If core routing configuration or scalar IDs are invalid.
+            DeviceContractError: If the platform response violates the contract.
+            MethodNotAllowedError: For service refusals, including HTTP400/403.
+            UnknownError: For other unmapped HTTP failures or redirects.
+        """
+        response = await self.c.request(
+            "GET",
+            f"{device_api.device_base(self.config)}/auth-keys/{device_api.routing_id(device_guid)}/token/",
+            headers=self.config.get_headers(**kwargs),
+            follow_redirects=False,
+        )
+        return device_api.device_response(response, DeviceOnboardingResponse)
+
+    async def update_device(
+        self, device_guid: str, body: DeviceUpdate, **kwargs: Unpack[HeaderOptions]
+    ) -> DeviceUpdateResponse:
+        """Update explicit device details or lifecycle state.
+
+        Args:
+            device_guid: Device routing UUID, not a name or numeric selection ID.
+            body: Validated typed payload; explicit values retain their wire meanings.
+            **kwargs: Authentication/context header overrides.
+
+        Returns:
+            Platform summary; empty/null descriptions remain service no-ops.
+
+        Raises:
+            ValidationError: If core routing configuration or scalar IDs are invalid.
+            DeviceContractError: If the platform response violates the contract.
+            MethodNotAllowedError: For service refusals, including HTTP400/403.
+            UnknownError: For other unmapped HTTP failures or redirects.
+        """
+        response = await self.c.request(
+            "PUT",
+            f"{device_api.device_base(self.config)}/devices/",
+            json=device_api.update_payload(device_guid, body),
+            headers=self.config.get_headers(**kwargs),
+            follow_redirects=False,
+        )
+        return device_api.device_response(response, DeviceUpdateResponse)
+
+    async def delete_device(
+        self, device_guid: str, **kwargs: Unpack[HeaderOptions]
+    ) -> DeviceMutationResponse:
+        """Delete one device subject to platform eligibility.
+
+        Args:
+            device_guid: Device routing UUID, not a name or numeric selection ID.
+            **kwargs: Authentication/context header overrides.
+
+        Returns:
+            Typed empty acknowledgment; service restrictions remain authoritative.
+
+        Raises:
+            ValidationError: If core routing configuration or scalar IDs are invalid.
+            DeviceContractError: If the platform response violates the contract.
+            MethodNotAllowedError: For service refusals, including HTTP400/403.
+            UnknownError: For other unmapped HTTP failures or redirects.
+        """
+        response = await self.c.request(
+            "DELETE",
+            f"{device_api.device_base(self.config)}/devices/{device_api.routing_id(device_guid)}",
+            headers=self.config.get_headers(**kwargs),
+            follow_redirects=False,
+        )
+        return device_api.device_response(response, DeviceMutationResponse)
+
+    async def execute_device_command(
+        self, body: DeviceCommand, **kwargs: Unpack[DeviceCommandCallOptions]
+    ) -> DeviceCommandSubmissionResponse:
+        """Submit one command without polling or wrapping its text.
+
+        Args:
+            body: Validated typed payload; explicit values retain their wire meanings.
+            **kwargs: Header overrides and optional positive finite request_timeout cap.
+
+        Returns:
+            Immediate/launch output map or mode-validated deferred job.
+
+        Raises:
+            ValidationError: If core routing configuration or scalar IDs are invalid.
+            DeviceContractError: If the platform response violates the contract.
+            MethodNotAllowedError: For service refusals, including HTTP400/403.
+            UnknownError: For other unmapped HTTP failures or redirects.
+        """
+        body = device_api.command_payload(body)
+        timeout = device_api.command_timeout(
+            self.c.timeout, kwargs.pop("request_timeout", None)
+        )
+        response = await self.c.request(
+            "POST",
+            f"{device_api.device_base(self.config)}/cmd/",
+            json=device_api.command_json(body),
+            timeout=timeout,
+            headers=self.config.get_headers(**kwargs),
+            follow_redirects=False,
+        )
+        return device_api.command_submission(response, body)
+
+    async def get_device_command_result(
+        self,
+        jid: str,
+        *,
+        query: DeviceCommandResultQuery,
+        **kwargs: Unpack[DeviceCommandCallOptions],
+    ) -> DeviceCommandResultResponse | DeviceCommandPendingResponse:
+        """Retrieve one job snapshot for explicit target devices.
+
+        Args:
+            jid: Opaque job identifier returned by deferred submission.
+            query: Typed optional filter or explicit result-lookup target devices.
+            **kwargs: Header overrides and optional positive finite request_timeout cap.
+
+        Returns:
+            Output map or the exact HTTP400 pending marker; no internal waits.
+
+        Raises:
+            ValidationError: If core routing configuration or scalar IDs are invalid.
+            DeviceContractError: If the platform response violates the contract.
+            MethodNotAllowedError: For service refusals, including HTTP400/403.
+            UnknownError: For other unmapped HTTP failures or redirects.
+        """
+        params = device_api.command_query(query)
+        timeout = device_api.command_timeout(
+            self.c.timeout, kwargs.pop("request_timeout", None)
+        )
+        response = await self.c.request(
+            "GET",
+            f"{device_api.device_base(self.config)}/cmd/{device_api.routing_id(jid)}",
+            params=params,
+            timeout=timeout,
+            headers=self.config.get_headers(**kwargs),
+            follow_redirects=False,
+        )
+        return device_api.command_result(response)
+
+    async def list_device_labels(
+        self, device_guid: str, **kwargs: Unpack[HeaderOptions]
+    ) -> DeviceLabelListResponse:
+        """List stored labels for one device.
+
+        Args:
+            device_guid: Device routing UUID, not a name or numeric selection ID.
+            **kwargs: Authentication/context header overrides.
+
+        Returns:
+            Label records whose IDs can be used for update/deletion.
+
+        Raises:
+            ValidationError: If core routing configuration or scalar IDs are invalid.
+            DeviceContractError: If the platform response violates the contract.
+            MethodNotAllowedError: For service refusals, including HTTP400/403.
+            UnknownError: For other unmapped HTTP failures or redirects.
+        """
+        response = await self.c.request(
+            "GET",
+            f"{device_api.device_base(self.config)}/labels/{device_api.routing_id(device_guid)}/",
+            headers=self.config.get_headers(**kwargs),
+            follow_redirects=False,
+        )
+        return device_api.device_response(response, DeviceLabelListResponse)
+
+    async def create_device_labels(
+        self,
+        device_guid: str,
+        body: DeviceLabelsCreate,
+        **kwargs: Unpack[HeaderOptions],
+    ) -> DeviceLabelsCreateResponse:
+        """Create a nonempty flat map of labels on one device.
+
+        Args:
+            device_guid: Device routing UUID, not a name or numeric selection ID.
+            body: Validated typed payload; explicit values retain their wire meanings.
+            **kwargs: Authentication/context header overrides.
+
+        Returns:
+            Created label records and their numeric identities.
+
+        Raises:
+            ValidationError: If core routing configuration or scalar IDs are invalid.
+            DeviceContractError: If the platform response violates the contract.
+            MethodNotAllowedError: For service refusals, including HTTP400/403.
+            UnknownError: For other unmapped HTTP failures or redirects.
+        """
+        payload = device_api.labels_payload(body)
+        response = await self.c.request(
+            "POST",
+            f"{device_api.device_base(self.config)}/labels/{device_api.routing_id(device_guid)}",
+            json=payload,
+            headers=self.config.get_headers(**kwargs),
+            follow_redirects=False,
+        )
+        return device_api.device_response(response, DeviceLabelsCreateResponse)
+
+    async def update_device_label(
+        self, label_id: int, body: DeviceLabelUpdate, **kwargs: Unpack[HeaderOptions]
+    ) -> DeviceMutationResponse:
+        """Update explicit label fields by returned record ID.
+
+        Args:
+            label_id: Strict positive label record ID returned by the platform.
+            body: Validated typed payload; explicit values retain their wire meanings.
+            **kwargs: Authentication/context header overrides.
+
+        Returns:
+            Typed empty acknowledgment, without a follow-up label read.
+
+        Raises:
+            ValidationError: If core routing configuration or scalar IDs are invalid.
+            DeviceContractError: If the platform response violates the contract.
+            MethodNotAllowedError: For service refusals, including HTTP400/403.
+            UnknownError: For other unmapped HTTP failures or redirects.
+        """
+        payload = device_api.wire_payload(body, DeviceLabelUpdate)
+        response = await self.c.request(
+            "PUT",
+            f"{device_api.device_base(self.config)}/labels/{device_api.record_id(label_id)}",
+            json=payload,
+            headers=self.config.get_headers(**kwargs),
+            follow_redirects=False,
+        )
+        return device_api.device_response(response, DeviceMutationResponse)
+
+    async def delete_device_label(
+        self, label_id: int, **kwargs: Unpack[HeaderOptions]
+    ) -> DeviceMutationResponse:
+        """Delete a label by its returned numeric record ID.
+
+        Args:
+            label_id: Strict positive label record ID returned by the platform.
+            **kwargs: Authentication/context header overrides.
+
+        Returns:
+            Typed empty acknowledgment.
+
+        Raises:
+            ValidationError: If core routing configuration or scalar IDs are invalid.
+            DeviceContractError: If the platform response violates the contract.
+            MethodNotAllowedError: For service refusals, including HTTP400/403.
+            UnknownError: For other unmapped HTTP failures or redirects.
+        """
+        response = await self.c.request(
+            "DELETE",
+            f"{device_api.device_base(self.config)}/labels/{device_api.record_id(label_id)}",
+            headers=self.config.get_headers(**kwargs),
+            follow_redirects=False,
+        )
+        return device_api.device_response(response, DeviceMutationResponse)
+
+    async def list_device_config_variables(
+        self, device_guid: str, **kwargs: Unpack[HeaderOptions]
+    ) -> DeviceConfigVariableListResponse:
+        """List the default configuration view of one device.
+
+        Args:
+            device_guid: Device routing UUID, not a name or numeric selection ID.
+            **kwargs: Authentication/context header overrides.
+
+        Returns:
+            Configuration records; reported values may be empty.
+
+        Raises:
+            ValidationError: If core routing configuration or scalar IDs are invalid.
+            DeviceContractError: If the platform response violates the contract.
+            MethodNotAllowedError: For service refusals, including HTTP400/403.
+            UnknownError: For other unmapped HTTP failures or redirects.
+        """
+        response = await self.c.request(
+            "GET",
+            f"{device_api.device_base(self.config)}/config_variables/device/{device_api.routing_id(device_guid)}/",
+            headers=self.config.get_headers(**kwargs),
+            follow_redirects=False,
+        )
+        return device_api.device_response(response, DeviceConfigVariableListResponse)
+
+    async def create_device_config_variable(
+        self,
+        device_guid: str,
+        body: DeviceConfigVariableCreate,
+        **kwargs: Unpack[HeaderOptions],
+    ) -> DeviceConfigVariableResponse:
+        """Create a nonempty configuration value on one device.
+
+        Args:
+            device_guid: Device routing UUID, not a name or numeric selection ID.
+            body: Validated typed payload; explicit values retain their wire meanings.
+            **kwargs: Authentication/context header overrides.
+
+        Returns:
+            Created record; online and reserved-key rules are service-enforced.
+
+        Raises:
+            ValidationError: If core routing configuration or scalar IDs are invalid.
+            DeviceContractError: If the platform response violates the contract.
+            MethodNotAllowedError: For service refusals, including HTTP400/403.
+            UnknownError: For other unmapped HTTP failures or redirects.
+        """
+        payload = device_api.wire_payload(body, DeviceConfigVariableCreate)
+        response = await self.c.request(
+            "POST",
+            f"{device_api.device_base(self.config)}/config_variables/device/{device_api.routing_id(device_guid)}",
+            json=payload,
+            headers=self.config.get_headers(**kwargs),
+            follow_redirects=False,
+        )
+        return device_api.device_response(response, DeviceConfigVariableResponse)
+
+    async def update_device_config_variable(
+        self,
+        config_id: int,
+        body: DeviceConfigVariableUpdate,
+        **kwargs: Unpack[HeaderOptions],
+    ) -> DeviceConfigVariableResponse:
+        """Update a configuration value by returned record ID.
+
+        Args:
+            config_id: Strict positive configuration record ID returned by the platform.
+            body: Validated typed payload; explicit values retain their wire meanings.
+            **kwargs: Authentication/context header overrides.
+
+        Returns:
+            Updated record, preserving its key and the platform outcome.
+
+        Raises:
+            ValidationError: If core routing configuration or scalar IDs are invalid.
+            DeviceContractError: If the platform response violates the contract.
+            MethodNotAllowedError: For service refusals, including HTTP400/403.
+            UnknownError: For other unmapped HTTP failures or redirects.
+        """
+        payload = device_api.wire_payload(body, DeviceConfigVariableUpdate)
+        response = await self.c.request(
+            "PUT",
+            f"{device_api.device_base(self.config)}/config_variables/{device_api.record_id(config_id)}",
+            json=payload,
+            headers=self.config.get_headers(**kwargs),
+            follow_redirects=False,
+        )
+        return device_api.device_response(response, DeviceConfigVariableResponse)
+
+    async def delete_device_config_variable(
+        self, config_id: int, **kwargs: Unpack[HeaderOptions]
+    ) -> DeviceMutationResponse:
+        """Delete a configuration record subject to service restrictions.
+
+        Args:
+            config_id: Strict positive configuration record ID returned by the platform.
+            **kwargs: Authentication/context header overrides.
+
+        Returns:
+            Typed empty acknowledgment; no availability or key lookup.
+
+        Raises:
+            ValidationError: If core routing configuration or scalar IDs are invalid.
+            DeviceContractError: If the platform response violates the contract.
+            MethodNotAllowedError: For service refusals, including HTTP400/403.
+            UnknownError: For other unmapped HTTP failures or redirects.
+        """
+        response = await self.c.request(
+            "DELETE",
+            f"{device_api.device_base(self.config)}/config_variables/{device_api.record_id(config_id)}",
+            headers=self.config.get_headers(**kwargs),
+            follow_redirects=False,
+        )
+        return device_api.device_response(response, DeviceMutationResponse)
+
+    async def set_device_vpn(
+        self, device_guid: str, body: DeviceVPNUpdate, **kwargs: Unpack[HeaderOptions]
+    ) -> DeviceVPNResponse:
+        """Enable or disable VPN on one explicit device.
+
+        Args:
+            device_guid: Device routing UUID, not a name or numeric selection ID.
+            body: Validated typed payload; explicit values retain their wire meanings.
+            **kwargs: Authentication/context header overrides.
+
+        Returns:
+            Actual DeviceDaemon acknowledgment; acceptance is not readiness.
+
+        Raises:
+            ValidationError: If core routing configuration or scalar IDs are invalid.
+            DeviceContractError: If the platform response violates the contract.
+            MethodNotAllowedError: For service refusals, including HTTP400/403.
+            UnknownError: For other unmapped HTTP failures or redirects.
+        """
+        payload = device_api.vpn_payload(body)
+        response = await self.c.request(
+            "PATCH",
+            f"{device_api.device_base(self.config)}/devices/{device_api.routing_id(device_guid)}/daemons",
+            json=payload,
+            headers=self.config.get_headers(**kwargs),
+            follow_redirects=False,
+        )
+        return device_api.device_response(response, DeviceVPNResponse)
+
+    async def apply_device_parameters(
+        self, body: DeviceParameterApply, **kwargs: Unpack[HeaderOptions]
+    ) -> DeviceParameterApplyResponse:
+        """Apply selected or all Parameter trees to explicit devices.
+
+        Args:
+            body: Validated typed payload; explicit values retain their wire meanings.
+            **kwargs: Authentication/context header overrides.
+
+        Returns:
+            Actual per-device outcomes; unknown targets may be omitted.
+
+        Raises:
+            ValidationError: If core routing configuration or scalar IDs are invalid.
+            DeviceContractError: If the platform response violates the contract.
+            MethodNotAllowedError: For service refusals, including HTTP400/403.
+            UnknownError: For other unmapped HTTP failures or redirects.
+        """
+        payload = device_api.wire_payload(body, DeviceParameterApply)
+        response = await self.c.request(
+            "POST",
+            f"{device_api.device_base(self.config)}/parameters/",
+            json=payload,
+            headers=self.config.get_headers(**kwargs),
+            follow_redirects=False,
+        )
+        return device_api.device_response(response, DeviceParameterApplyResponse)
+
+    async def migrate_device(
+        self, device_guid: str, body: DeviceMigration, **kwargs: Unpack[HeaderOptions]
+    ) -> DeviceMutationResponse:
+        """Migrate one device using unchanged source-project authorization.
+
+        Args:
+            device_guid: Device routing UUID, not a name or numeric selection ID.
+            body: Validated typed payload; explicit values retain their wire meanings.
+            **kwargs: Authentication/context header overrides.
+
+        Returns:
+            Typed acknowledgment; destination eligibility is service-enforced.
+
+        Raises:
+            ValidationError: If core routing configuration or scalar IDs are invalid.
+            DeviceContractError: If the platform response violates the contract.
+            MethodNotAllowedError: For service refusals, including HTTP400/403.
+            UnknownError: For other unmapped HTTP failures or redirects.
+        """
+        payload = device_api.wire_payload(body, DeviceMigration)
+        response = await self.c.request(
+            "PUT",
+            f"{device_api.device_base(self.config)}/devices/{device_api.routing_id(device_guid)}/migrate",
+            json=payload,
+            headers=self.config.get_headers(**kwargs),
+            follow_redirects=False,
+        )
+        return device_api.device_response(response, DeviceMutationResponse)

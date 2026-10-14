@@ -48,6 +48,8 @@ from rapyuta_io_sdk_v2.models import (
     OAuth2ClientList,
     OAuth2UpdateURI,
     SharedURL,
+    device,
+    device_command,
     parameter,
 )
 from rapyuta_io_sdk_v2.models.daemons import DockerProxyConfig
@@ -57,6 +59,7 @@ from rapyuta_io_sdk_v2.models.package import PackageSpec
 from rapyuta_io_sdk_v2.models.user import UserProject
 from rapyuta_io_sdk_v2.models.utils import BaseMetadata, Depends
 from rapyuta_io_sdk_v2.pydantic_source import ConfigTreeSource
+from tests.data.device_data import CASES
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -135,7 +138,9 @@ def _request_model(annotation: object) -> type[BaseModel] | None:
 
 def _client_type_hints(method: Callable[..., object]) -> dict[str, Any]:
     # Resolve the shared options and iterators imported only during type checking.
-    return get_type_hints(method, localns=vars(client_options) | vars(collections.abc))
+    return get_type_hints(
+        method, localns=vars(client_options) | vars(collections.abc) | vars(models)
+    )
 
 
 def _model_requests() -> list[tuple[str, str, str]]:
@@ -798,3 +803,33 @@ def test_parameter_exports_and_client_parity() -> None:
         assert inspect.iscoroutinefunction(getattr(AsyncClient, name))
     assert not hasattr(Client, "upload_parameters")
     assert not hasattr(AsyncClient, "upload_parameters_async")
+
+
+def test_device_exports_operations_and_signature_parity() -> None:
+    operation_count = 20
+    assert len(CASES) == operation_count
+    for case in CASES:
+        sync = getattr(Client, case.name)
+        async_ = getattr(AsyncClient, case.name)
+        assert inspect.signature(sync) == inspect.signature(async_)
+        assert _client_type_hints(sync) == _client_type_hints(async_)
+        assert inspect.iscoroutinefunction(async_)
+    for module in (device, device_command):
+        for name, member in inspect.getmembers(module, inspect.isclass):
+            if name.startswith("Device") and name.isidentifier():
+                assert getattr(sdk, name) is getattr(models, name) is member
+                assert name in sdk.__all__
+    excluded = (
+        "topics",
+        "topic_status",
+        "subscribe_topic",
+        "unsubscribe_topic",
+        "upgrade_device",
+        "request_agent_upgrade",
+        "patch_daemons",
+        "toggle_features",
+        "change_device_daemon",
+    )
+    assert not any(
+        hasattr(client, name) for client in (Client, AsyncClient) for name in excluded
+    )

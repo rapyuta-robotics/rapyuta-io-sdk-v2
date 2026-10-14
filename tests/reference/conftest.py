@@ -7,7 +7,9 @@ from __future__ import annotations
 import json
 from importlib.metadata import distribution
 
+import httpx
 import pytest
+import requests
 
 REVISION = "739a6fe44600ff0964fa56b04878ddb21e76b5be"
 REPORTS: list[pytest.TestReport] = []
@@ -34,3 +36,18 @@ def pytest_sessionfinish(session: pytest.Session) -> None:
     executed = any(report.when == "call" for report in REPORTS)
     if not executed or any(report.skipped for report in REPORTS):
         session.exitstatus = pytest.ExitCode.TESTS_FAILED
+
+
+@pytest.fixture
+def device_reference_network_guard(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Reject real I/O only for Device reference cases opting into this fixture."""
+
+    def reject_network(*_args: object, **_kwargs: object) -> None:
+        message = "Device reference checks must not use live network transports"
+        raise AssertionError(message)
+
+    monkeypatch.setattr(requests.sessions.Session, "send", reject_network)
+    monkeypatch.setattr(httpx.HTTPTransport, "handle_request", reject_network)
+    monkeypatch.setattr(
+        httpx.AsyncHTTPTransport, "handle_async_request", reject_network
+    )
