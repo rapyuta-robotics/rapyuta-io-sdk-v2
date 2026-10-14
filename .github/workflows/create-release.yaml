@@ -56,3 +56,4 @@ jobs:
           correlation_id: ${{ inputs.correlation_id }}
           callback_url: ${{ vars.BAYMAX_CREATE_RELEASE_CALLBACK_URL }}
           oidc_audience: ${{ vars.BAYMAX_OIDC_AUDIENCE }}
+          version_bump_hook: scripts/bump-version.sh
