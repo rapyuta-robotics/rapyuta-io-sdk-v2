@@ -94,6 +94,16 @@ from rapyuta_io_sdk_v2.apply.secrets import (
     decrypt_secret_file,
 )
 from rapyuta_io_sdk_v2.apply.source import DeviceInterfaceResolver, ManifestSource
+from rapyuta_io_sdk_v2.chart import (
+    AsyncChart,
+    AsyncChartRepository,
+    Chart,
+    ChartError,
+    ChartInputs,
+    ChartLoadError,
+    ChartRepository,
+    ChartVersionWarning,
+)
 from rapyuta_io_sdk_v2.models.applier import (
     ApplierOptions,
     ApplierResult,
@@ -118,6 +128,12 @@ from rapyuta_io_sdk_v2.models.auth import (
     LoginRequest,
     TokenRequest,
     TokenResponse,
+)
+from rapyuta_io_sdk_v2.models.chart import (
+    ChartEntry,
+    ChartIndex,
+    ChartMetadata,
+    ChartSource,
 )
 from rapyuta_io_sdk_v2.models.configtree import (
     ConfigKeyContent,
@@ -159,12 +175,24 @@ __all__ = [
     "ApplierUsageError",
     "ApplierValidationError",
     "AsyncApplier",
+    "AsyncChart",
+    "AsyncChartRepository",
     "AsyncClient",
     "AuthSubject",
     "AuthSubjectResponse",
     "Backup",
     "BackupList",
     "BulkRoleBindingUpdate",
+    "Chart",
+    "ChartEntry",
+    "ChartError",
+    "ChartIndex",
+    "ChartInputs",
+    "ChartLoadError",
+    "ChartMetadata",
+    "ChartRepository",
+    "ChartSource",
+    "ChartVersionWarning",
     "Client",
     "ConfigKeyContent",
     "ConfigKeyRename",

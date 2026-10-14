@@ -196,6 +196,95 @@ value (including dates and YAML binary values) or the original bytes for binary
 downloads. Bulk role-binding updates return `BulkRoleBindingUpdate`. The retired
 `update_project_owner` method has been removed.
 
+## Chart support
+
+`Chart` and `AsyncChart` package existing Apply templates with metadata and
+bundled values. They wrap the SDK Appliers and support local directories,
+compressed tar archives, and published or branch-preview repositories.
+
+```python
+from rapyuta_io_sdk_v2 import Chart, ChartInputs, ChartSource
+
+chart = Chart.load(
+    ChartSource.from_directory("./my-chart"),
+    inputs=ChartInputs(values={"name": "my-application"}),
+)
+print(chart.metadata.name, chart.metadata.version)
+inspection = chart.inspect()
+plan = chart.apply(dry_run=True)
+# Execute with your configured, caller-owned SDK Client:
+# result = chart.apply(client)
+# result = chart.delete(client)
+# result = chart.apply(client, delete_existing=True)
+```
+
+A chart directory contains `Chart.yaml`, `templates/`, and `values.yaml` when
+bundled defaults are needed. Supported manifest files under `templates/` are
+selected recursively in deterministic order, excluding hidden paths as in the CLI. No explicit values sources means
+use `values.yaml`; any supplied mapping or ordered YAML/JSON source sequence
+replaces those defaults. An explicit `{}` therefore does not load defaults.
+Explicit sources merge using the existing Apply rules. Supply complete values,
+secrets, and `rio` context through `ChartInputs`; encrypted secret files must be
+decrypted explicitly with the existing secret-file helper first.
+
+```python
+from rapyuta_io_sdk_v2 import AsyncChart, ChartInputs, ChartSource
+
+# Inside your application's async function:
+chart = await AsyncChart.load(
+    ChartSource.from_repository("gateway:1.0.0", branch="feature/my-chart"),
+    inputs=ChartInputs(values="./complete-values.yaml", rio=rio_context),
+)
+inspection = chart.inspect()  # Already prepared; no I/O.
+plan = await chart.apply(dry_run=True)
+# result = await chart.apply(async_client)
+```
+
+The standard repository index and branch base are fixed constants. Branch URL
+construction preserves `/` and encodes spaces and reserved characters just as
+the rio CLI does. A non-empty branch overrides an explicit repository URL. An
+unversioned chart selects the first repository entry and warns if several match;
+an exact version selects its first matching entry. Only the first advertised
+package URL is used. Catalog helpers expose metadata without terminal parsing:
+
+```python
+from rapyuta_io_sdk_v2 import ChartRepository
+
+repository = ChartRepository(branch="feature/my-chart")
+entries = repository.find_chart("gateway")
+all_entries = repository.list_charts()
+```
+
+`AsyncChartRepository` provides awaitable `fetch_index`, `find_chart`, and
+`list_charts`. Repository requests use a separate HTTPX transport; callers can
+supply `http_client=` for private repositories, custom timeout policy, or mocks.
+The SDK closes only acquisition clients it creates. Platform clients are supplied
+only to live operations and remain open, unchanged, and caller-owned.
+
+Loading validates metadata and confines extraction to an owned temporary root.
+Extracted files are removed before loading returns. Prepared charts remain
+usable after their source files disappear; load again to pick up changed inputs.
+Local preparation and previews need no platform account. Remote loading contacts
+only the selected repository/package source. Device-interface filters require
+an explicit resolver; asynchronous preparation invokes that synchronous resolver
+on a worker thread, so provide thread-safe resolution or prefetched data.
+
+Recreation runs delete before apply under one operation guard. It returns the
+final `ApplierResult`, while `chart.phase_results` retains both settled phases,
+including partial failures or cancellation. A failed deletion never starts apply.
+`chart.last_result` follows the existing Applier semantics; rejected preflight
+publishes no new result. Existing Apply errors propagate unchanged, supplemented
+with chart origin notes where needed. Acquisition errors expose
+`ChartLoadError.stage`, `.category`, `.source`, and optional `.selector`.
+Async cancellation settles active preparation and owned cleanup before returning;
+it can wait for a caller-supplied resolver to finish. No rollback is claimed.
+
+Standalone sync/async usage, explicit encrypted-secret inputs, and offline
+preview commands are demonstrated in [sync_chart.py](examples/chart/sync_chart.py)
+and [async_chart.py](examples/chart/async_chart.py). Run the focused regression
+suite with `uv run pytest tests/chart -q`. The [Chart validation guide](specs/003-chart-support/quickstart.md)
+describes CLI fixture replay and the six postgis/gateway/gostproxy parity cases.
+
 ## Contributing
 
 We welcome contributions. Please read our [contribution guidelines](CONTRIBUTING.md) to get started.

@@ -36,6 +36,13 @@ from benedict import benedict
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping
 
+# Direct execution puts scripts/, rather than the checkout root, on sys.path.
+# Keep package imports available to the workflow oracle in either execution mode.
+if not __package__:
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from scripts.chart_workflow_oracle import capture_workflows
+
 DEFAULT_OUTPUT = Path("tests/apply/fixtures/parity")
 CHARTS = ("postgis", "gateway", "gostproxy")
 
@@ -490,7 +497,8 @@ def main(argv: list[str] | None = None) -> None:
     """Run selected CLI fixture captures or read-only replay checks."""
     argument = argparse.ArgumentParser(description=__doc__)
     argument.add_argument(
-        "--suite", choices=("rio-filters", "ansible-filters", "charts")
+        "--suite",
+        choices=("rio-filters", "ansible-filters", "charts", "chart-workflows"),
     )
     argument.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     argument.add_argument("--cli-root", type=Path, default=Path("../rapyuta-io-cli"))
@@ -507,7 +515,9 @@ def main(argv: list[str] | None = None) -> None:
         if options.suite
         else ("rio-filters", "ansible-filters", "charts")
     ):
-        if suite == "charts":
+        if suite == "chart-workflows":
+            capture_workflows(output, cli_root, write=options.write)
+        elif suite == "charts":
             _chart_suite(output, cli_root, charts_root, write=options.write)
         else:
             _direct_suite(suite, output, cli_root, write=options.write)
