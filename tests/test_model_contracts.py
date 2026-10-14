@@ -27,6 +27,7 @@ import pytest
 from pydantic import BaseModel, ValidationError
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+import rapyuta_io_sdk_v2 as sdk
 from rapyuta_io_sdk_v2 import AsyncClient, Client, Configuration, models
 from rapyuta_io_sdk_v2 import _client_options as client_options
 from rapyuta_io_sdk_v2.configtree import ConfigTreeInputError
@@ -49,6 +50,9 @@ from rapyuta_io_sdk_v2.models import (
     OAuth2ClientList,
     OAuth2UpdateURI,
     SharedURL,
+    device,
+    device_command,
+    parameter,
 )
 from rapyuta_io_sdk_v2.models.daemons import DockerProxyConfig
 from rapyuta_io_sdk_v2.models.deployment import DeploymentSpec
@@ -57,11 +61,15 @@ from rapyuta_io_sdk_v2.models.package import PackageSpec
 from rapyuta_io_sdk_v2.models.user import UserProject
 from rapyuta_io_sdk_v2.models.utils import BaseMetadata, Depends
 from rapyuta_io_sdk_v2.pydantic_source import ConfigTreeSource
+from tests.data.device_data import CASES
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
     from pytest_mock import MockFixture
+
+
+PARAMETER_OPERATION_COUNT = 9
 
 
 class TreeSettings(BaseSettings):
@@ -132,7 +140,9 @@ def _request_model(annotation: object) -> type[BaseModel] | None:
 
 def _client_type_hints(method: Callable[..., object]) -> dict[str, Any]:
     # Resolve the shared options and iterators imported only during type checking.
-    return get_type_hints(method, localns=vars(client_options) | vars(collections.abc))
+    return get_type_hints(
+        method, localns=vars(client_options) | vars(collections.abc) | vars(models)
+    )
 
 
 def _model_requests() -> list[tuple[str, str, str]]:
@@ -792,3 +802,51 @@ async def test_add_user_serializes_json_and_returns_user(
     assert response.spec.email_id == "user@example.com"
     assert post.call_args.kwargs["json"]["spec"]["emailID"] == "user@example.com"
     assert "body" not in post.call_args.kwargs
+
+
+def test_parameter_exports_and_client_parity() -> None:
+
+    for name, member in inspect.getmembers(parameter, inspect.isclass):
+        if name.startswith("Parameter"):
+            assert getattr(sdk, name) is member
+            assert name in sdk.__all__
+            assert getattr(models, name) is member
+    operations = [name for name in vars(Client) if "_parameter_" in name]
+    assert len(operations) == PARAMETER_OPERATION_COUNT
+    for name in operations:
+        assert inspect.signature(getattr(Client, name)) == inspect.signature(
+            getattr(AsyncClient, name)
+        )
+        assert inspect.iscoroutinefunction(getattr(AsyncClient, name))
+    assert not hasattr(Client, "upload_parameters")
+    assert not hasattr(AsyncClient, "upload_parameters_async")
+
+
+def test_device_exports_operations_and_signature_parity() -> None:
+    operation_count = 20
+    assert len(CASES) == operation_count
+    for case in CASES:
+        sync = getattr(Client, case.name)
+        async_ = getattr(AsyncClient, case.name)
+        assert inspect.signature(sync) == inspect.signature(async_)
+        assert _client_type_hints(sync) == _client_type_hints(async_)
+        assert inspect.iscoroutinefunction(async_)
+    for module in (device, device_command):
+        for name, member in inspect.getmembers(module, inspect.isclass):
+            if name.startswith("Device") and name.isidentifier():
+                assert getattr(sdk, name) is getattr(models, name) is member
+                assert name in sdk.__all__
+    excluded = (
+        "topics",
+        "topic_status",
+        "subscribe_topic",
+        "unsubscribe_topic",
+        "upgrade_device",
+        "request_agent_upgrade",
+        "patch_daemons",
+        "toggle_features",
+        "change_device_daemon",
+    )
+    assert not any(
+        hasattr(client, name) for client in (Client, AsyncClient) for name in excluded
+    )
