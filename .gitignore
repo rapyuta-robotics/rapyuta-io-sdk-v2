@@ -18,3 +18,11 @@ test_config.json
 ignore*
 ignore/
 .coverage
+venv/
+.pytest_cache/
+.DS_Store
+Thumbs.db
+*.tmp
+*.swp
+
+.env*
