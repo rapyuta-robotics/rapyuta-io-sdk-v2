@@ -219,9 +219,7 @@ def test_create_package_with_valuefrom_success(
 
     assert isinstance(response, Package)
     assert response.metadata.name == "secret-injected-app"
-    api_key_var = next(
-        v for v in response.spec.environmentVars if v.name == "API_KEY"
-    )
+    api_key_var = next(v for v in response.spec.environmentVars if v.name == "API_KEY")
     assert api_key_var.valueFrom.secret_key_ref.key == "API_KEY"
 
 
@@ -267,3 +265,32 @@ def test_environment_spec_plain_and_valuefrom_coexist():
     assert env.valueFrom.secret_key_ref.value == "injected"
 
 
+def test_create_package_sends_entrypoint(
+    client, cloud_package_model_mock, mocker: MockFixture
+):
+    mock_post = mocker.patch("httpx.Client.post")
+    mock_post.return_value = httpx.Response(
+        status_code=201,
+        json=cloud_package_model_mock,
+    )
+
+    client.create_package(
+        body={
+            "metadata": {"name": "ep", "version": "v1.0.0"},
+            "spec": {
+                "runtime": "cloud",
+                "executables": [
+                    {
+                        "name": "exec",
+                        "entrypoint": ["/bin/sh", "-c"],
+                        "command": "echo hi",
+                        "runAsBash": True,
+                    }
+                ],
+            },
+        }
+    )
+
+    sent = mock_post.call_args.kwargs["json"]["spec"]["executables"][0]
+    assert sent["entrypoint"] == ["/bin/sh", "-c"]
+    assert sent["command"] == ["echo hi"]

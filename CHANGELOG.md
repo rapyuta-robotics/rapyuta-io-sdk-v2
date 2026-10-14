@@ -5,6 +5,13 @@ using [git-cliff](https://git-cliff.org/).
 
 <!-- git-cliff: end of header -->
 
+## [0.10.0] - 2026-10-09
+
+### ✨ Features
+
+- *(packages)* Add entrypoint field to package Executable model
+
+
 ## [0.9.0] - 2026-09-24
 
 ### ✨ Features
