@@ -162,6 +162,9 @@ def test_get_database_success(client, database_model_mock, mocker: MockFixture):
     assert degraded.state.status == "waiting"
     assert degraded.restart_count == 3
 
+    exporter = response.status.postgres.exporter
+    assert (exporter.port, exporter.phase) == (15432, "running")
+
 
 def test_get_database_not_found(client, mocker: MockFixture):
     mock_get = mocker.patch("httpx.Client.get")
