@@ -1520,6 +1520,13 @@ def database_model_mock() -> dict[str, Any]:
                         "restartCount": 3,
                     },
                 ],
+                "exporter": {
+                    "deviceName": "edge-node-01",
+                    "port": 15432,
+                    "phase": "running",
+                    "state": {"status": "running", "startedAt": "2025-01-01T00:05:00Z"},
+                    "restartCount": 0,
+                },
             },
         },
     }
