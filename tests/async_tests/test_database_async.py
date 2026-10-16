@@ -156,3 +156,15 @@ async def test_delete_database_success(async_client, mocker: MockFixture):
 
     assert response is None
     assert mock_delete.call_args.kwargs["url"].endswith("/v2/databases/orders-db/")
+    assert mock_delete.call_args.kwargs["params"] is None
+
+
+@pytest.mark.asyncio
+async def test_delete_database_force(async_client, mocker: MockFixture):
+    mock_delete = mocker.patch("httpx.AsyncClient.delete")
+    mock_delete.return_value = httpx.Response(status_code=204)
+
+    await async_client.delete_database(name="orders-db", force=True)
+
+    assert mock_delete.call_args.kwargs["url"].endswith("/v2/databases/orders-db/")
+    assert mock_delete.call_args.kwargs["params"] == {"force": "true"}
