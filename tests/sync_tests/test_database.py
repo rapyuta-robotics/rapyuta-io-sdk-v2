@@ -257,3 +257,14 @@ def test_delete_database_success(client, mocker: MockFixture):
 
     assert response is None
     assert mock_delete.call_args.kwargs["url"].endswith("/v2/databases/orders-db/")
+    assert mock_delete.call_args.kwargs["params"] is None
+
+
+def test_delete_database_force(client, mocker: MockFixture):
+    mock_delete = mocker.patch("httpx.Client.delete")
+    mock_delete.return_value = httpx.Response(status_code=204)
+
+    client.delete_database(name="orders-db", force=True)
+
+    assert mock_delete.call_args.kwargs["url"].endswith("/v2/databases/orders-db/")
+    assert mock_delete.call_args.kwargs["params"] == {"force": "true"}
