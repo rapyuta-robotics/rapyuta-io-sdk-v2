@@ -1061,15 +1061,20 @@ class AsyncClient:
         handle_server_errors(result)
         return Database(**result.json())
 
-    async def delete_database(self, name: str, **kwargs) -> None:
+    async def delete_database(self, name: str, force: bool = False, **kwargs) -> None:
         """Delete a database by its name.
 
         Args:
             name (str): Database name.
+            force (bool): Delete without waiting for the hosting devices to
+                acknowledge teardown, e.g. when a device is offline. Also deletes
+                the database's backups and stops its restores; an offline device
+                keeps running its postgres pod.
         """
         result = await self.c.delete(
             url=f"{self.v2api_host}/v2/databases/{name}/",
             headers=self.config.get_headers(**kwargs),
+            params={"force": "true"} if force else None,
         )
         handle_server_errors(result)
 
