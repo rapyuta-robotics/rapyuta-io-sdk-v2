@@ -12,14 +12,13 @@ updates:
     commit-message:
       prefix: "chore(deps)"
     groups:
+      python-major:
+        update-types:
+          - major
       python-minor-patch:
         update-types:
           - minor
           - patch
-    ignore:
-      # Major bumps are handled manually.
-      - dependency-name: "*"
-        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: github-actions
     directory: /
