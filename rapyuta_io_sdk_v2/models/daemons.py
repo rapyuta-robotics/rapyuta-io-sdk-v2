@@ -1,18 +1,29 @@
-"""
-Pydantic models for Daemon resource validation.
+# Copyright 2026 Rapyuta Robotics
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""Pydantic models for Daemon resource validation.
 
 This module contains Pydantic models that correspond to the Daemon JSON schema,
 providing validation for Daemon resources to help users identify missing or
 incorrect fields.
 """
 
-from __future__ import annotations
-
 from typing import Literal
+
 from pydantic import BaseModel, Field
 
 from rapyuta_io_sdk_v2.models.utils import BaseMetadata
-
 
 # --- Daemon Status Types ---
 DaemonStatusType = Literal[
@@ -35,8 +46,12 @@ class AuthConfig(BaseModel):
 
     # This is a simplified AuthConfig for daemon pull secrets
     # Add specific fields as needed based on actual requirements
-    username: str | None = Field(default=None, description="Username for authentication")
-    password: str | None = Field(default=None, description="Password for authentication")
+    username: str | None = Field(
+        default=None, description="Username for authentication"
+    )
+    password: str | None = Field(
+        default=None, description="Password for authentication"
+    )
     registry: str | None = Field(default=None, description="Registry URL")
 
 
@@ -49,9 +64,12 @@ class VPNConfig(BaseModel):
     )
     headscale_url: str | None = Field(default=None, description="Headscale URL")
     headscale_acl_tag: str | None = Field(default=None, description="Headscale ACL tag")
-    advertise_routes: str | None = Field(default=None, description="Routes to advertise")
+    advertise_routes: str | None = Field(
+        default=None, description="Routes to advertise"
+    )
 
 
+# CamelCase attributes preserve the public model API and serialized field names.
 class DockerProxyConfig(BaseModel):
     """Docker proxy configuration."""
 
@@ -62,7 +80,10 @@ class DockerProxyConfig(BaseModel):
     password: str | None = Field(
         default=None, description="Password for proxy authentication"
     )
-    dataDirectory: str | None = Field(default=None, description="Data directory path")
+    dataDirectory: str | None = Field(  # noqa: N815
+        default=None,
+        description="Data directory path",
+    )
 
 
 class DockerMirrorConfig(BaseModel):
@@ -106,7 +127,9 @@ class DaemonStatus(BaseModel):
     enable: bool = Field(description="Whether daemon is enabled or not")
     status: DaemonStatusType | None = Field(
         default=None,
-        description="Status of the daemon (pending, running, error, terminating, terminated)",
+        description=(
+            "Status of the daemon (pending, running, error, terminating, terminated)"
+        ),
     )
     error_code: str | None = Field(
         default=None, description="Error code associated with the daemon"
@@ -127,13 +150,19 @@ class Daemon(BaseModel):
     """Daemon model."""
 
     # TypeMeta fields (inline)
-    apiVersion: str | None = Field(
+    apiVersion: str | None = Field(  # noqa: N815
         default="api.rapyuta.io/v2",
-        description="APIVersion defines the versioned schema of this representation of an object",
+        description=(
+            "APIVersion defines the versioned schema of this "
+            "representation of an object"
+        ),
     )
     kind: str = Field(
         default="Daemon",
-        description="Kind is a string value representing the REST resource this object represents",
+        description=(
+            "Kind is a string value representing the REST resource this "
+            "object represents"
+        ),
     )
 
     # ObjectMeta

@@ -1,27 +1,42 @@
+# Copyright 2026 Rapyuta Robotics
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
 import httpx
 import pytest
-from pytest_mock import MockFixture
 
-# ruff: noqa: F811, F401
-from rapyuta_io_sdk_v2.models import DeploymentList, Deployment
+from rapyuta_io_sdk_v2.exceptions import HttpNotFoundError, UnauthorizedAccessError
+from rapyuta_io_sdk_v2.models import Deployment, DeploymentList
 from rapyuta_io_sdk_v2.models.deployment import EnvArgsSpec
-from tests.utils.fixtures import async_client
-from tests.data import (
-    deployment_body,
-    deploymentlist_model_mock,
-    cloud_deployment_model_mock,
-    device_deployment_model_mock,
-    cloud_deployment_with_service_account_body,
-    cloud_deployment_with_service_account_mock,
-    cloud_deployment_with_valuefrom_body,
-    cloud_deployment_with_valuefrom_mock,
-)
+
+if TYPE_CHECKING:
+    from pytest_mock import MockFixture
+
+    from rapyuta_io_sdk_v2 import AsyncClient
 
 
 @pytest.mark.asyncio
 async def test_list_deployments_success(
-    async_client, deploymentlist_model_mock, mocker: MockFixture
-):
+    *,
+    async_client: AsyncClient,
+    deploymentlist_model_mock: dict[str, Any],
+    mocker: MockFixture,
+) -> None:
     mock_get = mocker.patch("httpx.AsyncClient.get")
     mock_get.return_value = httpx.Response(
         status_code=200,
@@ -31,8 +46,10 @@ async def test_list_deployments_success(
     response = await async_client.list_deployments()
 
     assert isinstance(response, DeploymentList)
-    assert response.metadata.continue_ == 123
-    assert len(response.items) == 2
+    assert (
+        response.metadata.continue_ == deploymentlist_model_mock["metadata"]["continue"]
+    )
+    assert len(response.items) == len(deploymentlist_model_mock["items"])
     cloud_dep = response.items[0]
     device_dep = response.items[1]
     assert cloud_dep.spec.runtime == "cloud"
@@ -42,14 +59,16 @@ async def test_list_deployments_success(
 
 
 @pytest.mark.asyncio
-async def test_list_deployments_not_found(async_client, mocker: MockFixture):
+async def test_list_deployments_not_found(
+    *, async_client: AsyncClient, mocker: MockFixture
+) -> None:
     mock_get = mocker.patch("httpx.AsyncClient.get")
     mock_get.return_value = httpx.Response(
         status_code=404,
         json={"error": "not found"},
     )
 
-    with pytest.raises(Exception) as exc:
+    with pytest.raises(HttpNotFoundError) as exc:
         await async_client.list_deployments()
 
     assert str(exc.value) == "not found"
@@ -57,8 +76,11 @@ async def test_list_deployments_not_found(async_client, mocker: MockFixture):
 
 @pytest.mark.asyncio
 async def test_get_cloud_deployment_success(
-    async_client, cloud_deployment_model_mock, mocker: MockFixture
-):
+    *,
+    async_client: AsyncClient,
+    cloud_deployment_model_mock: dict[str, Any],
+    mocker: MockFixture,
+) -> None:
     mock_get = mocker.patch("httpx.AsyncClient.get")
     mock_get.return_value = httpx.Response(
         status_code=200,
@@ -76,8 +98,11 @@ async def test_get_cloud_deployment_success(
 
 @pytest.mark.asyncio
 async def test_get_device_deployment_success(
-    async_client, device_deployment_model_mock, mocker: MockFixture
-):
+    *,
+    async_client: AsyncClient,
+    device_deployment_model_mock: dict[str, Any],
+    mocker: MockFixture,
+) -> None:
     mock_get = mocker.patch("httpx.AsyncClient.get")
     mock_get.return_value = httpx.Response(
         status_code=200,
@@ -94,14 +119,16 @@ async def test_get_device_deployment_success(
 
 
 @pytest.mark.asyncio
-async def test_get_deployment_not_found(async_client, mocker: MockFixture):
+async def test_get_deployment_not_found(
+    *, async_client: AsyncClient, mocker: MockFixture
+) -> None:
     mock_get = mocker.patch("httpx.AsyncClient.get")
     mock_get.return_value = httpx.Response(
         status_code=404,
         json={"error": "deployment not found"},
     )
 
-    with pytest.raises(Exception) as exc:
+    with pytest.raises(HttpNotFoundError) as exc:
         await async_client.get_deployment(name="mock_deployment_name")
 
     assert str(exc.value) == "deployment not found"
@@ -109,15 +136,15 @@ async def test_get_deployment_not_found(async_client, mocker: MockFixture):
 
 @pytest.mark.asyncio
 async def test_create_deployment_unauthorized(
-    async_client, deployment_body, mocker: MockFixture
-):
+    *, async_client: AsyncClient, deployment_body: dict[str, Any], mocker: MockFixture
+) -> None:
     mock_post = mocker.patch("httpx.AsyncClient.post")
     mock_post.return_value = httpx.Response(
         status_code=401,
         json={"error": "unauthorized"},
     )
 
-    with pytest.raises(Exception) as exc:
+    with pytest.raises(UnauthorizedAccessError) as exc:
         await async_client.create_deployment(body=deployment_body)
 
     assert str(exc.value) == "unauthorized"
@@ -125,8 +152,12 @@ async def test_create_deployment_unauthorized(
 
 @pytest.mark.asyncio
 async def test_create_deployment_success(
-    async_client, deployment_body, device_deployment_model_mock, mocker: MockFixture
-):
+    *,
+    async_client: AsyncClient,
+    deployment_body: dict[str, Any],
+    device_deployment_model_mock: dict[str, Any],
+    mocker: MockFixture,
+) -> None:
     mock_post = mocker.patch("httpx.AsyncClient.post")
     mock_post.return_value = httpx.Response(
         status_code=200,
@@ -142,8 +173,12 @@ async def test_create_deployment_success(
 
 @pytest.mark.asyncio
 async def test_update_deployment_success(
-    async_client, deployment_body, device_deployment_model_mock, mocker: MockFixture
-):
+    *,
+    async_client: AsyncClient,
+    deployment_body: dict[str, Any],
+    device_deployment_model_mock: dict[str, Any],
+    mocker: MockFixture,
+) -> None:
     mock_put = mocker.patch("httpx.AsyncClient.patch")
     mock_put.return_value = httpx.Response(
         status_code=200,
@@ -159,7 +194,9 @@ async def test_update_deployment_success(
 
 
 @pytest.mark.asyncio
-async def test_delete_deployment_success(async_client, mocker: MockFixture):
+async def test_delete_deployment_success(
+    *, async_client: AsyncClient, mocker: MockFixture
+) -> None:
     mock_delete = mocker.patch("httpx.AsyncClient.delete")
     mock_delete.return_value = httpx.Response(status_code=204, json={"success": True})
 
@@ -170,11 +207,12 @@ async def test_delete_deployment_success(async_client, mocker: MockFixture):
 
 @pytest.mark.asyncio
 async def test_create_deployment_with_service_account(
-    async_client,
-    cloud_deployment_with_service_account_body,
-    cloud_deployment_with_service_account_mock,
+    *,
+    async_client: AsyncClient,
+    cloud_deployment_with_service_account_body: dict[str, Any],
+    cloud_deployment_with_service_account_mock: dict[str, Any],
     mocker: MockFixture,
-):
+) -> None:
     mock_post = mocker.patch("httpx.AsyncClient.post")
     mock_post.return_value = httpx.Response(
         status_code=200,
@@ -196,8 +234,11 @@ async def test_create_deployment_with_service_account(
 
 @pytest.mark.asyncio
 async def test_get_deployment_with_valuefrom_success(
-    async_client, cloud_deployment_with_valuefrom_mock, mocker: MockFixture
-):
+    *,
+    async_client: AsyncClient,
+    cloud_deployment_with_valuefrom_mock: dict[str, Any],
+    mocker: MockFixture,
+) -> None:
     """GET a deployment whose envArgs contain valueFrom.secretKeyRef entries."""
     mock_get = mocker.patch("httpx.AsyncClient.get")
     mock_get.return_value = httpx.Response(
@@ -232,11 +273,12 @@ async def test_get_deployment_with_valuefrom_success(
 
 @pytest.mark.asyncio
 async def test_create_deployment_with_valuefrom_success(
-    async_client,
-    cloud_deployment_with_valuefrom_body,
-    cloud_deployment_with_valuefrom_mock,
+    *,
+    async_client: AsyncClient,
+    cloud_deployment_with_valuefrom_body: dict[str, Any],
+    cloud_deployment_with_valuefrom_mock: dict[str, Any],
     mocker: MockFixture,
-):
+) -> None:
     """POST a deployment with valueFrom envArgs and verify the response is parsed."""
     mock_post = mocker.patch("httpx.AsyncClient.post")
     mock_post.return_value = httpx.Response(
@@ -257,7 +299,7 @@ async def test_create_deployment_with_valuefrom_success(
 # ── New: EnvArgsSpec model validation ────────────────────────────────────────
 
 
-def test_env_args_spec_valuefrom_model_validation():
+def test_env_args_spec_valuefrom_model_validation() -> None:
     """EnvArgsSpec correctly parses a valueFrom.secretKeyRef payload."""
     arg = EnvArgsSpec.model_validate(
         {
@@ -278,7 +320,7 @@ def test_env_args_spec_valuefrom_model_validation():
     assert arg.valueFrom.secret_key_ref.value is None
 
 
-def test_env_args_spec_plain_and_valuefrom_coexist():
+def test_env_args_spec_plain_and_valuefrom_coexist() -> None:
     """EnvArgsSpec with both value and valueFrom can coexist."""
     arg = EnvArgsSpec.model_validate(
         {
@@ -297,3 +339,41 @@ def test_env_args_spec_plain_and_valuefrom_coexist():
     assert arg.valueFrom.secret_key_ref.value == "injected"
 
 
+@pytest.mark.asyncio
+async def test_get_deployment_graph_returns_json(
+    *, async_client: AsyncClient, mocker: MockFixture
+) -> None:
+    payload = {"updated": True}
+
+    def handle_request(request: httpx.Request) -> httpx.Response:
+        assert request.url.path == "/v2/deployments/app/graph/"
+        return httpx.Response(httpx.codes.OK, json=payload)
+
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(handle_request)
+    ) as connection:
+        mocker.patch.object(async_client, "c", connection)
+        result = await async_client.get_deployment_graph(name="app")
+
+    assert result == payload
+
+
+@pytest.mark.asyncio
+async def test_get_deployment_history_returns_json(
+    *, async_client: AsyncClient, mocker: MockFixture
+) -> None:
+    payload = {"updated": True}
+
+    def handle_request(request: httpx.Request) -> httpx.Response:
+        assert request.url.path == "/v2/deployments/app/history/"
+        return httpx.Response(httpx.codes.OK, json=payload)
+
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(handle_request)
+    ) as connection:
+        mocker.patch.object(async_client, "c", connection)
+        result = await async_client.get_deployment_history(
+            name="app", guid="deployment-guid"
+        )
+
+    assert result == payload

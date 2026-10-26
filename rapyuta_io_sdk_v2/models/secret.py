@@ -1,5 +1,18 @@
-"""
-Pydantic models for Secret resource validation.
+# Copyright 2026 Rapyuta Robotics
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""Pydantic models for Secret resource validation.
 
 This module contains Pydantic models that correspond to the Secret JSON schema,
 providing validation for Secret resources to help users identify missing or
@@ -22,6 +35,8 @@ from rapyuta_io_sdk_v2.models.utils import (
 
 
 class DockerSpec(BaseModel):
+    """Registry login details stored in a Docker secret."""
+
     registry: str = Field(
         default="https://index.docker.io/v1/", description="Docker registry URL"
     )
@@ -30,6 +45,8 @@ class DockerSpec(BaseModel):
 
 
 class DockerSpecCreate(DockerSpec):
+    """Registry credentials supplied when creating a Docker secret."""
+
     password: str = Field(description="Password for docker registry authentication")
 
 
@@ -53,13 +70,17 @@ class SecretSpec(BaseModel):
     secret_keys: list[str] | None = Field(
         default=None,
         alias="secretKeys",
-        description="List of keys present in the secret (read-only, returned by server)",
+        description=(
+            "List of keys present in the secret (read-only, returned by server)"
+        ),
     )
     runtime: Runtime | None = None
     depends: DeviceDepends | None = None
 
 
 class SecretSpecCreate(BaseModel):
+    """Credential payload and dependency settings for a new secret."""
+
     type: SecretType = Field(
         description="Type of the secret: Docker or Opaque",
     )
@@ -81,24 +102,25 @@ class Secret(BaseObject):
 
 
 class SecretCreate(Secret):
+    """Secret creation manifest with the required credential payload."""
+
     spec: SecretSpecCreate
 
     @model_validator(mode="after")
-    def validate_create_fields(self):
+    def validate_create_fields(self) -> SecretCreate:
+        """Require credential fields for the selected secret type."""
         spec = self.spec
         if spec.type == "Docker":
             if spec.docker is None:
-                raise ValueError(
-                    "'spec.docker' is required when creating a Docker secret"
-                )
-        elif spec.type == "Opaque":
-            if not spec.data:
-                raise ValueError(
-                    "'spec.data' is required when creating an Opaque secret"
-                )
+                message = "'spec.docker' is required when creating a Docker secret"
+                raise ValueError(message)
+        elif spec.type == "Opaque" and not spec.data:
+            message = "'spec.data' is required when creating an Opaque secret"
+            raise ValueError(message)
         return self
 
     def list_dependencies(self) -> list[str] | None:
+        """Return resource dependencies in manifest order."""
         runtime = self.spec.runtime
 
         if not runtime or runtime == "cloud":
@@ -113,5 +135,3 @@ class SecretCreate(Secret):
 
 class SecretList(BaseList[Secret]):
     """List of secrets using BaseList."""
-
-    pass
