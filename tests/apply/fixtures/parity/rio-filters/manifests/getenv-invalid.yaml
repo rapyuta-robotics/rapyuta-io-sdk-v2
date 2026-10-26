@@ -1,0 +1,6 @@
+kind: Role
+metadata:
+  name: getenv-invalid
+spec:
+  description: "{{ 'fallback' | getenv(42) }}"
+  rules: []

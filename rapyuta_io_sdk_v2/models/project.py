@@ -18,15 +18,29 @@ This module contains Pydantic models that correspond to the Project JSON schema,
 providing validation for Project resources to help users identify missing or
 incorrect fields.
 """
+# Lifecycle helper imports remain local to keep model modules independent.
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import TYPE_CHECKING, ClassVar, Literal
 
 from pydantic import ConfigDict, Field, model_validator
 
+from rapyuta_io_sdk_v2.models.applier import (
+    DependencyReference,
+    ResourceCapabilities,
+    ResourceContext,
+    ResourceOutcome,
+    ResourceReference,
+    ResourceScope,
+)
 from rapyuta_io_sdk_v2.models.base import SDKModel
+from rapyuta_io_sdk_v2.models.resource import ResourceMethods
 from rapyuta_io_sdk_v2.models.utils import BaseList, BaseMetadata, BaseObject, Subject
+
+if TYPE_CHECKING:
+    from rapyuta_io_sdk_v2.async_client import AsyncClient
+    from rapyuta_io_sdk_v2.client import Client
 
 
 class ProjectMember(SDKModel):
@@ -68,14 +82,14 @@ class FeaturesDockerCache(SDKModel):
     def validate_enabled_requires_all_fields(self) -> FeaturesDockerCache:
         """Require Docker cache connection settings when the cache is enabled."""
         if self and self.enabled:
-            required_fields = [
-                "proxy_device",
-                "proxy_interface",
-                "registry_secret",
-                "registry_url",
-            ]
+            required_values = (
+                ("proxy_device", self.proxy_device),
+                ("proxy_interface", self.proxy_interface),
+                ("registry_secret", self.registry_secret),
+                ("registry_url", self.registry_url),
+            )
             missing_fields = [
-                field for field in required_fields if getattr(self, field) is None
+                field for field, value in required_values if value is None
             ]
 
             if missing_fields:
@@ -120,8 +134,72 @@ class ProjectStatus(SDKModel):
     tracing: Literal["Success", "Error", "Disabled", "Pending"] | None = None
 
 
-class Project(BaseObject):
+def _member_dependencies(
+    members: list[ProjectMember] | None,
+) -> tuple[DependencyReference, ...]:
+    dependencies: list[DependencyReference] = []
+    for member in members or []:
+        subject = member.subject
+        if subject.kind is not None and (
+            subject.name is not None or subject.guid is not None
+        ):
+            dependencies.append(
+                DependencyReference(
+                    reference=ResourceReference(
+                        kind=subject.kind.lower(),
+                        name=subject.name,
+                        guid=subject.guid,
+                    )
+                )
+            )
+        dependencies.extend(
+            DependencyReference(
+                reference=ResourceReference(kind="role", name=role_name)
+            )
+            for role_name in member.role_names or []
+        )
+    return tuple(dependencies)
+
+
+def _cache_dependencies(features: Features) -> tuple[DependencyReference, ...]:
+    cache = features.docker_cache
+    if not cache.enabled:
+        return ()
+    dependencies: list[DependencyReference] = []
+    if cache.registry_secret is not None:
+        dependencies.append(
+            DependencyReference(
+                reference=ResourceReference(
+                    kind="secret",
+                    name=cache.registry_secret,
+                    guid=cache.registry_secret,
+                )
+            )
+        )
+    if cache.proxy_device is not None:
+        dependencies.append(
+            DependencyReference(
+                reference=ResourceReference(
+                    kind="device",
+                    name=cache.proxy_device,
+                    guid=cache.proxy_device,
+                )
+            )
+        )
+    return tuple(dependencies)
+
+
+class Project(ResourceMethods, BaseObject):
     """Project model."""
+
+    KIND: ClassVar[str] = "Project"
+    CAPABILITIES: ClassVar[ResourceCapabilities] = ResourceCapabilities(
+        create=True,
+        update=True,
+        delete=True,
+        apply_policy="create_or_update",
+        readiness_kind="project",
+    )
 
     model_config = ConfigDict(extra="forbid")
 
@@ -129,6 +207,103 @@ class Project(BaseObject):
     metadata: BaseMetadata
     spec: ProjectSpec
     status: ProjectStatus | None = None
+
+    def readiness_state(self) -> tuple[str | None, bool, bool]:
+        """Return the observed state, readiness, and terminal failure flags."""
+        status = self.status.status if self.status is not None else None
+        return status, status == "Success", status == "Error"
+
+    def resource_dependencies(
+        self, *, scope: ResourceScope | None = None
+    ) -> tuple[DependencyReference, ...]:
+        """Declare explicit members, roles, cache Secret, and external Device."""
+        del scope
+        return (
+            *_member_dependencies(self.spec.members),
+            *_cache_dependencies(self.spec.features),
+        )
+
+    def create_object(self, client: Client, *, context: ResourceContext) -> Project:
+        """Create a Project with selected organization routing."""
+        from rapyuta_io_sdk_v2.apply._resources.project import (  # noqa: PLC0415
+            _project_context,
+            _project_payload,
+        )
+        from rapyuta_io_sdk_v2.apply._resources.standard import (  # noqa: PLC0415
+            organization_options,
+            record_write,
+        )
+
+        context = _project_context(self, context)
+        payload = _project_payload(self, context)
+        return record_write(
+            context,
+            "created",
+            lambda: client.create_project(payload, **organization_options(context)),
+        )
+
+    async def create_object_async(
+        self, client: AsyncClient, *, context: ResourceContext
+    ) -> Project:
+        """Create a Project through the native asynchronous endpoint."""
+        from rapyuta_io_sdk_v2.apply._resources.project import (  # noqa: PLC0415
+            _project_context,
+            _project_payload,
+        )
+        from rapyuta_io_sdk_v2.apply._resources.standard import (  # noqa: PLC0415
+            organization_options,
+            record_write_async,
+        )
+
+        context = _project_context(self, context)
+        payload = _project_payload(self, context)
+        return await record_write_async(
+            context,
+            "created",
+            lambda: client.create_project(payload, **organization_options(context)),
+        )
+
+    def update_object(self, client: Client, *, context: ResourceContext) -> Project:
+        """Resolve and update the target Project in organization scope."""
+        from rapyuta_io_sdk_v2.apply._resources.project import update_project  # noqa: PLC0415
+
+        return update_project(client, self, context=context)
+
+    async def update_object_async(
+        self, client: AsyncClient, *, context: ResourceContext
+    ) -> Project:
+        """Resolve and update a Project with native asynchronous reads/writes."""
+        from rapyuta_io_sdk_v2.apply._resources.project import update_project_async  # noqa: PLC0415
+
+        return await update_project_async(client, self, context=context)
+
+    def apply(self, client: Client, *, context: ResourceContext) -> ResourceOutcome:
+        """Apply Project features, including two-step Docker-cache provisioning."""
+        from rapyuta_io_sdk_v2.apply._resources.project import apply_project  # noqa: PLC0415
+
+        return apply_project(self, client, context=context)
+
+    async def apply_async(
+        self, client: AsyncClient, *, context: ResourceContext
+    ) -> ResourceOutcome:
+        """Apply Project features with native async cache provisioning."""
+        from rapyuta_io_sdk_v2.apply._resources.project import apply_project_async  # noqa: PLC0415
+
+        return await apply_project_async(self, client, context=context)
+
+    def _delete_object(self, client: Client, *, context: ResourceContext) -> None:
+        """Delete this Project by its resolved GUID."""
+        from rapyuta_io_sdk_v2.apply._resources.project import delete_project  # noqa: PLC0415
+
+        delete_project(client, self, context=context)
+
+    async def _delete_object_async(
+        self, client: AsyncClient, *, context: ResourceContext
+    ) -> None:
+        """Delete this Project through native async lookup and mutation calls."""
+        from rapyuta_io_sdk_v2.apply._resources.project import delete_project_async  # noqa: PLC0415
+
+        await delete_project_async(client, self, context=context)
 
 
 class ProjectList(BaseList[Project]):

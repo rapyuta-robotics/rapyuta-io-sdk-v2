@@ -1,0 +1,163 @@
+branches:
+  feature-x: https://chartsbranch.blob.core.windows.net/charts-per-branch/feature-x/incubator/index.yaml
+  bug/fix some: https://chartsbranch.blob.core.windows.net/charts-per-branch/bug/fix%20some/incubator/index.yaml
+  feat?oops: https://chartsbranch.blob.core.windows.net/charts-per-branch/feat%3Foops/incubator/index.yaml
+  "bran\xA9h@!": https://chartsbranch.blob.core.windows.net/charts-per-branch/bran%C2%A9h%40%21/incubator/index.yaml
+default_index: https://rapyuta-robotics.github.io/rapyuta-charts/incubator/index.yaml
+lookups:
+  sample:
+    found: true
+    entries:
+    - created: '2026-01-01T00:00:00Z'
+      custom:
+        labels:
+        - recorded
+      description: first entry
+      digest: synthetic-digest
+      name: sample
+      urls:
+      - https://charts.example/sample-2.tgz
+      - https://charts.example/fallback.tgz
+      version: '2'
+    - name: sample
+      urls:
+      - https://charts.example/sample-1.tgz
+      version: 1.0.0
+    - name: sample
+      urls:
+      - https://charts.example/duplicate.tgz
+      version: 1.0.0
+  sample:1.0.0:
+    found: true
+    entries:
+    - name: sample
+      urls:
+      - https://charts.example/sample-1.tgz
+      version: 1.0.0
+  sample:2:
+    found: true
+    entries:
+    - created: '2026-01-01T00:00:00Z'
+      custom:
+        labels:
+        - recorded
+      description: first entry
+      digest: synthetic-digest
+      name: sample
+      urls:
+      - https://charts.example/sample-2.tgz
+      - https://charts.example/fallback.tgz
+      version: '2'
+  missing:
+    found: false
+  sample:9:
+    found: false
+    entries: []
+listing:
+- - sample
+  - '2'
+- - sample
+  - 1.0.0
+- - sample
+  - 1.0.0
+- - Zed
+  - '1'
+selection:
+  version: '2'
+  warned: true
+index_selection:
+  default: https://rapyuta-robotics.github.io/rapyuta-charts/incubator/index.yaml
+  custom: https://custom.test/index.yaml
+  empty_override: https://rapyuta-robotics.github.io/rapyuta-charts/incubator/index.yaml
+  branch: https://chartsbranch.blob.core.windows.net/charts-per-branch/bug/fix%20some/incubator/index.yaml
+  empty_branch: https://rapyuta-robotics.github.io/rapyuta-charts/incubator/index.yaml
+forwarding:
+  defaults:
+    values:
+    - values.yaml
+    secrets: []
+    files:
+    - templates
+    retry_count: 50
+    retry_interval: 6
+    delete_existing: false
+    dryrun: true
+    workers: 3
+    silent: false
+  explicit:
+    values:
+    - first.yaml
+    - second.yaml
+    secrets:
+    - secrets.yaml
+    files:
+    - templates
+    retry_count: 50
+    retry_interval: 6
+    delete_existing: true
+    dryrun: true
+    workers: 3
+    silent: false
+  delete:
+    values:
+    - values.yaml
+    files:
+    - templates
+    secrets: []
+    dryrun: true
+    silent: false
+    workers: 3
+recreation:
+  normal:
+    events:
+    - operation: apply
+      dryrun: true
+      workers: 3
+      retry_count: 4
+      retry_interval: 0
+    failed: false
+  recreate:
+    events:
+    - operation: delete
+      dryrun: false
+      workers: 3
+      retry_count: 4
+      retry_interval: 0
+    - operation: apply
+      dryrun: false
+      workers: 3
+      retry_count: 4
+      retry_interval: 0
+    failed: false
+  preview:
+    events:
+    - operation: delete
+      dryrun: true
+      workers: 3
+      retry_count: 4
+      retry_interval: 0
+    - operation: apply
+      dryrun: true
+      workers: 3
+      retry_count: 4
+      retry_interval: 0
+    failed: false
+  failed-delete:
+    events:
+    - operation: delete
+      dryrun: false
+      workers: 3
+      retry_count: 4
+      retry_interval: 0
+    failed: true
+first_package_url: https://charts.example/first.tgz
+failures:
+  branch:
+    failed: true
+    requests:
+    - https://chartsbranch.blob.core.windows.net/charts-per-branch/bug/fix%20some/incubator/index.yaml
+  package:
+    failed: true
+    requests:
+    - relative.tgz
+    extracted: false
