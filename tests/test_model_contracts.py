@@ -27,6 +27,7 @@ import pytest
 from pydantic import BaseModel, ValidationError
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+import rapyuta_io_sdk_v2 as sdk
 from rapyuta_io_sdk_v2 import AsyncClient, Client, Configuration, models
 from rapyuta_io_sdk_v2 import _client_options as client_options
 from rapyuta_io_sdk_v2.exceptions import HttpNotFoundError
@@ -47,6 +48,7 @@ from rapyuta_io_sdk_v2.models import (
     OAuth2ClientList,
     OAuth2UpdateURI,
     SharedURL,
+    parameter,
 )
 from rapyuta_io_sdk_v2.models.daemons import DockerProxyConfig
 from rapyuta_io_sdk_v2.models.deployment import DeploymentSpec
@@ -60,6 +62,9 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
     from pytest_mock import MockFixture
+
+
+PARAMETER_OPERATION_COUNT = 9
 
 
 class TreeSettings(BaseSettings):
@@ -775,3 +780,21 @@ async def test_add_user_serializes_json_and_returns_user(
     assert response.spec.email_id == "user@example.com"
     assert post.call_args.kwargs["json"]["spec"]["emailID"] == "user@example.com"
     assert "body" not in post.call_args.kwargs
+
+
+def test_parameter_exports_and_client_parity() -> None:
+
+    for name, member in inspect.getmembers(parameter, inspect.isclass):
+        if name.startswith("Parameter"):
+            assert getattr(sdk, name) is member
+            assert name in sdk.__all__
+            assert getattr(models, name) is member
+    operations = [name for name in vars(Client) if "_parameter_" in name]
+    assert len(operations) == PARAMETER_OPERATION_COUNT
+    for name in operations:
+        assert inspect.signature(getattr(Client, name)) == inspect.signature(
+            getattr(AsyncClient, name)
+        )
+        assert inspect.iscoroutinefunction(getattr(AsyncClient, name))
+    assert not hasattr(Client, "upload_parameters")
+    assert not hasattr(AsyncClient, "upload_parameters_async")

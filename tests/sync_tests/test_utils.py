@@ -235,3 +235,40 @@ def test_handle_server_errors_preserves_plain_text_error() -> None:
 def test_handle_server_errors_skips_success_response_body() -> None:
     response = httpx.Response(httpx.codes.NO_CONTENT)
     handle_server_errors(response)
+
+
+@pytest.mark.parametrize("payload", [[], "failure", 42, None, {"error": "failure"}])
+@pytest.mark.parametrize("status", [400, 403, 401, 404, 409])
+def test_error_shapes_preserve_status_mapping(payload: object, status: int) -> None:
+    types = {
+        400: exceptions.MethodNotAllowedError,
+        403: exceptions.MethodNotAllowedError,
+        401: exceptions.UnauthorizedAccessError,
+        404: exceptions.HttpNotFoundError,
+        409: exceptions.HttpAlreadyExistsError,
+    }
+    with pytest.raises(types[status]):
+        handle_server_errors(httpx.Response(status, json=payload))
+
+
+def test_non_json_error_body() -> None:
+    with pytest.raises(exceptions.InternalServerError, match="offline"):
+        handle_server_errors(httpx.Response(500, text="offline"))
+
+
+@pytest.mark.parametrize(
+    "case",
+    [
+        (400, exceptions.MethodNotAllowedError),
+        (401, exceptions.UnauthorizedAccessError),
+        (403, exceptions.MethodNotAllowedError),
+        (404, exceptions.HttpNotFoundError),
+        (409, exceptions.HttpAlreadyExistsError),
+        (500, exceptions.InternalServerError),
+    ],
+)
+def test_non_utf8_error_preserves_mapping(case: tuple[int, type[Exception]]) -> None:
+    status, error_type = case
+    with pytest.raises(error_type, match="proxy error") as caught:
+        handle_server_errors(httpx.Response(status, content=b"\xffproxy error"))
+    assert caught.value.status_code == status

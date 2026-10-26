@@ -21,6 +21,17 @@ from typing import TYPE_CHECKING, Any, Unpack
 
 import httpx
 
+from rapyuta_io_sdk_v2._parameter_api import (
+    blob_id,
+    child_path,
+    parameter_base,
+    parameter_response,
+    upload_headers,
+    wire_payload,
+)
+from rapyuta_io_sdk_v2._parameter_api import (
+    tree_name as parameter_tree_name,
+)
 from rapyuta_io_sdk_v2.config import Configuration
 from rapyuta_io_sdk_v2.models import (
     APIResponse,
@@ -81,6 +92,20 @@ from rapyuta_io_sdk_v2.models import (
     UserGroupList,
     UserList,
     UserPermissions,
+)
+from rapyuta_io_sdk_v2.models.parameter import (
+    ParameterBlobListResponse,
+    ParameterBlobQuery,
+    ParameterCommitResponse,
+    ParameterDeleteResponse,
+    ParameterNodeDelete,
+    ParameterNodeResponse,
+    ParameterNodeWrite,
+    ParameterTreeCreateResponse,
+    ParameterTreeListResponse,
+    ParameterTreeQuery,
+    ParameterUploadMetadata,
+    ParameterUploadResponse,
 )
 from rapyuta_io_sdk_v2.models.serviceaccount import (
     ServiceAccountToken,
@@ -3183,3 +3208,202 @@ class AsyncClient:
         )
         handle_server_errors(result)
         return SSHKeySignResponse(**result.json())
+
+    async def list_parameter_trees(
+        self,
+        *,
+        query: ParameterTreeQuery | None = None,
+        **kwargs: Unpack[HeaderOptions],
+    ) -> ParameterTreeListResponse:
+        """List trees with optional repeated regex filters; no request body.
+
+        Args:
+            query: Optional regular-expression instances in caller order.
+            **kwargs: Authentication/context header overrides.
+
+        Raises:
+            ValidationError: If the core endpoint is unconfigured.
+        """
+        query = query if query is not None else ParameterTreeQuery()
+        query = ParameterTreeQuery.model_validate(
+            wire_payload(query, ParameterTreeQuery)
+        )
+        response = await self.c.request(
+            "GET",
+            f"{parameter_base(self.config)}/tree",
+            params=[("instances", value) for value in query.instances],
+            headers=self.config.get_headers(**kwargs),
+            follow_redirects=False,
+        )
+        return parameter_response(response, ParameterTreeListResponse)
+
+    async def create_parameter_tree(
+        self,
+        name: str,
+        **kwargs: Unpack[HeaderOptions],
+    ) -> ParameterTreeCreateResponse:
+        """Create a value root with no body; existing roots surface server errors.
+
+        Args:
+            name: Literal tree name, one through fifty supported characters.
+            **kwargs: Authentication/context header overrides.
+        """
+        response = await self.c.request(
+            "PUT",
+            f"{parameter_base(self.config)}/tree/{parameter_tree_name(name)}",
+            headers=self.config.get_headers(**kwargs),
+            follow_redirects=False,
+        )
+        return parameter_response(response, ParameterTreeCreateResponse)
+
+    async def get_parameter_tree(
+        self,
+        name: str,
+        **kwargs: Unpack[HeaderOptions],
+    ) -> ParameterNodeResponse:
+        """Read an entire recursive tree without a request body.
+
+        Args:
+            name: Literal tree name.
+            **kwargs: Authentication/context header overrides.
+        """
+        response = await self.c.request(
+            "GET",
+            f"{parameter_base(self.config)}/tree/{parameter_tree_name(name)}",
+            headers=self.config.get_headers(**kwargs),
+            follow_redirects=False,
+        )
+        return parameter_response(response, ParameterNodeResponse)
+
+    async def put_parameter_node(
+        self,
+        tree_path: str,
+        body: ParameterNodeWrite,
+        **kwargs: Unpack[HeaderOptions],
+    ) -> ParameterNodeResponse:
+        """Write one child; zero creates and stored versions update existing nodes.
+
+        Args:
+            tree_path: Tree name followed by a relative child path.
+            body: Typed node fields and optimistic version; never auto-refreshed.
+            **kwargs: Authentication/context header overrides.
+        """
+        payload = wire_payload(body, ParameterNodeWrite)
+        response = await self.c.request(
+            "PUT",
+            f"{parameter_base(self.config)}/tree/{child_path(tree_path)}",
+            json=payload,
+            headers=self.config.get_headers(**kwargs),
+            follow_redirects=False,
+        )
+        return parameter_response(response, ParameterNodeResponse)
+
+    async def delete_parameter_tree(
+        self,
+        name: str,
+        **kwargs: Unpack[HeaderOptions],
+    ) -> ParameterDeleteResponse:
+        """Delete one root with no body; the service acknowledges absent roots.
+
+        Args:
+            name: Literal tree name.
+            **kwargs: Authentication/context header overrides.
+        """
+        response = await self.c.request(
+            "DELETE",
+            f"{parameter_base(self.config)}/tree/{parameter_tree_name(name)}",
+            headers=self.config.get_headers(**kwargs),
+            follow_redirects=False,
+        )
+        return parameter_response(response, ParameterDeleteResponse)
+
+    async def delete_parameter_node(
+        self,
+        tree_path: str,
+        body: ParameterNodeDelete,
+        **kwargs: Unpack[HeaderOptions],
+    ) -> ParameterDeleteResponse:
+        """Delete one child using its kind, media type and stored version.
+
+        Args:
+            tree_path: Tree name followed by a relative child path.
+            body: Typed deletion metadata; version is never auto-refreshed.
+            **kwargs: Authentication/context header overrides.
+        """
+        payload = wire_payload(body, ParameterNodeDelete)
+        response = await self.c.request(
+            "DELETE",
+            f"{parameter_base(self.config)}/tree/{child_path(tree_path)}",
+            json=payload,
+            headers=self.config.get_headers(**kwargs),
+            follow_redirects=False,
+        )
+        return parameter_response(response, ParameterDeleteResponse)
+
+    async def list_parameter_blobs(
+        self,
+        query: ParameterBlobQuery,
+        **kwargs: Unpack[HeaderOptions],
+    ) -> ParameterBlobListResponse:
+        """List references for repeated tree names with no request body.
+
+        Args:
+            query: Nonempty tree-name query, preserving caller order.
+            **kwargs: Authentication/context header overrides.
+        """
+        query = ParameterBlobQuery.model_validate(
+            wire_payload(query, ParameterBlobQuery)
+        )
+        response = await self.c.request(
+            "GET",
+            f"{parameter_base(self.config)}/treeblobs",
+            params=[("treeNames", value) for value in query.tree_names],
+            headers=self.config.get_headers(**kwargs),
+            follow_redirects=False,
+        )
+        return parameter_response(response, ParameterBlobListResponse)
+
+    async def prepare_parameter_upload(
+        self,
+        tree_path: str,
+        metadata: ParameterUploadMetadata,
+        **kwargs: Unpack[HeaderOptions],
+    ) -> ParameterUploadResponse:
+        """Prepare one binary FileNode through headers without sending a body.
+
+        Args:
+            tree_path: Tree name followed by a relative file path.
+            metadata: Version, lowercase MD5, media type and optional encoding.
+            **kwargs: Context overrides; typed metadata wins over header options.
+        """
+        headers = upload_headers(self.config, metadata, kwargs)
+        response = await self.c.request(
+            "PUT",
+            f"{parameter_base(self.config)}/binaryfilenode/{child_path(tree_path)}",
+            headers=headers,
+            follow_redirects=False,
+        )
+        return parameter_response(response, ParameterUploadResponse)
+
+    async def commit_parameter_upload(
+        self,
+        tree_name: str,
+        blob_ref_id: str,
+        **kwargs: Unpack[HeaderOptions],
+    ) -> ParameterCommitResponse:
+        """Confirm one prepared reference with no body or implicit status query.
+
+        Args:
+            tree_name: Literal tree name.
+            blob_ref_id: Nonzero decimal string from the prepared FileNode.
+            **kwargs: Authentication/context header overrides.
+        """
+        name = parameter_tree_name(tree_name)
+        response = await self.c.request(
+            "PATCH",
+            f"{parameter_base(self.config)}/binaryfilenode/"
+            f"{name}/blobref/{blob_id(blob_ref_id)}",
+            headers=self.config.get_headers(**kwargs),
+            follow_redirects=False,
+        )
+        return parameter_response(response, ParameterCommitResponse)
