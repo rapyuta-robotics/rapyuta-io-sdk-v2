@@ -21,7 +21,10 @@ import httpx
 import pytest
 
 from rapyuta_io_sdk_v2.exceptions import HttpNotFoundError, UnauthorizedAccessError
-from rapyuta_io_sdk_v2.models import Network, NetworkList
+from rapyuta_io_sdk_v2.models import (
+    Network,
+    NetworkList,
+)
 
 if TYPE_CHECKING:
     from pytest_mock import MockFixture
@@ -93,7 +96,7 @@ async def test_create_network_unauthorized(
     )
 
     with pytest.raises(UnauthorizedAccessError) as exc:
-        await async_client.create_network(body=network_body)
+        await async_client.create_network(body=Network.model_validate(network_body))
 
     assert str(exc.value) == "unauthorized"
 

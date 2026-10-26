@@ -88,7 +88,7 @@ async def test_update_user_success(
         json=mock_response_user,
     )
     response = await async_client.update_user(
-        email_id="test.user@example.com", body=user_body
+        email_id="test.user@example.com", body=User.model_validate(user_body)
     )
     assert response.metadata.name == "test user"
     assert response.metadata.guid == "user-testuser-guid-000000001"
@@ -109,7 +109,9 @@ async def test_update_user_unauthorized(
     )
 
     with pytest.raises(UnauthorizedAccessError) as exc:
-        await async_client.update_user(email_id="test.user@example.com", body=user_body)
+        await async_client.update_user(
+            email_id="test.user@example.com", body=User.model_validate(user_body)
+        )
     assert "user cannot be authenticated" in str(exc.value)
 
 
@@ -209,9 +211,8 @@ async def test_get_user_permissions_unauthorized(
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("input_type", ["dict", "model"])
 async def test_add_user_sends_json_and_returns_user(
-    *, async_client: AsyncClient, mocker: MockFixture, input_type: str
+    *, async_client: AsyncClient, mocker: MockFixture
 ) -> None:
     user = User.model_validate(
         {
@@ -219,7 +220,7 @@ async def test_add_user_sends_json_and_returns_user(
             "spec": {"emailID": "operator@example.com", "firstName": "Operator"},
         }
     )
-    payload = user.model_dump(by_alias=True)
+    payload = user.model_dump(by_alias=True, mode="json")
 
     def handle_request(request: httpx.Request) -> httpx.Response:
         assert request.method == "POST"
@@ -236,7 +237,7 @@ async def test_add_user_sends_json_and_returns_user(
     ) as connection:
         mocker.patch.object(async_client, "c", connection)
         result = await async_client.add_user(
-            payload if input_type == "dict" else user,
+            user,
             content_type="application/json",
             x_checksum="checksum",
             organization_guid="override-org",

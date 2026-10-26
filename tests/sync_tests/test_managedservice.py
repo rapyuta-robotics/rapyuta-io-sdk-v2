@@ -123,12 +123,14 @@ def test_create_instance_success(
 
     # Call the create_instance method
     response = client.create_instance(
-        body={
-            "apiVersion": "api.rapyuta.io/v2",
-            "metadata": {
-                "name": "test-instance",
-            },
-        }
+        body=ManagedServiceInstance.model_validate(
+            {
+                "apiVersion": "api.rapyuta.io/v2",
+                "metadata": {
+                    "name": "test-instance",
+                },
+            }
+        )
     )
 
     # # Validate the response
@@ -228,16 +230,18 @@ def test_create_instance_binding_success(
 
     # Call the create_instance_binding method
     response = client.create_instance_binding(
-        body={
-            "metadata": {
-                "name": "test-instance-binding",
-                "labels": {},
-            },
-            "spec": {
-                "instance": "vpn_instance_value",
-                "provider": "headscalevpn",
-            },
-        },
+        body=ManagedServiceBinding.model_validate(
+            {
+                "metadata": {
+                    "name": "test-instance-binding",
+                    "labels": {},
+                },
+                "spec": {
+                    "instance": "vpn_instance_value",
+                    "provider": "headscalevpn",
+                },
+            }
+        ),
         instance_name="mock_instance_name",
     )
 

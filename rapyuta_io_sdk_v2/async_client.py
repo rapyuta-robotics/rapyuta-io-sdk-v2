@@ -20,19 +20,31 @@ import platform
 from typing import TYPE_CHECKING, Any, Unpack
 
 import httpx
-from pydantic import ValidationError as PydanticValidationError
-from yaml import safe_load
 
 from rapyuta_io_sdk_v2.config import Configuration
 from rapyuta_io_sdk_v2.models import (
+    APIResponse,
+    AuthSubjectResponse,
     BulkRoleBindingUpdate,
+    ConfigKeyContent,
+    ConfigKeyRename,
+    ConfigKeyUpload,
+    ConfigTree,
+    ConfigTreeList,
+    ConfigTreeRevision,
+    ConfigTreeRevisionList,
+    ConfigValues,
     Daemon,
     Deployment,
+    DeploymentGraph,
+    DeploymentHistoryList,
     DeploymentList,
     Disk,
     DiskList,
     FileUpload,
+    FileUploadDownloadResponse,
     FileUploadList,
+    LoginRequest,
     ManagedServiceBinding,
     ManagedServiceBindingList,
     ManagedServiceInstance,
@@ -40,6 +52,8 @@ from rapyuta_io_sdk_v2.models import (
     ManagedServiceProviderList,
     Network,
     NetworkList,
+    OAuth2Client,
+    OAuth2ClientList,
     OAuth2UpdateURI,
     Organization,
     Package,
@@ -59,8 +73,11 @@ from rapyuta_io_sdk_v2.models import (
     SharedURLList,
     StaticRoute,
     StaticRouteList,
+    TokenRequest,
+    TokenResponse,
     User,
     UserGroup,
+    UserGroupCreate,
     UserGroupList,
     UserList,
     UserPermissions,
@@ -74,10 +91,10 @@ from rapyuta_io_sdk_v2.models.sshkey import (
     SSHKeySignRequest,
     SSHKeySignResponse,
 )
-from rapyuta_io_sdk_v2.utils import handle_server_errors
+from rapyuta_io_sdk_v2.utils import decode_config_key_content, handle_server_errors
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterable, AsyncIterator, Iterable
+    from collections.abc import AsyncIterator
 
     from rapyuta_io_sdk_v2._client_options import (
         ClientOptions,
@@ -149,13 +166,23 @@ class AsyncClient:
         result = self.sync_client.post(
             url=f"{self.rip_host}/user/login",
             headers={"Content-Type": "application/json"},
-            json={
-                "email": email,
-                "password": password,
-            },
+            json=LoginRequest(email=email, password=password).model_dump(),
         )
         handle_server_errors(result)
-        return result.json()["data"].get("token")
+        return TokenResponse(**result.json()).data.token
+
+    def get_subject(self, auth_token: str) -> AuthSubjectResponse:
+        """Get the identity-provider subject for an authentication token.
+
+        Args:
+            auth_token: Authentication token identifying the subject.
+        """
+        result = self.sync_client.get(
+            url=f"{self.rip_host}/user/info",
+            headers={"Authorization": f"Bearer {auth_token}"},
+        )
+        handle_server_errors(result)
+        return AuthSubjectResponse(**result.json())
 
     def login(
         self,
@@ -209,12 +236,13 @@ class AsyncClient:
         result = self.sync_client.post(
             url=f"{self.rip_host}/refreshtoken",
             headers={"Content-Type": "application/json"},
-            json={"token": token},
+            json=TokenRequest(token=token).model_dump(),
         )
         handle_server_errors(result)
+        refreshed = TokenResponse(**result.json()).data.token
         if set_token:
-            self.config.auth_token = result.json()["data"].get("token")
-        return result.json()["data"].get("token")
+            self.config.auth_token = refreshed
+        return refreshed
 
     def set_organization(self, organization_guid: str) -> None:
         """Set the organization GUID.
@@ -263,14 +291,14 @@ class AsyncClient:
 
     async def update_organization(
         self,
-        body: Organization | dict[str, Any],
+        body: Organization,
         organization_guid: str | None = None,
         **kwargs: Unpack[OrganizationOverrideHeaderOptions],
     ) -> Organization:
         """Update an organization by its GUID.
 
         Args:
-            body (dict): Organization details
+            body: Organization details
             organization_guid (str, optional): Organization GUID. Defaults to None.
 
             **kwargs: Additional request header options passed to
@@ -279,15 +307,12 @@ class AsyncClient:
         Returns:
             Organization: Organization details as an Organization object.
         """
-        if isinstance(body, dict):
-            body = Organization.model_validate(body)
-
         result = await self.c.put(
             url=f"{self.v2api_host}/v2/organizations/{organization_guid}/",
             headers=self.config.get_headers(
                 with_project=False, organization_guid=organization_guid, **kwargs
             ),
-            json=body.model_dump(by_alias=True),
+            json=body.model_dump(by_alias=True, mode="json"),
         )
         handle_server_errors(result)
         return Organization(**result.json())
@@ -332,7 +357,7 @@ class AsyncClient:
         return UserList(**result.json())
 
     async def add_user(
-        self, user: User | dict, **kwargs: Unpack[ProjectHeaderOptions]
+        self, user: User, **kwargs: Unpack[ProjectHeaderOptions]
     ) -> User:
         """Add a User in Organization.
 
@@ -344,12 +369,10 @@ class AsyncClient:
         Returns:
             User: User details as a user object.
         """
-        if isinstance(user, dict):
-            user = User.model_validate(user)
         result = await self.c.post(
             url=f"{self.v2api_host}/v2/users/",
             headers=self.config.get_headers(with_project=False, **kwargs),
-            json=user.model_dump(by_alias=True),
+            json=user.model_dump(by_alias=True, mode="json"),
         )
 
         handle_server_errors(result)
@@ -376,12 +399,12 @@ class AsyncClient:
         return User(**result.json())
 
     async def update_myself(
-        self, body: User | dict[str, Any], **kwargs: Unpack[IdentityHeaderOptions]
+        self, body: User, **kwargs: Unpack[IdentityHeaderOptions]
     ) -> User:
         """Update my user details.
 
         Args:
-            body (dict): User details
+            body: User details
 
             **kwargs: Additional request header options passed to
                 Configuration.get_headers.
@@ -389,15 +412,12 @@ class AsyncClient:
         Returns:
             User: User details as a User object.
         """
-        if isinstance(body, dict):
-            body = User.model_validate(body)
-
         result = await self.c.put(
             url=f"{self.v2api_host}/v2/users/me/",
             headers=self.config.get_headers(
                 with_project=False, with_organization=False, **kwargs
             ),
-            json=body.model_dump(by_alias=True),
+            json=body.model_dump(by_alias=True, mode="json"),
         )
         handle_server_errors(result)
         return User(**result.json())
@@ -423,15 +443,12 @@ class AsyncClient:
         return User(**result.json())
 
     async def update_user(
-        self,
-        email_id: str,
-        body: User | dict[str, Any],
-        **kwargs: Unpack[ProjectHeaderOptions],
+        self, email_id: str, body: User, **kwargs: Unpack[ProjectHeaderOptions]
     ) -> User:
         """Update the user details.
 
         Args:
-            body (dict): User details
+            body: User details
 
             email_id: Email address identifying the user.
             **kwargs: Additional request header options passed to
@@ -440,13 +457,10 @@ class AsyncClient:
         Returns:
             User: User details as a User object.
         """
-        if isinstance(body, dict):
-            body = User.model_validate(body)
-
         result = await self.c.put(
             url=f"{self.v2api_host}/v2/users/{email_id}/",
             headers=self.config.get_headers(with_project=False, **kwargs),
-            json=body.model_dump(by_alias=True),
+            json=body.model_dump(by_alias=True, mode="json"),
         )
         handle_server_errors(result)
         return User(**result.json())
@@ -530,7 +544,7 @@ class AsyncClient:
                 Configuration.get_headers.
 
         Returns:
-            List of projects as a dictionary.
+            List of projects as a Pydantic model.
         """
         parameters: dict[str, Any] = {
             "continue": cont,
@@ -575,7 +589,7 @@ class AsyncClient:
             ValueError: If organization_guid or project_guid is None
 
         Returns:
-            Project details as a dictionary.
+            Project details as a Pydantic model.
         """
         if project_guid is None:
             project_guid = self.config.project_guid
@@ -590,61 +604,53 @@ class AsyncClient:
         return Project(**result.json())
 
     async def create_project(
-        self,
-        body: Project | dict[str, Any],
-        **kwargs: Unpack[OrganizationOverrideHeaderOptions],
+        self, body: Project, **kwargs: Unpack[OrganizationOverrideHeaderOptions]
     ) -> Project:
         """Create a new project.
 
         Args:
-            body (dict): Project details
+            body: Project details
 
             **kwargs: Additional request header options passed to
                 Configuration.get_headers.
 
         Returns:
-            Project details as a dictionary.
+            Project details as a Pydantic model.
         """
-        if isinstance(body, dict):
-            body = Project.model_validate(body)
-
-        org_guid = body.metadata.organizationGUID or None
+        org_guid = body.metadata.organization_guid or None
 
         result = await self.c.post(
             url=f"{self.v2api_host}/v2/projects/",
             headers=self.config.get_headers(
                 organization_guid=org_guid, with_project=False, **kwargs
             ),
-            json=body.model_dump(by_alias=True),
+            json=body.model_dump(by_alias=True, mode="json"),
         )
         handle_server_errors(result)
         return Project(**result.json())
 
     async def update_project(
         self,
-        body: Project | dict[str, Any],
+        body: Project,
         project_guid: str | None = None,
         **kwargs: Unpack[OrganizationHeaderOptions],
     ) -> Project:
         """Update a project by its GUID.
 
         Args:
-            body (dict): Project details
+            body: Project details
             project_guid (str, optional): Project GUID. Defaults to None.
 
             **kwargs: Additional request header options passed to
                 Configuration.get_headers.
 
         Returns:
-            Project details as a dictionary.
+            Project details as a Pydantic model.
         """
-        if isinstance(body, dict):
-            body = Project.model_validate(body)
-
         result = await self.c.put(
             url=f"{self.v2api_host}/v2/projects/{project_guid}/",
             headers=self.config.get_headers(with_project=False, **kwargs),
-            json=body.model_dump(by_alias=True),
+            json=body.model_dump(by_alias=True, mode="json"),
         )
         handle_server_errors(result)
         return Project(**result.json())
@@ -668,33 +674,6 @@ class AsyncClient:
             headers=self.config.get_headers(with_project=False, **kwargs),
         )
         handle_server_errors(result)
-
-    async def update_project_owner(
-        self,
-        body: dict,
-        project_guid: str | None = None,
-        **kwargs: Unpack[ProjectOverrideHeaderOptions],
-    ) -> dict[str, Any]:
-        """Update the owner of a project by its GUID.
-
-        Args:
-            body: Resource manifest or request payload.
-            project_guid: Project guid.
-            **kwargs: Additional request header options passed to
-                Configuration.get_headers.
-
-        Returns:
-            dict[str, Any]: Project owner update result.
-        """
-        project_guid = project_guid or self.config.project_guid
-
-        result = await self.c.put(
-            url=f"{self.v2api_host}/v2/projects/{project_guid}/owner/",
-            headers=self.config.get_headers(**kwargs),
-            json=body,
-        )
-        handle_server_errors(result)
-        return result.json()
 
     # -------------------Package-------------------
     # Keep the positional signature accepted by existing SDK callers.
@@ -720,7 +699,7 @@ class AsyncClient:
                 Configuration.get_headers.
 
         Returns:
-            List of packages as a dictionary.
+            List of packages as a Pydantic model.
         """
         result = await self.c.get(
             url=f"{self.v2api_host}/v2/packages/",
@@ -737,7 +716,7 @@ class AsyncClient:
         return PackageList(**result.json())
 
     async def create_package(
-        self, body: Package | dict[str, Any], **kwargs: Unpack[HeaderOptions]
+        self, body: Package, **kwargs: Unpack[HeaderOptions]
     ) -> Package:
         """Create a new package.
 
@@ -745,7 +724,7 @@ class AsyncClient:
         For a documented example, run the rio explain package command.
 
         Args:
-            body (dict): Package details
+            body: Package details
 
             **kwargs: Additional request header options passed to
                 Configuration.get_headers.
@@ -753,13 +732,10 @@ class AsyncClient:
         Returns:
             Package: Package details as a Package object.
         """
-        if isinstance(body, dict):
-            body = Package.model_validate(body)
-
         result = await self.c.post(
             url=f"{self.v2api_host}/v2/packages/",
             headers=self.config.get_headers(**kwargs),
-            json=body.model_dump(by_alias=True),
+            json=body.model_dump(by_alias=True, mode="json"),
         )
 
         handle_server_errors(result)
@@ -857,7 +833,7 @@ class AsyncClient:
                 Configuration.get_headers.
 
         Returns:
-            List of deployments as a dictionary.
+            List of deployments as a Pydantic model.
         """
         result = await self.c.get(
             url=f"{self.v2api_host}/v2/deployments/",
@@ -885,12 +861,12 @@ class AsyncClient:
     # -------------------Deployment-------------------
 
     async def create_deployment(
-        self, body: Deployment | dict[str, Any], **kwargs: Unpack[HeaderOptions]
+        self, body: Deployment, **kwargs: Unpack[HeaderOptions]
     ) -> Deployment:
         """Create a new deployment.
 
         Args:
-            body (dict): Deployment details
+            body: Deployment details
 
             **kwargs: Additional request header options passed to
                 Configuration.get_headers.
@@ -898,13 +874,10 @@ class AsyncClient:
         Returns:
             Deployment: Deployment details as a Deployment object.
         """
-        if isinstance(body, dict):
-            body = Deployment.model_validate(body)
-
         result = await self.c.post(
             url=f"{self.v2api_host}/v2/deployments/",
             headers=self.config.get_headers(**kwargs),
-            json=body.model_dump(by_alias=True),
+            json=body.model_dump(by_alias=True, mode="json"),
         )
 
         handle_server_errors(result)
@@ -936,16 +909,13 @@ class AsyncClient:
         return Deployment(**result.json())
 
     async def update_deployment(
-        self,
-        name: str,
-        body: Deployment | dict[str, Any],
-        **kwargs: Unpack[HeaderOptions],
+        self, name: str, body: Deployment, **kwargs: Unpack[HeaderOptions]
     ) -> Deployment:
         """Update a deployment by its name.
 
         Args:
             name (str): Deployment name
-            body (dict): Deployment details
+            body: Deployment details
 
             **kwargs: Additional request header options passed to
                 Configuration.get_headers.
@@ -953,13 +923,10 @@ class AsyncClient:
         Returns:
             Deployment: Deployment details as a Deployment object.
         """
-        if isinstance(body, dict):
-            body = Deployment.model_validate(body)
-
         result = await self.c.patch(
             url=f"{self.v2api_host}/v2/deployments/{name}/",
             headers=self.config.get_headers(**kwargs),
-            json=body.model_dump(by_alias=True),
+            json=body.model_dump(by_alias=True, mode="json"),
         )
         handle_server_errors(result)
         return Deployment(**result.json())
@@ -985,7 +952,7 @@ class AsyncClient:
 
     async def get_deployment_graph(
         self, name: str, **kwargs: Unpack[HeaderOptions]
-    ) -> dict[str, Any]:
+    ) -> DeploymentGraph:
         """Get a deployment graph by its name. [Experimental].
 
         Args:
@@ -994,18 +961,18 @@ class AsyncClient:
                 Configuration.get_headers.
 
         Returns:
-            Deployment graph as a dictionary.
+            Deployment graph as a Pydantic model.
         """
         result = await self.c.get(
             url=f"{self.v2api_host}/v2/deployments/{name}/graph/",
             headers=self.config.get_headers(**kwargs),
         )
         handle_server_errors(result)
-        return result.json()
+        return DeploymentGraph(**result.json())
 
     async def get_deployment_history(
         self, name: str, guid: str | None = None, **kwargs: Unpack[HeaderOptions]
-    ) -> dict[str, Any]:
+    ) -> DeploymentHistoryList:
         """Get a deployment history by its name.
 
         Args:
@@ -1015,7 +982,7 @@ class AsyncClient:
                 Configuration.get_headers.
 
         Returns:
-            Deployment history as a dictionary.
+            Deployment history as a Pydantic model.
         """
         result = await self.c.get(
             url=f"{self.v2api_host}/v2/deployments/{name}/history/",
@@ -1023,7 +990,7 @@ class AsyncClient:
             params={"guid": guid},
         )
         handle_server_errors(result)
-        return result.json()
+        return DeploymentHistoryList(**result.json())
 
     async def stream_deployment_logs(
         self, name: str, executable: str, replica: int = 0
@@ -1085,7 +1052,7 @@ class AsyncClient:
                 Configuration.get_headers.
 
         Returns:
-            List of disks as a dictionary.
+            List of disks as a Pydantic model.
         """
         result = await self.c.get(
             url=f"{self.v2api_host}/v2/disks/",
@@ -1123,13 +1090,11 @@ class AsyncClient:
 
         return Disk(**result.json())
 
-    async def create_disk(
-        self, body: Disk | dict[str, Any], **kwargs: Unpack[HeaderOptions]
-    ) -> Disk:
+    async def create_disk(self, body: Disk, **kwargs: Unpack[HeaderOptions]) -> Disk:
         """Create a new disk.
 
         Args:
-            body (dict): Disk details
+            body: Disk details
 
             **kwargs: Additional request header options passed to
                 Configuration.get_headers.
@@ -1137,13 +1102,10 @@ class AsyncClient:
         Returns:
             Disk: Disk details as a Disk object.
         """
-        if isinstance(body, dict):
-            body = Disk.model_validate(body)
-
         result = await self.c.post(
             url=f"{self.v2api_host}/v2/disks/",
             headers=self.config.get_headers(**kwargs),
-            json=body.model_dump(by_alias=True),
+            json=body.model_dump(by_alias=True, mode="json"),
         )
         handle_server_errors(result)
         return Disk(**result.json())
@@ -1217,7 +1179,7 @@ class AsyncClient:
                 Configuration.get_headers.
 
         Returns:
-            List of static routes as a dictionary.
+            List of static routes as a Pydantic model.
         """
         result = await self.c.get(
             url=f"{self.v2api_host}/v2/staticroutes/",
@@ -1236,12 +1198,12 @@ class AsyncClient:
         return StaticRouteList(**result.json())
 
     async def create_staticroute(
-        self, body: StaticRoute | dict[str, Any], **kwargs: Unpack[HeaderOptions]
+        self, body: StaticRoute, **kwargs: Unpack[HeaderOptions]
     ) -> StaticRoute:
         """Create a new static route.
 
         Args:
-            body (dict): Static route details
+            body: Static route details
 
             **kwargs: Additional request header options passed to
                 Configuration.get_headers.
@@ -1249,13 +1211,10 @@ class AsyncClient:
         Returns:
             StaticRoute: Static route details as a StaticRoute object.
         """
-        if isinstance(body, dict):
-            body = StaticRoute.model_validate(body)
-
         result = await self.c.post(
             url=f"{self.v2api_host}/v2/staticroutes/",
             headers=self.config.get_headers(**kwargs),
-            json=body.model_dump(by_alias=True),
+            json=body.model_dump(by_alias=True, mode="json"),
         )
         handle_server_errors(result)
         return StaticRoute(**result.json())
@@ -1283,16 +1242,13 @@ class AsyncClient:
         return StaticRoute(**result.json())
 
     async def update_staticroute(
-        self,
-        name: str,
-        body: StaticRoute | dict[str, Any],
-        **kwargs: Unpack[HeaderOptions],
+        self, name: str, body: StaticRoute, **kwargs: Unpack[HeaderOptions]
     ) -> StaticRoute:
         """Update a static route by its name.
 
         Args:
             name (str): Static route name
-            body (dict): Update details
+            body: Update details
 
             **kwargs: Additional request header options passed to
                 Configuration.get_headers.
@@ -1300,13 +1256,10 @@ class AsyncClient:
         Returns:
             StaticRoute: Static route details as a StaticRoute object.
         """
-        if isinstance(body, dict):
-            body = StaticRoute.model_validate(body)
-
         result = await self.c.put(
             url=f"{self.v2api_host}/v2/staticroutes/{name}/",
             headers=self.config.get_headers(**kwargs),
-            json=body.model_dump(by_alias=True),
+            json=body.model_dump(by_alias=True, mode="json"),
         )
         handle_server_errors(result)
         return StaticRoute(**result.json())
@@ -1373,7 +1326,7 @@ class AsyncClient:
                 Configuration.get_headers.
 
         Returns:
-            List of networks as a dictionary.
+            List of networks as a Pydantic model.
         """
         result = await self.c.get(
             url=f"{self.v2api_host}/v2/networks/",
@@ -1395,12 +1348,12 @@ class AsyncClient:
         return NetworkList(**result.json())
 
     async def create_network(
-        self, body: Network | dict[str, Any], **kwargs: Unpack[HeaderOptions]
+        self, body: Network, **kwargs: Unpack[HeaderOptions]
     ) -> Network:
         """Create a new network.
 
         Args:
-            body (dict): Network details
+            body: Network details
 
             **kwargs: Additional request header options passed to
                 Configuration.get_headers.
@@ -1408,13 +1361,10 @@ class AsyncClient:
         Returns:
             Network: Network details as a Network object.
         """
-        if isinstance(body, dict):
-            body = Network.model_validate(body)
-
         result = await self.c.post(
             url=f"{self.v2api_host}/v2/networks/",
             headers=self.config.get_headers(**kwargs),
-            json=body.model_dump(by_alias=True),
+            json=body.model_dump(by_alias=True, mode="json"),
         )
         handle_server_errors(result)
         return Network(**result.json())
@@ -1485,7 +1435,7 @@ class AsyncClient:
                 Configuration.get_headers.
 
         Returns:
-            List of secrets as a dictionary.
+            List of secrets as a Pydantic model.
         """
         parameters: dict[str, Any] = {
             "continue": cont,
@@ -1508,12 +1458,12 @@ class AsyncClient:
         return SecretList(**result.json())
 
     async def create_secret(
-        self, body: SecretCreate | dict[str, Any], **kwargs: Unpack[HeaderOptions]
+        self, body: SecretCreate, **kwargs: Unpack[HeaderOptions]
     ) -> Secret:
         """Create a new secret.
 
         Args:
-            body (dict): Secret details
+            body: Secret details
 
             **kwargs: Additional request header options passed to
                 Configuration.get_headers.
@@ -1521,13 +1471,10 @@ class AsyncClient:
         Returns:
             Secret: Secret details as a Secret object.
         """
-        if isinstance(body, dict):
-            body = SecretCreate.model_validate(body)
-
         result = await self.c.post(
             url=f"{self.v2api_host}/v2/secrets/",
             headers=self.config.get_headers(**kwargs),
-            json=body.model_dump(by_alias=True),
+            json=body.model_dump(by_alias=True, mode="json"),
         )
 
         handle_server_errors(result)
@@ -1554,13 +1501,13 @@ class AsyncClient:
         return Secret(**result.json())
 
     async def update_secret(
-        self, name: str, body: Secret | dict[str, Any], **kwargs: Unpack[HeaderOptions]
+        self, name: str, body: SecretCreate, **kwargs: Unpack[HeaderOptions]
     ) -> Secret:
         """Update a secret by its name.
 
         Args:
             name (str): Secret name
-            body (dict): Update details
+            body: Update details
 
             **kwargs: Additional request header options passed to
                 Configuration.get_headers.
@@ -1568,13 +1515,10 @@ class AsyncClient:
         Returns:
             Secret: Secret details as a Secret object.
         """
-        if isinstance(body, dict):
-            body = Secret.model_validate(body)
-
         result = await self.c.put(
             url=f"{self.v2api_host}/v2/secrets/{name}/",
             headers=self.config.get_headers(**kwargs),
-            json=body.model_dump(by_alias=True),
+            json=body.model_dump(by_alias=True, mode="json"),
         )
         handle_server_errors(result)
         return Secret(**result.json())
@@ -1607,7 +1551,7 @@ class AsyncClient:
         names: list[str] | None = None,
         regions: list[str] | None = None,
         **kwargs: Unpack[HeaderOptions],
-    ) -> dict[str, Any]:
+    ) -> OAuth2ClientList:
         """List all OAuth2 clients in a project.
 
         Args:
@@ -1621,7 +1565,7 @@ class AsyncClient:
                 Configuration.get_headers.
 
         Returns:
-            List of OAuth2 clients as a dictionary.
+            List of OAuth2 clients as a Pydantic model.
         """
         params = {
             "continue": cont,
@@ -1640,11 +1584,11 @@ class AsyncClient:
             params=params,
         )
         handle_server_errors(result)
-        return result.json()
+        return OAuth2ClientList(**result.json())
 
     async def get_oauth2_client(
         self, client_id: str, **kwargs: Unpack[HeaderOptions]
-    ) -> dict[str, Any]:
+    ) -> OAuth2Client:
         """Get an OAuth2 client by its client_id.
 
         Args:
@@ -1654,63 +1598,63 @@ class AsyncClient:
                 Configuration.get_headers.
 
         Returns:
-            OAuth2 client details as a dictionary.
+            OAuth2 client details as a Pydantic model.
         """
         result = await self.c.get(
             url=f"{self.v2api_host}/v2/oauth2/clients/{client_id}/",
             headers=self.config.get_headers(**kwargs),
         )
         handle_server_errors(result)
-        return result.json()
+        return OAuth2Client(**result.json())
 
     async def create_oauth2_client(
-        self, body: dict, **kwargs: Unpack[HeaderOptions]
-    ) -> dict[str, Any]:
+        self, body: OAuth2Client, **kwargs: Unpack[HeaderOptions]
+    ) -> OAuth2Client:
         """Create a new OAuth2 client.
 
         Args:
-            body (dict): OAuth2 client details
+            body: OAuth2 client details
 
             **kwargs: Additional request header options passed to
                 Configuration.get_headers.
 
         Returns:
-            OAuth2 client details as a dictionary.
+            OAuth2 client details as a Pydantic model.
         """
         result = await self.c.post(
             url=f"{self.v2api_host}/v2/oauth2/clients/",
             headers=self.config.get_headers(**kwargs),
-            json=body,
+            json=body.model_dump(by_alias=True, exclude_unset=True, mode="json"),
         )
         handle_server_errors(result)
-        return result.json()
+        return OAuth2Client(**result.json())
 
     async def update_oauth2_client(
-        self, client_id: str, body: dict, **kwargs: Unpack[HeaderOptions]
-    ) -> dict[str, Any]:
+        self, client_id: str, body: OAuth2Client, **kwargs: Unpack[HeaderOptions]
+    ) -> OAuth2Client:
         """Update an OAuth2 client by its client_id.
 
         Args:
             client_id (str): OAuth2 client ID
-            body (dict): Update details
+            body: Update details
 
             **kwargs: Additional request header options passed to
                 Configuration.get_headers.
 
         Returns:
-            OAuth2 client details as a dictionary.
+            OAuth2 client details as a Pydantic model.
         """
         result = await self.c.put(
             url=f"{self.v2api_host}/v2/oauth2/clients/{client_id}/",
             headers=self.config.get_headers(**kwargs),
-            json=body,
+            json=body.model_dump(by_alias=True, exclude_unset=True, mode="json"),
         )
         handle_server_errors(result)
-        return result.json()
+        return OAuth2Client(**result.json())
 
     async def update_oauth2_client_uris(
         self, client_id: str, update: OAuth2UpdateURI, **kwargs: Unpack[HeaderOptions]
-    ) -> dict[str, Any]:
+    ) -> OAuth2Client:
         """Update OAuth2 client URIs.
 
         Args:
@@ -1721,15 +1665,15 @@ class AsyncClient:
                 Configuration.get_headers.
 
         Returns:
-            OAuth2 client details as a dictionary.
+            OAuth2 client details as a Pydantic model.
         """
         result = await self.c.put(
             url=f"{self.v2api_host}/v2/oauth2/clients/{client_id}/uris/",
             headers=self.config.get_headers(**kwargs),
-            json=update.model_dump(by_alias=True),
+            json=update.model_dump(by_alias=True, mode="json"),
         )
         handle_server_errors(result)
-        return result.json()
+        return OAuth2Client(**result.json())
 
     async def delete_oauth2_client(
         self, client_id: str, **kwargs: Unpack[HeaderOptions]
@@ -1761,7 +1705,7 @@ class AsyncClient:
         label_selector: list[str] | None = None,
         with_project: bool = True,  # noqa: FBT001, FBT002
         **kwargs: Unpack[ProjectHeaderOptions],
-    ) -> dict[str, Any]:
+    ) -> ConfigTreeList:
         """List all config trees in a project.
 
         Args:
@@ -1776,7 +1720,7 @@ class AsyncClient:
                 Configuration.get_headers.
 
         Returns:
-            List of config trees as a dictionary.
+            List of config trees as a Pydantic model.
         """
         parameters = {
             "continue": cont,
@@ -1790,19 +1734,19 @@ class AsyncClient:
             params=parameters,
         )
         handle_server_errors(result)
-        return result.json()
+        return ConfigTreeList(**result.json())
 
     # Keep the positional signature accepted by existing SDK callers.
     async def create_configtree(
         self,
-        body: dict,
+        body: ConfigTree,
         with_project: bool = True,  # noqa: FBT001, FBT002
         **kwargs: Unpack[ProjectHeaderOptions],
-    ) -> dict[str, Any]:
+    ) -> ConfigTree:
         """Create a new config tree.
 
         Args:
-            body (object): Config tree details
+            body: Config tree details
             with_project (bool, optional): Work in the project scope. Defaults to
                 True.
 
@@ -1810,15 +1754,15 @@ class AsyncClient:
                 Configuration.get_headers.
 
         Returns:
-            Config tree details as a dictionary.
+            Config tree details as a Pydantic model.
         """
         result = await self.c.post(
             url=f"{self.v2api_host}/v2/configtrees/",
             headers=self.config.get_headers(with_project=with_project, **kwargs),
-            json=body,
+            json=body.model_dump(by_alias=True, exclude_unset=True, mode="json"),
         )
         handle_server_errors(result)
-        return result.json()
+        return ConfigTree(**result.json())
 
     # Keep the positional signature accepted by existing SDK callers.
     async def get_configtree(  # noqa: PLR0913, PLR0917
@@ -1830,7 +1774,7 @@ class AsyncClient:
         revision: str | None = None,
         with_project: bool = True,  # noqa: FBT001, FBT002
         **kwargs: Unpack[ProjectHeaderOptions],
-    ) -> dict[str, Any]:
+    ) -> ConfigTree:
         """Get a config tree by its name.
 
         Args:
@@ -1849,7 +1793,7 @@ class AsyncClient:
                 Configuration.get_headers.
 
         Returns:
-            Config tree details as a dictionary.
+            Config tree details as a Pydantic model.
         """
         result = await self.c.get(
             url=f"{self.v2api_host}/v2/configtrees/{name}/",
@@ -1862,49 +1806,49 @@ class AsyncClient:
             },
         )
         handle_server_errors(result)
-        return result.json()
+        return ConfigTree(**result.json())
 
     async def set_configtree_revision(
         self,
         name: str,
-        configtree: object,
+        configtree: ConfigTree,
         project_guid: str | None = None,
         **kwargs: Unpack[ProjectOverrideHeaderOptions],
-    ) -> dict[str, Any]:
+    ) -> ConfigTree:
         """Set a config tree revision.
 
         Args:
             name (str): Config tree name
-            configtree (object): Config tree details
+            configtree: Config tree details
             project_guid (str, optional): Project GUID. async defaults to None.
 
             **kwargs: Additional request header options passed to
                 Configuration.get_headers.
 
         Returns:
-            Config tree details as a dictionary.
+            Config tree details as a Pydantic model.
         """
         result = await self.c.put(
             url=f"{self.v2api_host}/v2/configtrees/{name}/",
             headers=self.config.get_headers(project_guid=project_guid, **kwargs),
-            json=configtree,
+            json=configtree.model_dump(by_alias=True, exclude_unset=True, mode="json"),
         )
         handle_server_errors(result)
-        return result.json()
+        return ConfigTree(**result.json())
 
     # Keep the positional signature accepted by existing SDK callers.
     async def update_configtree(
         self,
         name: str,
-        body: dict,
+        body: ConfigTree,
         with_project: bool = True,  # noqa: FBT001, FBT002
         **kwargs: Unpack[ProjectHeaderOptions],
-    ) -> dict[str, Any]:
+    ) -> ConfigTree:
         """Update a config tree by its name.
 
         Args:
             name (str): Config tree name
-            body (dict): Update details
+            body: Update details
             with_project (bool, optional): Work in the project scope. Defaults to
                 True.
 
@@ -1912,17 +1856,17 @@ class AsyncClient:
                 Configuration.get_headers.
 
         Returns:
-            Config tree details as a dictionary.
+            Config tree details as a Pydantic model.
         """
         result = await self.c.put(
             url=f"{self.v2api_host}/v2/configtrees/{name}/",
             headers=self.config.get_headers(with_project=with_project, **kwargs),
-            json=body,
+            json=body.model_dump(by_alias=True, exclude_unset=True, mode="json"),
         )
 
         handle_server_errors(result)
 
-        return result.json()
+        return ConfigTree(**result.json())
 
     async def delete_configtree(
         self, name: str, **kwargs: Unpack[HeaderOptions]
@@ -1953,7 +1897,7 @@ class AsyncClient:
         committed: bool = False,  # noqa: FBT001, FBT002
         label_selector: list[str] | None = None,
         **kwargs: Unpack[HeaderOptions],
-    ) -> dict[str, Any]:
+    ) -> ConfigTreeRevisionList:
         """List all revisions of a config tree.
 
         Args:
@@ -1968,7 +1912,7 @@ class AsyncClient:
                 Configuration.get_headers.
 
         Returns:
-            List of revisions as a dictionary.
+            List of revisions as a Pydantic model.
         """
         parameters = {
             "continue": cont,
@@ -1985,110 +1929,96 @@ class AsyncClient:
         )
 
         handle_server_errors(result)
-        return result.json()
+        return ConfigTreeRevisionList(**result.json())
 
     async def create_revision(
         self,
         name: str,
-        body: dict,
+        body: ConfigTreeRevision | None = None,
         project_guid: str | None = None,
         **kwargs: Unpack[ProjectOverrideHeaderOptions],
-    ) -> dict[str, Any]:
+    ) -> ConfigTreeRevision:
         """Create a new revision.
 
         Args:
             name (str): Config tree name
-            body (object): Revision details
+            body: Revision details
             project_guid (str): Project GUID (optional)
 
             **kwargs: Additional request header options passed to
                 Configuration.get_headers.
 
         Returns:
-            Revision details as a dictionary.
+            Revision details as a Pydantic model.
         """
         result = await self.c.post(
             url=f"{self.v2api_host}/v2/configtrees/{name}/revisions/",
             headers=self.config.get_headers(project_guid=project_guid, **kwargs),
-            json=body,
+            json=body.model_dump(by_alias=True, exclude_unset=True, mode="json")
+            if body is not None
+            else None,
         )
 
         handle_server_errors(result)
-        return result.json()
+        return ConfigTreeRevision(**result.json())
 
     async def put_keys_in_revision(
         self,
         name: str,
         revision_id: str,
-        config_values: dict,
+        config_values: ConfigValues,
         **kwargs: Unpack[HeaderOptions],
-    ) -> dict[str, Any]:
+    ) -> APIResponse:
         """Put keys in a revision.
 
         Args:
             name (str): Config tree name
             revision_id (str): Config tree revision ID
-            config_values (dict): Config values
+            config_values: Config values
 
             **kwargs: Additional request header options passed to
                 Configuration.get_headers.
 
         Returns:
-            Revision details as a dictionary.
+            APIResponse: Mutation success status.
         """
         result = await self.c.put(
             url=f"{self.v2api_host}/v2/configtrees/{name}/revisions/{revision_id}/keys/",
             headers=self.config.get_headers(**kwargs),
-            json=config_values,
+            json=config_values.model_dump(
+                by_alias=True, exclude_unset=True, mode="json"
+            ),
         )
 
         handle_server_errors(result)
-        return result.json()
+        return APIResponse(**result.json())
 
-    # Keep the positional signature accepted by existing SDK callers.
-    async def commit_revision(  # noqa: PLR0913, PLR0917
+    async def commit_revision(
         self,
         tree_name: str,
         revision_id: str,
-        author: str | None = None,
-        message: str | None = None,
+        body: ConfigTreeRevision,
+        *,
         project_guid: str | None = None,
-        labels: dict[str, str] | None = None,
         **kwargs: Unpack[ProjectOverrideHeaderOptions],
-    ) -> dict[str, Any]:
-        """Commit a revision.
+    ) -> ConfigTreeRevision:
+        """Commit a revision with the supplied author, message, and labels.
 
         Args:
-            tree_name (str): Config tree name
-            revision_id (str): Config tree revision ID
-            author (str, optional): Revision Author. Defaults to None.
-            message (str, optional): Revision Message. Defaults to None.
-            project_guid (str, optional): Project GUID. Defaults to None.
-            labels (dict, optional): Labels to set on the revision. Defaults to
-                None.
-
+            tree_name: Config tree name.
+            revision_id: Revision to commit.
+            body: Commit information and optional metadata labels.
+            project_guid: Project GUID override.
             **kwargs: Additional request header options passed to
                 Configuration.get_headers.
-
-        Returns:
-            Revision details as a dictionary.
         """
-        config_tree_revision = {
-            "author": author,
-            "message": message,
-        }
-
-        if labels:
-            config_tree_revision["metadata"] = {"labels": labels}
-
         result = await self.c.patch(
             url=f"{self.v2api_host}/v2/configtrees/{tree_name}/revisions/{revision_id}/",
             headers=self.config.get_headers(project_guid=project_guid, **kwargs),
-            json=config_tree_revision,
+            json=body.model_dump(by_alias=True, exclude_unset=True, mode="json"),
         )
-
         handle_server_errors(result)
-        return result.json()
+        return ConfigTreeRevision(**result.json())
 
     # Keep the positional signature accepted by existing SDK callers.
     async def get_key_in_revision(  # noqa: PLR0917
@@ -2098,7 +2028,7 @@ class AsyncClient:
         key: str,
         project_guid: str | None = None,
         **kwargs: Unpack[ProjectOverrideHeaderOptions],
-    ) -> object:
+    ) -> ConfigKeyContent:
         """Get a key in a revision.
 
         Args:
@@ -2111,16 +2041,14 @@ class AsyncClient:
                 Configuration.get_headers.
 
         Returns:
-            Key details as a dictionary.
+            Decoded JSON/YAML values or raw binary bytes in ConfigKeyContent.root.
         """
         result = await self.c.get(
             url=f"{self.v2api_host}/v2/configtrees/{tree_name}/revisions/{revision_id}/{key}/",
             headers=self.config.get_headers(project_guid=project_guid, **kwargs),
         )
-        # The data received from the API is always in string format. To use
-        # appropriate data-type in Python (as well in exports), we are
-        # passing it through YAML parser.
-        return safe_load(result.text)
+        handle_server_errors(result)
+        return ConfigKeyContent(decode_config_key_content(result))
 
     # Keep the positional signature accepted by existing SDK callers.
     async def put_key_in_revision(  # noqa: PLR0917
@@ -2128,10 +2056,10 @@ class AsyncClient:
         tree_name: str,
         revision_id: str,
         key: str,
-        body: str | bytes | Iterable[bytes] | AsyncIterable[bytes] | None,
+        body: ConfigKeyUpload,
         project_guid: str | None = None,
         **kwargs: Unpack[ProjectOverrideHeaderOptions],
-    ) -> dict[str, Any]:
+    ) -> APIResponse:
         """Put a key in a revision.
 
         Args:
@@ -2145,15 +2073,15 @@ class AsyncClient:
                 Configuration.get_headers.
 
         Returns:
-            Key details as a dictionary.
+            APIResponse: Mutation success status.
         """
         result = await self.c.put(
             url=f"{self.v2api_host}/v2/configtrees/{tree_name}/revisions/{revision_id}/{key}/",
             headers=self.config.get_headers(project_guid=project_guid, **kwargs),
-            content=body,
+            content=body.root,
         )
         handle_server_errors(result)
-        return result.json()
+        return APIResponse(**result.json())
 
     # Keep the positional signature accepted by existing SDK callers.
     async def delete_key_in_revision(  # noqa: PLR0917
@@ -2190,33 +2118,35 @@ class AsyncClient:
         tree_name: str,
         revision_id: str,
         key: str,
-        config_key_rename: dict,
+        config_key_rename: ConfigKeyRename,
         project_guid: str | None = None,
         **kwargs: Unpack[ProjectOverrideHeaderOptions],
-    ) -> dict[str, Any]:
+    ) -> APIResponse:
         """Rename a key in a revision.
 
         Args:
             tree_name (str): Config tree name
             revision_id (str): Config tree revision ID
             key (str): Key
-            config_key_rename (dict): Key rename details
+            config_key_rename: Key rename details
             project_guid (str, optional): Project GUID. async defaults to None.
 
             **kwargs: Additional request header options passed to
                 Configuration.get_headers.
 
         Returns:
-            Key details as a dictionary.
+            APIResponse: Mutation success status.
         """
         result = await self.c.patch(
             url=f"{self.v2api_host}/v2/configtrees/{tree_name}/revisions/{revision_id}/{key}/",
             headers=self.config.get_headers(project_guid=project_guid, **kwargs),
-            json=config_key_rename,
+            json=config_key_rename.model_dump(
+                by_alias=True, exclude_unset=True, mode="json"
+            ),
         )
 
         handle_server_errors(result)
-        return result.json()
+        return APIResponse(**result.json())
 
     # Managed Service API
 
@@ -2224,7 +2154,7 @@ class AsyncClient:
         """List all providers.
 
         Returns:
-            List of providers as a dictionary.
+            List of providers as a Pydantic model.
         """
         result = await self.c.get(
             url=f"{self.v2api_host}/v2/managedservices/providers/",
@@ -2253,7 +2183,7 @@ class AsyncClient:
                 Defaults to None.
 
         Returns:
-            List of instances as a dictionary.
+            List of instances as a Pydantic model.
         """
         result = await self.c.get(
             url=f"{self.v2api_host}/v2/managedservices/",
@@ -2276,7 +2206,7 @@ class AsyncClient:
             name (str): Instance name
 
         Returns:
-            Instance details as a dictionary.
+            Instance details as a Pydantic model.
         """
         result = await self.c.get(
             url=f"{self.v2api_host}/v2/managedservices/{name}/",
@@ -2287,7 +2217,7 @@ class AsyncClient:
         return ManagedServiceInstance(**result.json())
 
     async def create_instance(
-        self, body: ManagedServiceInstance | dict[str, Any]
+        self, body: ManagedServiceInstance
     ) -> ManagedServiceInstance:
         """Create a new instance.
 
@@ -2297,13 +2227,10 @@ class AsyncClient:
         Returns:
             Instance details as a ManagedServiceInstance object.
         """
-        if isinstance(body, dict):
-            body = ManagedServiceInstance.model_validate(body)
-
         result = await self.c.post(
             url=f"{self.v2api_host}/v2/managedservices/",
             headers=self.config.get_headers(),
-            json=body.model_dump(by_alias=True),
+            json=body.model_dump(by_alias=True, mode="json"),
         )
 
         handle_server_errors(result)
@@ -2343,7 +2270,7 @@ class AsyncClient:
                 instance bindings from. Defaults to None.
 
         Returns:
-            List of instance bindings as a dictionary.
+            List of instance bindings as a Pydantic model.
         """
         result = await self.c.get(
             url=f"{self.v2api_host}/v2/managedservices/{instance_name}/bindings/",
@@ -2359,24 +2286,21 @@ class AsyncClient:
         return ManagedServiceBindingList(**result.json())
 
     async def create_instance_binding(
-        self, instance_name: str, body: ManagedServiceBinding | dict
+        self, instance_name: str, body: ManagedServiceBinding
     ) -> ManagedServiceBinding:
         """Create a new instance binding.
 
         Args:
             instance_name (str): Instance name.
-            body (object): Instance binding details.
+            body: Instance binding details.
 
         Returns:
-            Instance binding details as a dictionary.
+            Instance binding details as a Pydantic model.
         """
-        if isinstance(body, dict):
-            body = ManagedServiceBinding.model_validate(body)
-
         result = await self.c.post(
             url=f"{self.v2api_host}/v2/managedservices/{instance_name}/bindings/",
             headers=self.config.get_headers(),
-            json=body.model_dump(by_alias=True),
+            json=body.model_dump(by_alias=True, mode="json"),
         )
 
         handle_server_errors(result)
@@ -2392,7 +2316,7 @@ class AsyncClient:
             name (str): Instance binding name.
 
         Returns:
-            Instance binding details as a dictionary.
+            Instance binding details as a Pydantic model.
         """
         result = await self.c.get(
             url=f"{self.v2api_host}/v2/managedservices/{instance_name}/bindings/{name}/",
@@ -2483,7 +2407,7 @@ class AsyncClient:
         return UserGroup(**result.json())
 
     async def create_user_group(
-        self, user_group: UserGroup, **kwargs: Unpack[ProjectHeaderOptions]
+        self, user_group: UserGroupCreate, **kwargs: Unpack[ProjectHeaderOptions]
     ) -> UserGroup:
         """Create user group.
 
@@ -2495,7 +2419,7 @@ class AsyncClient:
         result = await self.c.post(
             url=f"{self.v2api_host}/v2/usergroups/",
             headers=self.config.get_headers(with_project=False, **kwargs),
-            json=user_group.model_dump(by_alias=True),
+            json=user_group.model_dump(by_alias=True, mode="json"),
         )
         handle_server_errors(result)
 
@@ -2519,7 +2443,7 @@ class AsyncClient:
                 group_guid=user_group.metadata.guid,
                 **kwargs,
             ),
-            json=user_group.model_dump(by_alias=True),
+            json=user_group.model_dump(by_alias=True, mode="json"),
         )
         handle_server_errors(result)
 
@@ -2602,7 +2526,7 @@ class AsyncClient:
         return Role(**result.json())
 
     async def create_role(
-        self, role: Role | dict, **kwargs: Unpack[ProjectHeaderOptions]
+        self, role: Role, **kwargs: Unpack[ProjectHeaderOptions]
     ) -> Role:
         """Create role.
 
@@ -2611,12 +2535,10 @@ class AsyncClient:
             **kwargs: Additional request header options passed to
                 Configuration.get_headers.
         """
-        if isinstance(role, dict):
-            role = Role.model_validate(role)
         result = await self.c.post(
             url=f"{self.v2api_host}/v2/roles/",
             headers=self.config.get_headers(with_project=False, **kwargs),
-            json=role.model_dump(by_alias=True),
+            json=role.model_dump(by_alias=True, mode="json"),
         )
         handle_server_errors(result)
 
@@ -2632,12 +2554,10 @@ class AsyncClient:
             **kwargs: Additional request header options passed to
                 Configuration.get_headers.
         """
-        if isinstance(role, dict):
-            role = Role.model_validate(role)
         result = await self.c.put(
             url=f"{self.v2api_host}/v2/roles/{role.metadata.name}/",
             headers=self.config.get_headers(with_project=False, **kwargs),
-            json=role.model_dump(by_alias=True),
+            json=role.model_dump(by_alias=True, mode="json"),
         )
         handle_server_errors(result)
 
@@ -2739,10 +2659,8 @@ class AsyncClient:
         return RoleBinding(**result.json())
 
     async def update_role_binding(
-        self,
-        binding: BulkRoleBindingUpdate | dict,
-        **kwargs: Unpack[ProjectHeaderOptions],
-    ) -> RoleBinding | dict[str, Any]:
+        self, binding: BulkRoleBindingUpdate, **kwargs: Unpack[ProjectHeaderOptions]
+    ) -> BulkRoleBindingUpdate:
         """Update role binding.
 
         Args:
@@ -2750,19 +2668,14 @@ class AsyncClient:
             **kwargs: Additional request header options passed to
                 Configuration.get_headers.
         """
-        if isinstance(binding, dict):
-            binding = BulkRoleBindingUpdate.model_validate(binding)
         result = await self.c.put(
             url=f"{self.v2api_host}/v2/role-bindings/",
             headers=self.config.get_headers(with_project=False, **kwargs),
-            json=binding.model_dump(by_alias=True),
+            json=binding.model_dump(by_alias=True, mode="json"),
         )
         handle_server_errors(result)
 
-        try:
-            return RoleBinding(**result.json())
-        except (PydanticValidationError, TypeError):
-            return result.json()
+        return BulkRoleBindingUpdate(**result.json())
 
     # -------------------ServiceAccount-------------------
 
@@ -2830,7 +2743,7 @@ class AsyncClient:
 
     async def create_service_account(
         self,
-        service_account: ServiceAccount | dict,
+        service_account: ServiceAccount,
         **kwargs: Unpack[ProjectHeaderOptions],
     ) -> ServiceAccount:
         """Create service account.
@@ -2840,12 +2753,10 @@ class AsyncClient:
             **kwargs: Additional request header options passed to
                 Configuration.get_headers.
         """
-        if isinstance(service_account, dict):
-            service_account = ServiceAccount.model_validate(service_account)
         result = await self.c.post(
             url=f"{self.v2api_host}/v2/serviceaccounts/",
             headers=self.config.get_headers(with_project=False, **kwargs),
-            json=service_account.model_dump(by_alias=True),
+            json=service_account.model_dump(by_alias=True, mode="json"),
         )
 
         handle_server_errors(result)
@@ -2853,7 +2764,7 @@ class AsyncClient:
 
     async def update_service_account(
         self,
-        service_account: ServiceAccount | dict,
+        service_account: ServiceAccount,
         name: str | None,
         **kwargs: Unpack[ProjectHeaderOptions],
     ) -> ServiceAccount:
@@ -2865,14 +2776,12 @@ class AsyncClient:
             **kwargs: Additional request header options passed to
                 Configuration.get_headers.
         """
-        if isinstance(service_account, dict):
-            service_account = ServiceAccount.model_validate(service_account)
         if not name:
             name = service_account.metadata.name
         result = await self.c.put(
             url=f"{self.v2api_host}/v2/serviceaccounts/{name}/",
             headers=self.config.get_headers(with_project=False, **kwargs),
-            json=service_account.model_dump(by_alias=True),
+            json=service_account.model_dump(by_alias=True, mode="json"),
         )
 
         handle_server_errors(result)
@@ -2926,7 +2835,7 @@ class AsyncClient:
     async def create_service_account_token(
         self,
         name: str,
-        expiry_at: ServiceAccountToken | dict,
+        expiry_at: ServiceAccountToken,
         **kwargs: Unpack[ProjectHeaderOptions],
     ) -> ServiceAccountTokenInfo:
         """Create service account token.
@@ -2937,9 +2846,6 @@ class AsyncClient:
             **kwargs: Additional request header options passed to
                 Configuration.get_headers.
         """
-        if isinstance(expiry_at, dict):
-            expiry_at = ServiceAccountToken.model_validate(expiry_at)
-
         result = await self.c.post(
             url=f"{self.v2api_host}/v2/serviceaccounts/{name}/tokens/",
             headers=self.config.get_headers(with_project=False, **kwargs),
@@ -2954,7 +2860,7 @@ class AsyncClient:
         self,
         name: str,
         token_id: str,
-        expiry_at: ServiceAccountToken | dict,
+        expiry_at: ServiceAccountToken,
         **kwargs: Unpack[ProjectHeaderOptions],
     ) -> ServiceAccountTokenInfo:
         """Refresh service account token.
@@ -2966,9 +2872,6 @@ class AsyncClient:
             **kwargs: Additional request header options passed to
                 Configuration.get_headers.
         """
-        if isinstance(expiry_at, dict):
-            expiry_at = ServiceAccountToken.model_validate(expiry_at)
-
         result = await self.c.patch(
             url=f"{self.v2api_host}/v2/serviceaccounts/{name}/tokens/{token_id}/",
             headers=self.config.get_headers(with_project=False, **kwargs),
@@ -3072,14 +2975,14 @@ class AsyncClient:
     async def create_fileupload(
         self,
         device_guid: str,
-        body: FileUpload | dict[str, Any],
+        body: FileUpload,
         **kwargs: Unpack[HeaderOptions],
     ) -> FileUpload:
         """Create a new file upload for a device.
 
         Args:
             device_guid (str): Device GUID.
-            body (FileUpload | dict): File upload specification.
+            body (FileUpload): File upload specification.
 
             **kwargs: Additional request header options passed to
                 Configuration.get_headers.
@@ -3087,9 +2990,6 @@ class AsyncClient:
         Returns:
             FileUpload: Created file upload details.
         """
-        if isinstance(body, dict):
-            body = FileUpload.model_validate(body)
-
         result = await self.c.post(
             url=f"{self.v2api_host}/v2/devices/{device_guid}/fileuploads/",
             headers=self.config.get_headers(**kwargs),
@@ -3151,7 +3051,7 @@ class AsyncClient:
         device_guid: str,
         guid: str,
         **kwargs: Unpack[HeaderOptions],
-    ) -> dict[str, Any]:
+    ) -> FileUploadDownloadResponse:
         """Get the download URL for a file upload.
 
         Args:
@@ -3162,14 +3062,14 @@ class AsyncClient:
                 Configuration.get_headers.
 
         Returns:
-            dict[str, Any]: Dictionary containing the signed download URL.
+            FileUploadDownloadResponse: Model containing the signed download URL.
         """
         result = await self.c.get(
             url=f"{self.v2api_host}/v2/devices/{device_guid}/fileuploads/{guid}/download/",
             headers=self.config.get_headers(**kwargs),
         )
         handle_server_errors(result)
-        return result.json()
+        return FileUploadDownloadResponse(**result.json())
 
     # -------------------SharedURL-------------------
     async def list_sharedurls(
@@ -3230,14 +3130,14 @@ class AsyncClient:
     async def create_sharedurl(
         self,
         fileupload_guid: str,
-        body: SharedURL | dict[str, Any],
+        body: SharedURL,
         **kwargs: Unpack[HeaderOptions],
     ) -> SharedURL:
         """Create a shared URL for a file upload.
 
         Args:
             fileupload_guid (str): File upload GUID.
-            body (SharedURL | dict): Shared URL specification with expiry time.
+            body (SharedURL): Shared URL specification with expiry time.
 
             **kwargs: Additional request header options passed to
                 Configuration.get_headers.
@@ -3248,9 +3148,6 @@ class AsyncClient:
         Note:
             File upload must be in PENDING, IN PROGRESS, or COMPLETED status.
         """
-        if isinstance(body, dict):
-            body = SharedURL.model_validate(body)
-
         result = await self.c.post(
             url=f"{self.v2api_host}/v2/devices/fileuploads/{fileupload_guid}/sharedurls/",
             headers=self.config.get_headers(**kwargs),
@@ -3262,7 +3159,7 @@ class AsyncClient:
     # -------------------SSH Certificates-------------------
     async def sign_ssh_public_key(
         self,
-        body: SSHKeySignRequest | dict[str, Any],
+        body: SSHKeySignRequest,
         **kwargs: Unpack[HeaderOptions],
     ) -> SSHKeySignResponse:
         """Sign an SSH public key.
@@ -3271,7 +3168,7 @@ class AsyncClient:
         and returns a signed SSH certificate.
 
         Args:
-            body (SSHKeySignRequest | dict): The SSH public key to sign.
+            body (SSHKeySignRequest): The SSH public key to sign.
 
             **kwargs: Additional request header options passed to
                 Configuration.get_headers.
@@ -3279,13 +3176,10 @@ class AsyncClient:
         Returns:
             SSHKeySignResponse: The signed SSH certificate.
         """
-        if isinstance(body, dict):
-            body = SSHKeySignRequest.model_validate(body)
-
         result = await self.c.post(
             url=f"{self.v2api_host}/v2/certs/ssh/sign/",
             headers=self.config.get_headers(**kwargs),
-            json=body.model_dump(by_alias=True),
+            json=body.model_dump(by_alias=True, mode="json"),
         )
         handle_server_errors(result)
         return SSHKeySignResponse(**result.json())

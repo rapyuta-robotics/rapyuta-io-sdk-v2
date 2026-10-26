@@ -21,7 +21,10 @@ import httpx
 import pytest
 
 from rapyuta_io_sdk_v2.exceptions import HttpNotFoundError, UnauthorizedAccessError
-from rapyuta_io_sdk_v2.models import Disk, DiskList
+from rapyuta_io_sdk_v2.models import (
+    Disk,
+    DiskList,
+)
 
 if TYPE_CHECKING:
     from pytest_mock import MockFixture
@@ -90,7 +93,7 @@ async def test_create_disk_unauthorized(
     )
 
     with pytest.raises(UnauthorizedAccessError) as exc:
-        await async_client.create_disk(body=disk_body)
+        await async_client.create_disk(body=Disk.model_validate(disk_body))
 
     assert str(exc.value) == "unauthorized"
 

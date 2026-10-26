@@ -18,10 +18,12 @@ This module contains Pydantic models for SSH public key signing requests
 and responses, used by the /v2/certs/ssh/sign/ endpoint.
 """
 
-from pydantic import BaseModel, Field
+from pydantic import Field
+
+from rapyuta_io_sdk_v2.models.base import SDKModel
 
 
-class SSHKeySignRequest(BaseModel):
+class SSHKeySignRequest(SDKModel):
     """Request body for signing an SSH public key."""
 
     public_key: str = Field(
@@ -30,7 +32,7 @@ class SSHKeySignRequest(BaseModel):
     )
 
 
-class SSHKeySignResponse(BaseModel):
+class SSHKeySignResponse(SDKModel):
     """Response from the SSH public key signing endpoint."""
 
     certificate: str = Field(

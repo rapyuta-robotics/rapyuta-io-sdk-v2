@@ -24,6 +24,14 @@ from rapyuta_io_sdk_v2.exceptions import (
     BadGatewayError,
     ServiceUnavailableError,
 )
+from rapyuta_io_sdk_v2.models import (
+    ConfigKeyRename,
+    ConfigKeyUpload,
+    ConfigTree,
+    ConfigTreeRevision,
+    ConfigValue,
+    ConfigValues,
+)
 
 if TYPE_CHECKING:
     from pytest_mock import MockFixture
@@ -37,13 +45,19 @@ def test_list_configtrees_success(*, client: Client, mocker: MockFixture) -> Non
         status_code=200,
         json={
             "metadata": {"continue": 1},
-            "items": [{"name": "test-configtree", "guid": "mock_configtree_guid"}],
+            "items": [
+                {
+                    "metadata": {
+                        "name": "test-configtree",
+                        "guid": "mock_configtree_guid",
+                    }
+                }
+            ],
         },
     )
     response = client.list_configtrees()
-    assert response["items"] == [
-        {"name": "test-configtree", "guid": "mock_configtree_guid"}
-    ]
+    assert response.items[0].metadata.name == "test-configtree"
+    assert response.items[0].metadata.guid == "mock_configtree_guid"
 
 
 def test_list_configtrees_bad_gateway(*, client: Client, mocker: MockFixture) -> None:
@@ -67,8 +81,8 @@ def test_create_configtree_success(
             "metadata": {"guid": "test_configtree_guid", "name": "test_configtree"},
         },
     )
-    response = client.create_configtree(configtree_body)
-    assert response["metadata"]["guid"] == "test_configtree_guid"
+    response = client.create_configtree(ConfigTree.model_validate(configtree_body))
+    assert response.metadata.guid == "test_configtree_guid"
 
 
 def test_create_configtree_service_unavailable(
@@ -80,7 +94,7 @@ def test_create_configtree_service_unavailable(
         json={"error": "service unavailable"},
     )
     with pytest.raises(ServiceUnavailableError) as exc:
-        client.create_configtree(configtree_body)
+        client.create_configtree(ConfigTree.model_validate(configtree_body))
     assert str(exc.value) == "service unavailable"
 
 
@@ -93,8 +107,8 @@ def test_get_configtree_success(*, client: Client, mocker: MockFixture) -> None:
         },
     )
     response = client.get_configtree(name="mock_configtree_name")
-    assert response["metadata"]["guid"] == "test_configtree_guid"
-    assert response["metadata"]["name"] == "test_configtree"
+    assert response.metadata.guid == "test_configtree_guid"
+    assert response.metadata.name == "test_configtree"
 
 
 def test_set_configtree_revision_success(
@@ -108,10 +122,11 @@ def test_set_configtree_revision_success(
         },
     )
     response = client.set_configtree_revision(
-        name="mock_configtree_name", configtree=configtree_body
+        name="mock_configtree_name",
+        configtree=ConfigTree.model_validate(configtree_body),
     )
-    assert response["metadata"]["guid"] == "test_configtree_guid"
-    assert response["metadata"]["name"] == "test_configtree"
+    assert response.metadata.guid == "test_configtree_guid"
+    assert response.metadata.name == "test_configtree"
 
 
 def test_update_configtree_success(
@@ -125,10 +140,10 @@ def test_update_configtree_success(
         },
     )
     response = client.update_configtree(
-        name="mock_configtree_name", body=configtree_body
+        name="mock_configtree_name", body=ConfigTree.model_validate(configtree_body)
     )
-    assert response["metadata"]["guid"] == "test_configtree_guid"
-    assert response["metadata"]["name"] == "test_configtree"
+    assert response.metadata.guid == "test_configtree_guid"
+    assert response.metadata.name == "test_configtree"
 
 
 def test_delete_configtree_success(*, client: Client, mocker: MockFixture) -> None:
@@ -147,13 +162,19 @@ def test_list_revisions_success(*, client: Client, mocker: MockFixture) -> None:
         status_code=200,
         json={
             "metadata": {"continue": 1},
-            "items": [{"name": "test-configtree", "guid": "mock_configtree_guid"}],
+            "items": [
+                {
+                    "metadata": {
+                        "name": "test-configtree",
+                        "guid": "mock_configtree_guid",
+                    }
+                }
+            ],
         },
     )
     response = client.list_revisions(tree_name="mock_configtree_name")
-    assert response["items"] == [
-        {"name": "test-configtree", "guid": "mock_configtree_guid"}
-    ]
+    assert response.items[0].metadata.name == "test-configtree"
+    assert response.items[0].metadata.guid == "mock_configtree_guid"
 
 
 def test_create_revision_success(
@@ -166,25 +187,26 @@ def test_create_revision_success(
             "metadata": {"guid": "test_revision_guid", "name": "test_revision"},
         },
     )
-    response = client.create_revision(name="mock_configtree_name", body=configtree_body)
-    assert response["metadata"]["guid"] == "test_revision_guid"
+    response = client.create_revision(
+        name="mock_configtree_name",
+        body=ConfigTreeRevision.model_validate(configtree_body),
+    )
+    assert response.metadata.guid == "test_revision_guid"
 
 
 def test_put_keys_in_revision_success(*, client: Client, mocker: MockFixture) -> None:
     mock_put = mocker.patch("httpx.Client.put")
     mock_put.return_value = httpx.Response(
         status_code=200,
-        json={
-            "metadata": {"guid": "test_revision_guid", "name": "test_revision"},
-        },
+        json={"success": True},
     )
     response = client.put_keys_in_revision(
         name="mock_configtree_name",
         revision_id="mock_revision_id",
-        config_values=["mock_value1", "mock_value2"],
+        config_values=ConfigValues({"mock_key": ConfigValue(data="dmFsdWU=")}),
     )
-    assert response["metadata"]["guid"] == "test_revision_guid"
-    assert response["metadata"]["name"] == "test_revision"
+    assert response.success is True
+    assert response.success is True
 
 
 def test_commit_revision_success(*, client: Client, mocker: MockFixture) -> None:
@@ -198,9 +220,10 @@ def test_commit_revision_success(*, client: Client, mocker: MockFixture) -> None
     response = client.commit_revision(
         tree_name="mock_configtree_name",
         revision_id="mock_revision_id",
+        body=ConfigTreeRevision(),
     )
-    assert response["metadata"]["guid"] == "test_revision_guid"
-    assert response["metadata"]["name"] == "test_revision"
+    assert response.metadata.guid == "test_revision_guid"
+    assert response.metadata.name == "test_revision"
 
 
 def test_commit_revision_with_labels(*, client: Client, mocker: MockFixture) -> None:
@@ -218,10 +241,10 @@ def test_commit_revision_with_labels(*, client: Client, mocker: MockFixture) -> 
     response = client.commit_revision(
         tree_name="mock_configtree_name",
         revision_id="mock_revision_id",
-        labels={"rapyuta.io/milestone": "v1.0"},
+        body=ConfigTreeRevision(metadata={"labels": {"rapyuta.io/milestone": "v1.0"}}),
     )
-    assert response["metadata"]["guid"] == "test_revision_guid"
-    assert response["metadata"]["labels"]["rapyuta.io/milestone"] == "v1.0"
+    assert response.metadata.guid == "test_revision_guid"
+    assert response.metadata.labels["rapyuta.io/milestone"] == "v1.0"
 
     # Verify the request body included metadata.labels
     call_kwargs = mock_patch.call_args
@@ -245,8 +268,8 @@ def test_get_key_in_revision_str(*, client: Client, mocker: MockFixture) -> None
     )
 
     # Validate the response
-    assert isinstance(response, str)
-    assert response == "test_value"
+    assert isinstance(response.root, str)
+    assert response.root == "test_value"
 
 
 def test_get_key_in_revision_int(*, client: Client, mocker: MockFixture) -> None:
@@ -266,8 +289,8 @@ def test_get_key_in_revision_int(*, client: Client, mocker: MockFixture) -> None
     )
 
     # Validate the response
-    assert isinstance(response, int)
-    assert response == expected_value
+    assert isinstance(response.root, int)
+    assert response.root == expected_value
 
 
 def test_get_key_in_revision_bool(*, client: Client, mocker: MockFixture) -> None:
@@ -282,26 +305,24 @@ def test_get_key_in_revision_bool(*, client: Client, mocker: MockFixture) -> Non
     )
 
     # Validate the response
-    assert isinstance(response, bool)
-    assert response
+    assert isinstance(response.root, bool)
+    assert response.root
 
 
 def test_put_key_in_revision_success(*, client: Client, mocker: MockFixture) -> None:
     mock_put = mocker.patch("httpx.Client.put")
     mock_put.return_value = httpx.Response(
         status_code=200,
-        json={
-            "metadata": {"guid": "test_revision_guid", "name": "test_revision"},
-        },
+        json={"success": True},
     )
     response = client.put_key_in_revision(
         tree_name="mock_configtree_name",
         revision_id="mock_revision_id",
         key="mock_key",
-        body="value",
+        body=ConfigKeyUpload("value"),
     )
-    assert response["metadata"]["guid"] == "test_revision_guid"
-    assert response["metadata"]["name"] == "test_revision"
+    assert response.success is True
+    assert response.success is True
 
 
 def test_delete_key_in_revision_success(*, client: Client, mocker: MockFixture) -> None:
@@ -320,15 +341,13 @@ def test_rename_key_in_revision_success(*, client: Client, mocker: MockFixture) 
     mock_patch = mocker.patch("httpx.Client.patch")
     mock_patch.return_value = httpx.Response(
         status_code=200,
-        json={
-            "metadata": {"guid": "test_revision_guid", "name": "test_revision"},
-        },
+        json={"success": True},
     )
     response = client.rename_key_in_revision(
         tree_name="mock_configtree_name",
         revision_id="mock_revision_id",
         key="mock_key",
-        config_key_rename={"metadata": {"name": "test_key"}},
+        config_key_rename=ConfigKeyRename(name="test_key"),
     )
-    assert response["metadata"]["guid"] == "test_revision_guid"
-    assert response["metadata"]["name"] == "test_revision"
+    assert response.success is True
+    assert response.success is True

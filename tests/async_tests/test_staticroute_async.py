@@ -21,7 +21,10 @@ import httpx
 import pytest
 
 from rapyuta_io_sdk_v2.exceptions import HttpNotFoundError, UnauthorizedAccessError
-from rapyuta_io_sdk_v2.models import StaticRoute, StaticRouteList
+from rapyuta_io_sdk_v2.models import (
+    StaticRoute,
+    StaticRouteList,
+)
 
 if TYPE_CHECKING:
     from pytest_mock import MockFixture
@@ -93,7 +96,9 @@ async def test_create_staticroute_unauthorized(
     )
 
     with pytest.raises(UnauthorizedAccessError) as exc:
-        await async_client.create_staticroute(body=staticroute_body)
+        await async_client.create_staticroute(
+            body=StaticRoute.model_validate(staticroute_body)
+        )
 
     assert str(exc.value) == "unauthorized"
 
@@ -113,7 +118,7 @@ async def test_update_staticroute_success(
     )
 
     response = await async_client.update_staticroute(
-        name="test-staticroute", body=staticroute_body
+        name="test-staticroute", body=StaticRoute.model_validate(staticroute_body)
     )
 
     assert isinstance(response, StaticRoute)

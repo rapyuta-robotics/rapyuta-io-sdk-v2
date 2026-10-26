@@ -112,7 +112,7 @@ async def test_create_fileupload_success(
 
     response = await async_client.create_fileupload(
         device_guid=MOCK_DEVICE_GUID,
-        body=fileupload_body,
+        body=FileUpload.model_validate(fileupload_body),
     )
 
     assert isinstance(response, FileUpload)
@@ -132,7 +132,7 @@ async def test_create_fileupload_unauthorized(
     with pytest.raises(UnauthorizedAccessError) as exc:
         await async_client.create_fileupload(
             device_guid=MOCK_DEVICE_GUID,
-            body=fileupload_body,
+            body=FileUpload.model_validate(fileupload_body),
         )
 
     assert str(exc.value) == "unauthorized"
@@ -187,7 +187,7 @@ async def test_download_fileupload_success(
         guid=MOCK_FILEUPLOAD_GUID,
     )
 
-    assert response["url"] == "https://storage.example.com/signed-url"
+    assert response.url == "https://storage.example.com/signed-url"
 
 
 # SharedURL Async Tests
@@ -227,7 +227,7 @@ async def test_create_sharedurl_success(
 
     response = await async_client.create_sharedurl(
         fileupload_guid=MOCK_FILEUPLOAD_GUID,
-        body=sharedurl_body,
+        body=SharedURL.model_validate(sharedurl_body),
     )
 
     assert isinstance(response, SharedURL)
@@ -279,13 +279,13 @@ async def test_list_fileuploads_with_filters(
 
 
 @pytest.mark.asyncio
-async def test_create_fileupload_with_dict(
+async def test_create_fileupload_rejects_dict(
     *,
     async_client: AsyncClient,
     fileupload_model_mock: dict[str, Any],
     mocker: MockFixture,
 ) -> None:
-    """Test create_fileupload with dict input instead of model."""
+    """Reject dictionary payloads before making an HTTP request."""
     mock_post = mocker.patch("httpx.AsyncClient.post")
 
     mock_post.return_value = httpx.Response(
@@ -301,23 +301,23 @@ async def test_create_fileupload_with_dict(
         },
     }
 
-    response = await async_client.create_fileupload(
-        device_guid=MOCK_DEVICE_GUID,
-        body=body_dict,
-    )
+    with pytest.raises(AttributeError, match="model_dump"):
+        await async_client.create_fileupload(
+            device_guid=MOCK_DEVICE_GUID,
+            body=body_dict,
+        )
 
-    assert isinstance(response, FileUpload)
-    assert response.metadata.guid == MOCK_FILEUPLOAD_GUID
+    mock_post.assert_not_called()
 
 
 @pytest.mark.asyncio
-async def test_create_sharedurl_with_dict(
+async def test_create_sharedurl_rejects_dict(
     *,
     async_client: AsyncClient,
     sharedurl_model_mock: dict[str, Any],
     mocker: MockFixture,
 ) -> None:
-    """Test create_sharedurl with dict input instead of model."""
+    """Reject dictionary payloads before making an HTTP request."""
     mock_post = mocker.patch("httpx.AsyncClient.post")
 
     mock_post.return_value = httpx.Response(
@@ -333,13 +333,13 @@ async def test_create_sharedurl_with_dict(
         },
     }
 
-    response = await async_client.create_sharedurl(
-        fileupload_guid=MOCK_FILEUPLOAD_GUID,
-        body=body_dict,
-    )
+    with pytest.raises(AttributeError, match="model_dump"):
+        await async_client.create_sharedurl(
+            fileupload_guid=MOCK_FILEUPLOAD_GUID,
+            body=body_dict,
+        )
 
-    assert isinstance(response, SharedURL)
-    assert response.metadata.guid == MOCK_SHAREDURL_GUID
+    mock_post.assert_not_called()
 
 
 @pytest.mark.asyncio

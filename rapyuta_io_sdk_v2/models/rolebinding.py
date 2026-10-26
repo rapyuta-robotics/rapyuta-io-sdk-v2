@@ -18,8 +18,9 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import Field, model_validator
 
+from rapyuta_io_sdk_v2.models.base import SDKModel
 from rapyuta_io_sdk_v2.models.utils import (
     BaseList,
     BaseMetadata,
@@ -35,7 +36,7 @@ class RoleBindingMetadata(BaseMetadata):
     name: None = Field(default=None, exclude=True)
 
 
-class RoleRef(BaseModel):
+class RoleRef(SDKModel):
     """Role identified by name or GUID."""
 
     kind: Literal["Role"] = "Role"
@@ -52,7 +53,7 @@ class RoleRef(BaseModel):
         return self
 
 
-class RoleBindingSpec(BaseModel):
+class RoleBindingSpec(SDKModel):
     """Role granted to a subject within a domain."""
 
     role_ref: RoleRef = Field(alias="roleRef")
@@ -86,11 +87,13 @@ class RoleBinding(BaseObject):
         return dependencies
 
 
-class BulkRoleBindingUpdate(BaseModel):
+class BulkRoleBindingUpdate(SDKModel):
     """Bindings to add and bindings to replace in one update."""
 
-    new_bindings: list[RoleBinding] = Field(alias="newBindings")
-    old_bindings: list[RoleBinding | None] = Field(alias="oldBindings")
+    new_bindings: list[RoleBinding] = Field(default_factory=list, alias="newBindings")
+    old_bindings: list[RoleBinding | None] = Field(
+        default_factory=list, alias="oldBindings"
+    )
 
 
 class RoleBindingList(BaseList[RoleBinding]):

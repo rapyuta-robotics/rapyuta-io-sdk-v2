@@ -22,6 +22,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import httpx
+from yaml import safe_load
+from yaml.reader import ReaderError
 
 from rapyuta_io_sdk_v2 import exceptions
 
@@ -67,6 +69,35 @@ def handle_server_errors(response: httpx.Response) -> None:
     error_type = _HTTP_ERROR_TYPES.get(status_code, exceptions.UnknownError)
     message = error or f"{error_type.__name__} (status_code={status_code})"
     raise error_type(message)
+
+
+def decode_config_key_content(response: httpx.Response) -> object:
+    """Decode textual config keys as YAML and preserve binary keys as bytes.
+
+    Args:
+        response: Successful config-key download response.
+    """
+    media_type = response.headers.get("content-type", "").split(";", 1)[0].strip()
+    media_type = media_type.lower()
+    textual = (
+        media_type.startswith("text/")
+        or media_type.endswith(("+json", "+yaml"))
+        or media_type
+        in (
+            "",
+            "application/json",
+            "application/yaml",
+            "application/x-yaml",
+            "application/vnd.yaml",
+        )
+    )
+    if not textual:
+        return response.content
+    try:
+        return safe_load(response.content.decode(response.encoding or "utf-8"))
+    except (UnicodeDecodeError, ReaderError):
+        # Undeclared binary bodies must also survive without lossy text decoding.
+        return response.content
 
 
 def get_default_app_dir(app_name: str) -> str:
