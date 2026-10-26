@@ -21,6 +21,7 @@ from typing import TYPE_CHECKING, Self
 from rapyuta_io_sdk_v2.configtree._lifecycle import annotate, prepare_commit
 from rapyuta_io_sdk_v2.configtree._scope import Scope
 from rapyuta_io_sdk_v2.configtree._values import (
+    encode_secret_ref,
     encode_value,
     snapshot_values,
     validate_key,
@@ -121,6 +122,39 @@ class _BaseRevision:
         validate_key(key)
         try:
             self._keys[key] = encode_value(value, metadata=metadata)
+        except ConfigTreeInputError as error:
+            if error.key is None:
+                error.key = key
+            raise
+
+    def store_secret_ref(
+        self,
+        key: str,
+        secret_name: str,
+        secret_key: str,
+        *,
+        metadata: dict[str, str] | None = None,
+    ) -> None:
+        """Stage one leaf that resolves from a Secret, replacing any pending entry.
+
+        The platform (and, for a device deployment, the owning device) resolves
+        secret_name/secret_key into the real value on read; this key never
+        carries literal data.
+
+        Args:
+            key: Nonempty slash-separated key path.
+            secret_name: Name of the Secret resource holding the value.
+            secret_key: Key within that Secret.
+            metadata: Optional string-to-string metadata, including empty.
+
+        Raises:
+            ConfigTreeInputError: If the path, secret ref, or metadata is invalid.
+        """
+        validate_key(key)
+        try:
+            self._keys[key] = encode_secret_ref(
+                secret_name, secret_key, metadata=metadata
+            )
         except ConfigTreeInputError as error:
             if error.key is None:
                 error.key = key

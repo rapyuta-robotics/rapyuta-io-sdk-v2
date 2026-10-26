@@ -21,7 +21,12 @@ from typing import Any
 
 import yaml
 
-from rapyuta_io_sdk_v2.configtree._values import encode_value, normalize, validate_key
+from rapyuta_io_sdk_v2.configtree._values import (
+    encode_secret_ref,
+    encode_value,
+    normalize,
+    validate_key,
+)
 from rapyuta_io_sdk_v2.configtree.exceptions import (
     ConfigTreeInputError,
     InputReason,
@@ -37,6 +42,17 @@ def is_metadata_wrapper(value: object) -> bool:
         and set(value) == {"value", "metadata"}
         and isinstance(value["metadata"], dict)
     )
+
+
+def is_secret_ref_wrapper(value: object) -> bool:
+    """Recognize only an exact valueFrom.secretKeyRef mapping shape."""
+    if not isinstance(value, dict) or set(value) != {"valueFrom"}:
+        return False
+    value_from = value["valueFrom"]
+    if not isinstance(value_from, dict) or set(value_from) != {"secretKeyRef"}:
+        return False
+    ref = value_from["secretKeyRef"]
+    return isinstance(ref, dict) and set(ref) == {"name", "key"}
 
 
 def split_metadata(
@@ -206,14 +222,14 @@ def _flatten(
                 InputReason.INVALID_CONFIGURATION_PATH_COMPONENT, key=str(name)
             )
         child_path = (*path, name)
-        if isinstance(child, dict) and child:
+        if isinstance(child, dict) and child and not is_secret_ref_wrapper(child):
             _flatten(child, child_path, result)
-        else:
-            if child_path in result:
-                raise input_error(
-                    InputReason.AMBIGUOUS_CONFIGURATION_PATH, key="/".join(child_path)
-                )
-            result[child_path] = child
+            continue
+        if child_path in result:
+            raise input_error(
+                InputReason.AMBIGUOUS_CONFIGURATION_PATH, key="/".join(child_path)
+            )
+        result[child_path] = child
 
 
 def _valid_component(name: str) -> bool:
@@ -237,12 +253,19 @@ def _prepare_one(path: Path, stem: str) -> dict[str, ConfigValue]:
         key = "/".join(leaf_path)
         try:
             validate_key(key)
-            result[key] = encode_value(value, metadata=attachments.get(leaf_path[1:]))
+            result[key] = _encode_leaf(value, attachments.get(leaf_path[1:]))
         except ConfigTreeInputError as error:
             if error.key is None:
                 error.key = key
             raise
     return result
+
+
+def _encode_leaf(value: object, metadata: dict[str, str] | None) -> ConfigValue:
+    if is_secret_ref_wrapper(value):
+        ref = value["valueFrom"]["secretKeyRef"]
+        return encode_secret_ref(ref["name"], ref["key"], metadata=metadata)
+    return encode_value(value, metadata=metadata)
 
 
 def prepare_documents(files: Iterable[str | Path]) -> dict[str, ConfigValue]:
