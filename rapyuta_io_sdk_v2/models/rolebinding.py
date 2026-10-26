@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from rapyuta_io_sdk_v2.models.utils import (
     BaseList,
@@ -31,9 +32,21 @@ class RoleRef(BaseModel):
 
 
 class RoleBindingSpec(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
     role_ref: RoleRef = Field(alias="roleRef")
     domain: Domain
     subject: Subject
+    # The binding is time-bound when not_after is set. Older servers ignore both.
+    not_before: datetime | None = Field(default=None, alias="notBefore")
+    not_after: datetime | None = Field(default=None, alias="notAfter")
+
+    @field_validator("not_before", "not_after")
+    @classmethod
+    def check_window_timezone(cls, v):
+        if v is not None and v.tzinfo is None:
+            raise ValueError("notBefore and notAfter must carry a time zone")
+        return v
 
 
 class RoleBinding(BaseObject):
@@ -60,8 +73,10 @@ class RoleBinding(BaseObject):
 
 
 class BulkRoleBindingUpdate(BaseModel):
-    new_bindings: list[RoleBinding] = Field(alias="newBindings")
-    old_bindings: list[RoleBinding | None] = Field(alias="oldBindings")
+    new_bindings: list[RoleBinding] = Field(default_factory=list, alias="newBindings")
+    old_bindings: list[RoleBinding | None] = Field(
+        default_factory=list, alias="oldBindings"
+    )
 
 
 class RoleBindingList(BaseList[RoleBinding]):
