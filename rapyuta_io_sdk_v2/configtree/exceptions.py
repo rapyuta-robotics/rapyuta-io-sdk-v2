@@ -120,6 +120,7 @@ class InputReason(StrEnum):
     INVALID_CONFIGURATION_KEY_PAYLOAD = "Invalid configuration key payload"
     INVALID_CONFIGURATION_METADATA = "Invalid configuration metadata"
     INVALID_CONFIGURATION_PATH_COMPONENT = "Invalid configuration path component"
+    INVALID_CONFIGURATION_SECRET_REF = "Invalid configuration secret ref"  # noqa: S105
     INVALID_STORED_CONFIGURATION_KEY = "Invalid stored configuration key"
     NON_FINITE_CONFIGURATION_VALUE = "Non-finite configuration value"
     SOURCE_KEY_HAS_INVALID_CONTENT_LENGTH = "Source key has invalid content length"

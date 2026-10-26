@@ -29,6 +29,7 @@ from rapyuta_io_sdk_v2.configtree.exceptions import (
     input_error,
 )
 from rapyuta_io_sdk_v2.models.configtree import ConfigValue, ConfigValues
+from rapyuta_io_sdk_v2.models.utils import SecretKeyRef, ValueFrom
 
 
 def normalize(value: object, *, seen: set[int] | None = None) -> object:
@@ -118,6 +119,39 @@ def encode_value(
     return ConfigValue.model_validate(fields)
 
 
+def _is_nonempty_str(value: object) -> bool:
+    return isinstance(value, str) and bool(value)
+
+
+def encode_secret_ref(
+    secret_name: str, secret_key: str, *, metadata: dict[str, str] | None = None
+) -> ConfigValue:
+    """Encode a leaf that resolves from a Secret instead of carrying data.
+
+    The server (and, for device deployments, the owning device) resolves
+    secret_name/secret_key into the real value on read -- this entry never
+    carries literal data, a checksum, or a content type.
+    """
+    if not _is_nonempty_str(secret_name) or not _is_nonempty_str(secret_key):
+        raise input_error(InputReason.INVALID_CONFIGURATION_SECRET_REF)
+    if metadata is not None and (
+        not isinstance(metadata, dict)
+        or any(
+            not isinstance(k, str) or not isinstance(v, str)
+            for k, v in metadata.items()
+        )
+    ):
+        raise input_error(InputReason.INVALID_CONFIGURATION_KEY_METADATA)
+    fields = {
+        "value_from": ValueFrom(
+            secret_key_ref=SecretKeyRef(name=secret_name, key=secret_key)
+        ),
+    }
+    if metadata is not None:
+        fields["metadata"] = metadata.copy()
+    return ConfigValue.model_validate(fields)
+
+
 def snapshot_values(values: dict[str, ConfigValue]) -> ConfigValues:
     """Revalidate an independent plain-field snapshot of mutable entries."""
     snapshot: dict[str, ConfigValue] = {}
@@ -137,6 +171,21 @@ def snapshot_values(values: dict[str, ConfigValue]) -> ConfigValues:
 def _validated_entry(entry: ConfigValue) -> ConfigValue:
     plain = entry.model_dump(exclude_unset=True, by_alias=True, warnings=False)
     strict = ConfigValue.model_validate(plain, strict=True)
+    if strict.value_from is not None:
+        return _validated_secret_ref_entry(strict)
+    return _validated_literal_entry(strict)
+
+
+def _validated_secret_ref_entry(strict: ConfigValue) -> ConfigValue:
+    ref = strict.value_from.secret_key_ref
+    if ref is None or not ref.name or not ref.key:
+        raise ValueError
+    if strict.data is not None or strict.checksum is not None:
+        raise ValueError
+    return strict
+
+
+def _validated_literal_entry(strict: ConfigValue) -> ConfigValue:
     if strict.content_type != "kv" or strict.data is None or strict.checksum is None:
         raise ValueError
     raw = base64.b64decode(strict.data, validate=True)
@@ -159,6 +208,7 @@ def merge_values(
         key
         for key in source.keys() & destination.keys()
         if source[key].data != destination[key].data
+        or source[key].value_from != destination[key].value_from
         or ("metadata" in source[key].model_fields_set)
         != ("metadata" in destination[key].model_fields_set)
         or source[key].metadata != destination[key].metadata
@@ -176,7 +226,17 @@ def merge_values(
 
 
 def _validate_source_length(key: str, entry: ConfigValue) -> None:
-    if not isinstance(entry, ConfigValue) or entry.data is None:
+    if not isinstance(entry, ConfigValue):
+        raise input_error(InputReason.SOURCE_KEY_HAS_INVALID_CONTENT_LENGTH, key=key)
+    if entry.value_from is not None:
+        # No literal content to measure -- _validated_entry (via
+        # snapshot_values, called right after this) checks the ref itself.
+        return
+    _validate_literal_source_length(key, entry)
+
+
+def _validate_literal_source_length(key: str, entry: ConfigValue) -> None:
+    if entry.data is None:
         raise input_error(InputReason.SOURCE_KEY_HAS_INVALID_CONTENT_LENGTH, key=key)
     try:
         actual = len(base64.b64decode(entry.data, validate=True))

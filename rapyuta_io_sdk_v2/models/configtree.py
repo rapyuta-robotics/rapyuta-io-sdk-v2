@@ -17,11 +17,11 @@
 from pydantic import Field, RootModel
 
 from rapyuta_io_sdk_v2.models.base import SDKModel
-from rapyuta_io_sdk_v2.models.utils import BaseList, BaseMetadata, BaseObject
+from rapyuta_io_sdk_v2.models.utils import BaseList, BaseMetadata, BaseObject, ValueFrom
 
 
 class ConfigValue(SDKModel):
-    """Stored key metadata and optional base64-encoded data."""
+    """Stored key metadata and optional base64-encoded data or secret reference."""
 
     permissions: str | None = None
     metadata: dict[str, str] | None = None
@@ -30,6 +30,11 @@ class ConfigValue(SDKModel):
     content_length: int | None = Field(default=None, alias="contentLength")
     url: str | None = None
     data: str | None = None
+    value_from: ValueFrom | None = Field(
+        default=None,
+        alias="valueFrom",
+        description="Populate the key's value from a Secret key reference",
+    )
 
 
 class ConfigTreeRevisionMetadata(BaseMetadata):
