@@ -212,3 +212,86 @@ SDK v1 downloader round-trip and test commands. Existing v2 ConfigTree APIs and
 ## Contributing
 
 We welcome contributions. Please read our [contribution guidelines](CONTRIBUTING.md) to get started.
+
+## Device Management
+
+`Client` and `AsyncClient` provide the same typed methods for the legacy Device
+Management service, using `Configuration.core_api_host` and existing authentication
+and context overrides. Each method makes one request. Await the corresponding
+method on `AsyncClient`.
+
+| Operations | Methods |
+| --- | --- |
+| Discovery and selection | `list_devices`, `select_devices`, `get_device` |
+| Registration and onboarding authorization | `create_device`, `get_device_onboarding` |
+| Device details/state and deletion | `update_device`, `delete_device` |
+| Labels | `list_device_labels`, `create_device_labels`, `update_device_label`, `delete_device_label` |
+| Configuration variables | `list_device_config_variables`, `create_device_config_variable`, `update_device_config_variable`, `delete_device_config_variable` |
+| VPN | `set_device_vpn` |
+| Parameter application | `apply_device_parameters` |
+| Commands | `execute_device_command`, `get_device_command_result` |
+| Migration | `migrate_device` |
+
+Responses retain `status` and `response.data`. Registration/onboarding data is a
+private token string with sibling `device_id` and `script_command`; it is not a
+Device detail record. Label/configuration records carry numeric IDs for subsequent
+updates/deletion. Mutations returning empty data use `DeviceMutationResponse`.
+Explicit null/empty description updates are transmitted, but the service treats
+them as no-ops. Registration serialization does not promise persistence of fields
+ignored by the server.
+
+VPN changes accept `DeviceVPNUpdate(vpn=True)` or `DeviceVPNUpdate(vpn=False)` for
+one device. Enable route advertisement with
+`DeviceVPNUpdate(vpn=True, config={"vpn": {"advertise_routes": True}})`; advertisement
+defaults to false and uses project-configured routes. The result contains the
+actual DeviceDaemon acknowledgment, which does not establish connectivity
+readiness. The public interface supports VPN settings only. Deprecated topics,
+agent upgrade, and general daemon changes are excluded.
+
+The command methods submit once or retrieve one snapshot. Command operational
+defaults are timeout=300, bg=false, run_async=false and env={}; `bg=True` returns a
+launch acknowledgment even if deferred execution was also requested. A lookup
+returns `DeviceCommandPendingResponse` only for the exact pending HTTP400 marker;
+other HTTP failures remain terminal SDK errors.
+
+Use the separate helpers to execute and collect every explicit target's output:
+
+```python
+from rapyuta_io_sdk_v2 import DeviceCommand, DeviceCommandWaitOptions
+from rapyuta_io_sdk_v2.helpers import execute_device_command
+
+outcome = execute_device_command(
+    client,
+    DeviceCommand(device_ids=("device-a", "device-b"), cmd="printf ''", run_async=True),
+    options=DeviceCommandWaitOptions(wait_timeout=30, poll_interval=1),
+)
+for result in outcome.responses:
+    print(result.device_guid, repr(result.output))  # Empty output is received output.
+```
+
+For async usage, import `execute_device_command_async` from the same module and
+await it with an `AsyncClient`. Both helpers default to a 300-second local wait,
+10-second polling interval, `/bin/bash` and `root` when shell/user are omitted.
+They preserve caller inputs, transport ownership and selected context. Execution
+timeout and local wait timeout are independent. Background commands cannot be
+used with the response-waiting helpers.
+
+`DeviceCommandError` exposes immutable `.failure` stage/identities and
+`.partial_result` outputs; available causes are chained. `DeviceCommandTimeout`
+also inherits `TimeoutError`. Synchronous requests already in progress may finish
+after the deadline; valid late outputs enrich the timeout snapshot and do not
+produce success. Async waiting has a cancellable overall deadline.
+`DeviceCommandCancelled` inherits `asyncio.CancelledError`, preserves the same
+context and should be re-raised. Local timeout/cancellation does not stop remote
+execution, resubmit commands or perform cleanup requests.
+
+Runnable examples: [sync management](examples/devices/manage.py),
+[async management](examples/devices/manage_async.py),
+[sync commands](examples/devices/command.py), and
+[async commands/cancellation](examples/devices/command_async.py).
+Run them with `--help` using the same configured environment as the SDK. Management
+requires explicit device or returned record IDs. Command examples accept repeated
+`--device`, exact `--command`, `--mode immediate|deferred`, `--wait-timeout`,
+`--poll-interval`, and optional `--direct`/`--jid`; the async example also supports
+`--cancel-after`. See the [validation guide](specs/002-device-management/quickstart.md)
+for isolated acceptance evidence and optional live setup.

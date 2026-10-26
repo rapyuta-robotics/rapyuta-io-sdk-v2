@@ -86,3 +86,9 @@ class GroupHeaderOptions(RequestHeaderOptions, total=False):
     with_organization: bool
     organization_guid: str | None
     project_guid: str | None
+
+
+class DeviceCommandCallOptions(HeaderOptions, total=False):
+    """Command request options; cap transport phases without changing defaults."""
+
+    request_timeout: float
