@@ -2262,18 +2262,18 @@ class AsyncClient:
 
     async def update_role_binding(
         self, binding: BulkRoleBindingUpdate | dict, **kwargs
-    ) -> RoleBinding:
+    ) -> BulkRoleBindingUpdate:
         if isinstance(binding, dict):
             binding = BulkRoleBindingUpdate.model_validate(binding)
         result = await self.c.put(
             url=f"{self.v2api_host}/v2/role-bindings/",
             headers=self.config.get_headers(with_project=False, **kwargs),
-            json=binding.model_dump(by_alias=True),
+            json=binding.model_dump(mode="json", by_alias=True, exclude_none=True),
         )
         handle_server_errors(result)
 
         try:
-            return RoleBinding(**result.json())
+            return BulkRoleBindingUpdate.model_validate(result.json())
         except Exception:
             return result.json()
 
