@@ -15,7 +15,9 @@ from rapyuta_io_sdk_v2.models.utils import (
 
 
 class RoleBindingMetadata(BaseMetadata):
-    name: None = Field(default=None, exclude=True)
+    # Role bindings have no name on the server. Manifests carry one as their
+    # key for rio apply, so accept it but never send it.
+    name: str | None = Field(default=None, exclude=True)
 
 
 class RoleRef(BaseModel):

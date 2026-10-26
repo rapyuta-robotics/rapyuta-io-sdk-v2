@@ -7,7 +7,7 @@ from pydantic import ValidationError
 from pytest_mock import MockFixture
 
 # ruff: noqa: F811, F401
-from rapyuta_io_sdk_v2 import BulkRoleBindingUpdate, RoleBindingList
+from rapyuta_io_sdk_v2 import BulkRoleBindingUpdate, RoleBinding, RoleBindingList
 from rapyuta_io_sdk_v2.exceptions import HttpAlreadyExistsError, MethodNotAllowedError
 from rapyuta_io_sdk_v2.models.rolebinding import RoleBindingSpec
 from tests.utils.fixtures import client
@@ -82,6 +82,15 @@ def test_spec_dump_emits_rfc3339():
 
     assert dumped["notAfter"] == "2026-10-26T08:00:00Z"
     assert "notBefore" not in dumped
+
+
+def test_manifest_name_is_accepted_and_not_sent():
+    rb = RoleBinding.model_validate(
+        {**binding(), "metadata": {"name": "engineer-warehouse-admin"}}
+    )
+
+    assert rb.metadata.name == "engineer-warehouse-admin"
+    assert "name" not in rb.model_dump(by_alias=True)["metadata"]
 
 
 def test_bulk_update_without_old_bindings():
