@@ -2685,3 +2685,32 @@ class AsyncClient:
         )
         handle_server_errors(result)
         return SSHKeySignResponse(**result.json())
+
+    async def sign_org_ssh_public_key(
+        self,
+        body: SSHKeySignRequest | dict[str, Any],
+        **kwargs,
+    ) -> SSHKeySignResponse:
+        """Sign an SSH public key at organization scope.
+
+        The returned certificate reaches every device in the caller's
+        organization, rather than only those in the selected project. The
+        caller must hold the certificate-signing permission at organization
+        scope, which the organization admin role carries.
+
+        Args:
+            body (SSHKeySignRequest | dict): The SSH public key to sign.
+
+        Returns:
+            SSHKeySignResponse: The signed SSH certificate.
+        """
+        if isinstance(body, dict):
+            body = SSHKeySignRequest.model_validate(body)
+
+        result = await self.c.post(
+            url=f"{self.v2api_host}/v2/certs/ssh/org/sign/",
+            headers=self.config.get_headers(**kwargs),
+            json=body.model_dump(by_alias=True),
+        )
+        handle_server_errors(result)
+        return SSHKeySignResponse(**result.json())
