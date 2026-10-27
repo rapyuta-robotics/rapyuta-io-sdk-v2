@@ -602,7 +602,6 @@ def cloud_deployment_with_valuefrom_mock() -> dict[str, Any]:
     }
 
 
-
 @pytest.fixture
 def disk_body() -> dict[str, Any]:
     return {
@@ -1375,4 +1374,329 @@ def ssh_key_sign_request_body() -> dict[str, Any]:
 def ssh_key_sign_response_mock() -> dict[str, Any]:
     return {
         "certificate": "ssh-rsa-cert-v01@openssh.com AAAAHHNza...",
+    }
+
+
+# -------------------- DATABASE --------------------
+
+
+@pytest.fixture
+def database_body() -> dict[str, Any]:
+    return {
+        "apiVersion": "api.rapyuta.io/v2",
+        "kind": "Database",
+        "metadata": {
+            "name": "orders-db",
+            "labels": {"app": "orders"},
+        },
+        "spec": {
+            "type": "postgres",
+            "postgres": {
+                "version": "17",
+                "primary": {
+                    "deviceName": "edge-node-01",
+                    "dataDirectory": "/opt/rapyuta/volumes/orders-db",
+                    "port": 5432,
+                },
+                # primaryHost is server-resolved; a caller never sets it.
+                "standby": {
+                    "primaryInterface": "eth0",
+                    "devices": [
+                        {
+                            "deviceName": "edge-node-02",
+                            "dataDirectory": "/opt/rapyuta/volumes/orders-db",
+                            "port": 5432,
+                        },
+                    ],
+                },
+                "users": {
+                    "primary": {
+                        "username": {"name": "orders-db-secret", "key": "PRIMARY_USER"},
+                        "password": {"name": "orders-db-secret", "key": "PRIMARY_PASS"},
+                    },
+                },
+                "parameters": {
+                    "max_connections": "200",
+                    "shared_buffers": "512MB",
+                },
+            },
+        },
+    }
+
+
+@pytest.fixture
+def database_model_mock() -> dict[str, Any]:
+    return {
+        "kind": "Database",
+        "apiVersion": "api.rapyuta.io/v2",
+        "metadata": {
+            "name": "orders-db",
+            "guid": "database-mockdb1234567890123",
+            "projectGUID": "project-aaaaaaaaaaaaaaaaaaaa",
+            "organizationGUID": "org-mock-789",
+            "creatorGUID": "mock-user-guid-000",
+            "createdAt": "2025-01-01T00:00:00Z",
+            "updatedAt": "2025-01-01T01:00:00Z",
+            "deletedAt": None,
+        },
+        "spec": {
+            "type": "postgres",
+            "postgres": {
+                "version": "17",
+                "primary": {
+                    "deviceName": "edge-node-01",
+                    "deviceGuid": "device-primary000000000000",
+                    "dataDirectory": "/opt/rapyuta/volumes/orders-db",
+                    "port": 5432,
+                },
+                "standby": {
+                    "primaryInterface": "eth0",
+                    "primaryHost": "10.1.2.3",
+                    "devices": [
+                        {
+                            "deviceName": "edge-node-02",
+                            "deviceGuid": "device-standby100000000000",
+                            "dataDirectory": "/opt/rapyuta/volumes/orders-db",
+                            "port": 5432,
+                        },
+                        {
+                            "deviceName": "edge-node-03",
+                            "deviceGuid": "device-standby200000000000",
+                            "dataDirectory": "/opt/rapyuta/volumes/orders-db",
+                            "port": 5432,
+                        },
+                    ],
+                },
+                "users": {
+                    "primary": {
+                        "username": {"name": "orders-db-secret", "key": "PRIMARY_USER"},
+                        "password": {"name": "orders-db-secret", "key": "PRIMARY_PASS"},
+                    },
+                    "replication": {
+                        "username": {
+                            "name": "orders-db-db-credentials",
+                            "key": "replication_username",
+                        },
+                        "password": {
+                            "name": "orders-db-db-credentials",
+                            "key": "replication_password",
+                        },
+                    },
+                },
+                "parameters": {
+                    "max_connections": "200",
+                    "shared_buffers": "512MB",
+                },
+            },
+        },
+        "status": {
+            "phase": "Running",
+            "postgres": {
+                "primary": {
+                    "deviceName": "edge-node-01",
+                    "port": 5432,
+                    "phase": "running",
+                    "state": {"status": "running", "startedAt": "2025-01-01T00:05:00Z"},
+                    "restartCount": 0,
+                },
+                # One entry per standby device, upserted independently by each.
+                "standby": [
+                    {
+                        "deviceName": "edge-node-02",
+                        "port": 5432,
+                        "phase": "running",
+                        "state": {
+                            "status": "running",
+                            "startedAt": "2025-01-01T00:06:00Z",
+                        },
+                        "restartCount": 0,
+                    },
+                    {
+                        "deviceName": "edge-node-03",
+                        "port": 5432,
+                        "phase": "failed",
+                        "message": "replication stream interrupted",
+                        "state": {"status": "waiting"},
+                        "restartCount": 3,
+                    },
+                ],
+            },
+        },
+    }
+
+
+@pytest.fixture
+def databaselist_model_mock(database_model_mock) -> dict[str, Any]:
+    return {
+        "metadata": {
+            "continue": 1,
+        },
+        "items": [database_model_mock],
+    }
+
+
+# -------------------- BACKUP --------------------
+
+
+@pytest.fixture
+def backup_body() -> dict[str, Any]:
+    return {
+        "apiVersion": "api.rapyuta.io/v2",
+        "kind": "Backup",
+        "metadata": {
+            "name": "orders-nightly",
+            "labels": {"app": "orders"},
+        },
+        "spec": {
+            "type": "scheduled",
+            "database": "orders-db",
+            "schedule": "0 2 * * *",
+        },
+    }
+
+
+@pytest.fixture
+def backup_model_mock() -> dict[str, Any]:
+    return {
+        "kind": "Backup",
+        "apiVersion": "api.rapyuta.io/v2",
+        "metadata": {
+            "name": "orders-nightly",
+            "guid": "backup-mockbackup12345678901",
+            "projectGUID": "project-aaaaaaaaaaaaaaaaaaaa",
+            "organizationGUID": "org-mock-789",
+            "creatorGUID": "mock-user-guid-000",
+            "createdAt": "2025-01-01T00:00:00Z",
+            "updatedAt": "2025-01-01T01:00:00Z",
+            "deletedAt": None,
+        },
+        "spec": {
+            "type": "scheduled",
+            "database": "orders-db",
+            "barmanImage": "barman:17",
+            "deviceGuid": "device-mockdevice12345678901",
+            "schedule": "0 2 * * *",
+        },
+        "status": {
+            "phase": "Ready",
+            "postgresVersion": "17",
+            "step": "Uploading",
+            "latestRun": {
+                "backupID": "20260101T020000",
+                "beginWAL": "000000010000000000000003",
+                "endWAL": "000000010000000000000004",
+                "verification": {
+                    "check": "Passed",
+                    "verifyBackup": "Passed",
+                    "restoreTest": "Skipped",
+                },
+                "completedAt": "2026-01-01T02:03:11Z",
+            },
+        },
+    }
+
+
+@pytest.fixture
+def backuplist_model_mock(backup_model_mock) -> dict[str, Any]:
+    return {
+        "metadata": {
+            "continue": 1,
+        },
+        "items": [backup_model_mock],
+    }
+
+
+# -------------------- RESTORE --------------------
+
+
+@pytest.fixture
+def restore_body() -> dict[str, Any]:
+    return {
+        "apiVersion": "api.rapyuta.io/v2",
+        "kind": "Restore",
+        "metadata": {
+            "name": "orders-db-restore",
+            "labels": {"app": "orders"},
+        },
+        "spec": {
+            "database": "orders-db",
+            "source": {
+                "type": "backup",
+                "fileUpload": "fileupload-mock1234",
+                "backupName": "orders-nightly",
+            },
+            "databases": ["orders"],
+            "options": {"clean": True, "noOwner": True, "ifExists": True},
+        },
+    }
+
+
+@pytest.fixture
+def restore_migration_body() -> dict[str, Any]:
+    return {
+        "apiVersion": "api.rapyuta.io/v2",
+        "kind": "Restore",
+        "metadata": {"name": "orders-db-migrate"},
+        "spec": {
+            "database": "orders-db-v18",
+            "source": {
+                "type": "dataDirectory",
+                "oldDataDirectory": "/opt/rapyuta/volumes/orders-db",
+                "sourceVersion": "17",
+            },
+        },
+    }
+
+
+@pytest.fixture
+def restore_model_mock() -> dict[str, Any]:
+    return {
+        "kind": "Restore",
+        "apiVersion": "api.rapyuta.io/v2",
+        "metadata": {
+            "name": "orders-db-restore",
+            "guid": "restore-mockrestore1234567890",
+            "projectGUID": "project-aaaaaaaaaaaaaaaaaaaa",
+            "organizationGUID": "org-mock-789",
+            "creatorGUID": "mock-user-guid-000",
+            "createdAt": "2026-01-01T00:00:00Z",
+            "updatedAt": "2026-01-01T01:00:00Z",
+            "deletedAt": None,
+        },
+        "spec": {
+            "database": "orders-db",
+            "source": {
+                "type": "backup",
+                "fileUpload": "fileupload-mock1234",
+                "backupName": "orders-nightly",
+                "backupRunID": "20260101T020000",
+                # Signed links are blanked on every user-facing read.
+                "archives": [{"guid": "fileupload-mock1234", "role": "base"}],
+            },
+            "databases": ["orders"],
+            "options": {"clean": True, "noOwner": True},
+            "deviceGuid": "device-mockdevice12345678901",
+            "databaseGuid": "database-mockdatabase12345678",
+            "postgresVersion": "17",
+            "restoreImage": "quay.io/rapyuta/databases/restore:17-latest",
+            "targetPort": 5432,
+            "dataDirectory": "/opt/rapyuta/volumes/orders-db",
+        },
+        "status": {
+            "phase": "Completed",
+            "message": "restore completed",
+            "startedAt": "2026-01-01T02:00:00Z",
+            "completedAt": "2026-01-01T02:03:11Z",
+            "restoredDatabases": ["orders"],
+        },
+    }
+
+
+@pytest.fixture
+def restorelist_model_mock(restore_model_mock) -> dict[str, Any]:
+    return {
+        "metadata": {
+            "continue": 1,
+        },
+        "items": [restore_model_mock],
     }
