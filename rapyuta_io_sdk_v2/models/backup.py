@@ -19,6 +19,7 @@ class BackupSpec(BaseModel):
     # Server-resolved at creation time.
     barman_image: str | None = Field(default=None, alias="barmanImage")
     device_guid: str | None = Field(default=None, alias="deviceGuid")
+    database_guid: str | None = Field(default=None, alias="databaseGuid")
     schedule: str | None = Field(
         default=None, description="Cron schedule (required when type=scheduled)"
     )
@@ -33,6 +34,8 @@ class BackupVerification(BaseModel):
     verify_backup: Literal["Passed", "Failed", "Skipped"] | None = Field(
         default=None, alias="verifyBackup"
     )
+    # Recovering into a temporary cluster: the only leg that proves it restores.
+    recover: Literal["Passed", "Failed", "Skipped"] | None = Field(default=None)
 
 
 class BackupRun(BaseModel):
@@ -48,7 +51,10 @@ class BackupRun(BaseModel):
 class BackupStatus(BaseModel):
     """Status of a Backup resource."""
 
-    phase: Literal["Pending", "Running", "Ready", "Failed"] | None = Field(default=None)
+    # An on-demand backup ends in Succeeded or Failed; Ready is scheduled-only.
+    phase: Literal["Pending", "Running", "Ready", "Succeeded", "Failed"] | None = Field(
+        default=None
+    )
     message: str | None = Field(default=None)
     # Which stage the current run is on; the per-run detail is in message.
     step: Literal["Verifying", "Recovering", "Uploading"] | None = Field(default=None)
