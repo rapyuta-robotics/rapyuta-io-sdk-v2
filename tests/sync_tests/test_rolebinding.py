@@ -50,7 +50,7 @@ def test_spec_without_window():
 
 
 def test_spec_rejects_naive_datetime():
-    with pytest.raises(ValidationError, match="must carry a time zone"):
+    with pytest.raises(ValidationError, match="timezone info"):
         RoleBindingSpec.model_validate({**SPEC, "notAfter": "2026-10-26T17:00:00"})
 
 
