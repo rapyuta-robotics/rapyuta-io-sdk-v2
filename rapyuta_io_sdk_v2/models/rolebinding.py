@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_validator
 
 from rapyuta_io_sdk_v2.models.utils import (
     BaseList,
@@ -40,15 +39,8 @@ class RoleBindingSpec(BaseModel):
     domain: Domain
     subject: Subject
     # The binding is time-bound when not_after is set. Older servers ignore both.
-    not_before: datetime | None = Field(default=None, alias="notBefore")
-    not_after: datetime | None = Field(default=None, alias="notAfter")
-
-    @field_validator("not_before", "not_after")
-    @classmethod
-    def check_window_timezone(cls, v):
-        if v is not None and v.tzinfo is None:
-            raise ValueError("notBefore and notAfter must carry a time zone")
-        return v
+    not_before: AwareDatetime | None = Field(default=None, alias="notBefore")
+    not_after: AwareDatetime | None = Field(default=None, alias="notAfter")
 
 
 class RoleBinding(BaseObject):

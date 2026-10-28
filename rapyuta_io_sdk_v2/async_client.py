@@ -2272,10 +2272,7 @@ class AsyncClient:
         )
         handle_server_errors(result)
 
-        try:
-            return BulkRoleBindingUpdate.model_validate(result.json())
-        except Exception:
-            return result.json()
+        return BulkRoleBindingUpdate.model_validate(result.json())
 
     # -------------------ServiceAccount-------------------
 
