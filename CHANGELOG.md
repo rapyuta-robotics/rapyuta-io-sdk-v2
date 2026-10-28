@@ -5,6 +5,13 @@ using [git-cliff](https://git-cliff.org/).
 
 <!-- git-cliff: end of header -->
 
+## [0.11.0] - 2026-10-27
+
+### ✨ Features
+
+- Add database resource models (#99)
+
+
 ## [0.10.0] - 2026-10-09
 
 ### ✨ Features
