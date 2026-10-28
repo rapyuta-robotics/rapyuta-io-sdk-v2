@@ -2,6 +2,12 @@ from rapyuta_io_sdk_v2.async_client import AsyncClient as AsyncClient
 from rapyuta_io_sdk_v2.client import Client as Client
 from rapyuta_io_sdk_v2.config import Configuration as Configuration
 from rapyuta_io_sdk_v2.models import (
+    Database as Database,
+    DatabaseList as DatabaseList,
+    Backup as Backup,
+    BackupList as BackupList,
+    Restore as Restore,
+    RestoreList as RestoreList,
     Deployment as Deployment,
     DeploymentList as DeploymentList,
     Disk as Disk,
@@ -46,4 +52,4 @@ from rapyuta_io_sdk_v2.models import (
 )
 from rapyuta_io_sdk_v2.utils import walk_pages as walk_pages
 
-__version__ = "0.10.0"
+__version__ = "v0.11.0"

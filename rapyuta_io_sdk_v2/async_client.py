@@ -61,6 +61,13 @@ from rapyuta_io_sdk_v2.models import (
     FileUploadList,
     SharedURL,
     SharedURLList,
+    Database,
+    DatabaseList,
+    Backup,
+    BackupArchiveList,
+    BackupList,
+    Restore,
+    RestoreList,
 )
 from rapyuta_io_sdk_v2.models.serviceaccount import (
     ServiceAccountToken,
@@ -958,6 +965,336 @@ class AsyncClient:
         )
         handle_server_errors(result)
         return None
+
+    # -------------------Database------------------------
+
+    async def list_databases(
+        self,
+        cont: int = 0,
+        label_selector: list[str] | None = None,
+        limit: int = 50,
+        names: list[str] | None = None,
+        **kwargs,
+    ) -> DatabaseList:
+        """List all databases in a project.
+
+        Args:
+            cont (int, optional): Start index. Defaults to 0.
+            label_selector (List[str], optional): Filter by labels. Defaults to None.
+            limit (int, optional): Number of results. Defaults to 50.
+            names (List[str], optional): Filter by names. Defaults to None.
+
+        Returns:
+            DatabaseList: Paginated list of databases.
+        """
+        result = await self.c.get(
+            url=f"{self.v2api_host}/v2/databases/",
+            headers=self.config.get_headers(**kwargs),
+            params={
+                "continue": cont,
+                "limit": limit,
+                "labelSelector": label_selector,
+                "names": names,
+            },
+        )
+        handle_server_errors(result)
+        return DatabaseList(**result.json())
+
+    async def get_database(self, name: str, **kwargs) -> Database:
+        """Get a database by its name.
+
+        Args:
+            name (str): Database name.
+
+        Returns:
+            Database: Database details.
+        """
+        result = await self.c.get(
+            url=f"{self.v2api_host}/v2/databases/{name}/",
+            headers=self.config.get_headers(**kwargs),
+        )
+        handle_server_errors(result)
+        return Database(**result.json())
+
+    async def create_database(
+        self, body: Database | dict[str, Any], **kwargs
+    ) -> Database:
+        """Create a new database.
+
+        Args:
+            body (Database | dict): Database manifest.
+
+        Returns:
+            Database: Created database details.
+        """
+        if isinstance(body, dict):
+            body = Database.model_validate(body)
+
+        result = await self.c.post(
+            url=f"{self.v2api_host}/v2/databases/",
+            headers=self.config.get_headers(**kwargs),
+            json=body.model_dump(by_alias=True),
+        )
+        handle_server_errors(result)
+        return Database(**result.json())
+
+    async def update_database(
+        self, name: str, body: Database | dict[str, Any], **kwargs
+    ) -> Database:
+        """Update a database by its name.
+
+        Args:
+            name (str): Database name.
+            body (Database | dict): Updated database manifest.
+
+        Returns:
+            Database: Updated database details.
+        """
+        if isinstance(body, dict):
+            body = Database.model_validate(body)
+
+        result = await self.c.put(
+            url=f"{self.v2api_host}/v2/databases/{name}/",
+            headers=self.config.get_headers(**kwargs),
+            json=body.model_dump(by_alias=True),
+        )
+        handle_server_errors(result)
+        return Database(**result.json())
+
+    async def delete_database(self, name: str, force: bool = False, **kwargs) -> None:
+        """Delete a database by its name.
+
+        Args:
+            name (str): Database name.
+            force (bool): Delete without waiting for the hosting devices to
+                acknowledge teardown, e.g. when a device is offline. Also deletes
+                the database's backups and stops its restores; an offline device
+                keeps running its postgres pod.
+        """
+        result = await self.c.delete(
+            url=f"{self.v2api_host}/v2/databases/{name}/",
+            headers=self.config.get_headers(**kwargs),
+            params={"force": "true"} if force else None,
+        )
+        handle_server_errors(result)
+
+    # -------------------Backup--------------------------
+
+    async def list_backups(
+        self,
+        cont: int = 0,
+        label_selector: list[str] | None = None,
+        limit: int = 50,
+        database: str | None = None,
+        **kwargs,
+    ) -> BackupList:
+        """List all backups in a project.
+
+        Backups are first-class resources keyed by GUID; they survive deletion
+        of their source database.
+
+        Args:
+            cont (int, optional): Start index. Defaults to 0.
+            label_selector (List[str], optional): Filter by labels. Defaults to None.
+            limit (int, optional): Number of results. Defaults to 50.
+            database (str, optional): Filter by source database name. Defaults to None.
+
+        Returns:
+            BackupList: Paginated list of backups.
+        """
+        result = await self.c.get(
+            url=f"{self.v2api_host}/v2/backups/",
+            headers=self.config.get_headers(**kwargs),
+            params={
+                "continue": cont,
+                "limit": limit,
+                "labelSelector": label_selector,
+                "database": database,
+            },
+        )
+        handle_server_errors(result)
+        return BackupList(**result.json())
+
+    async def list_database_uploads(
+        self,
+        cont: int = 0,
+        limit: int = 50,
+        database: str | None = None,
+        **kwargs,
+    ) -> BackupArchiveList:
+        """List uploaded backup archives.
+
+        Never scoped to a device, and the database is optional: an archive
+        outlives the uploading device, its Backup record and its database, and a
+        deleted database can no longer be named.
+
+        Args:
+            cont (int, optional): Start index. Defaults to 0.
+            limit (int, optional): Number of results. Defaults to 50.
+            database (str, optional): Name or GUID of the source database.
+                Omit to list every archive in the project.
+
+        Returns:
+            BackupArchiveList: Paginated list of archives.
+        """
+        result = await self.c.get(
+            url=f"{self.v2api_host}/v2/databases/uploads/",
+            headers=self.config.get_headers(**kwargs),
+            params={"continue": cont, "limit": limit, "database": database},
+        )
+        handle_server_errors(result)
+        return BackupArchiveList(**result.json())
+
+    async def get_backup(self, name: str, **kwargs) -> Backup:
+        """Get a backup by its name.
+
+        Args:
+            name (str): Backup name.
+
+        Returns:
+            Backup: Backup details.
+        """
+        result = await self.c.get(
+            url=f"{self.v2api_host}/v2/backups/{name}/",
+            headers=self.config.get_headers(**kwargs),
+        )
+        handle_server_errors(result)
+        return Backup(**result.json())
+
+    async def create_backup(self, body: Backup | dict[str, Any], **kwargs) -> Backup:
+        """Create a new backup.
+
+        Args:
+            body (Backup | dict): Backup manifest.
+
+        Returns:
+            Backup: Created backup details.
+        """
+        if isinstance(body, dict):
+            body = Backup.model_validate(body)
+
+        result = await self.c.post(
+            url=f"{self.v2api_host}/v2/backups/",
+            headers=self.config.get_headers(**kwargs),
+            json=body.model_dump(by_alias=True),
+        )
+        handle_server_errors(result)
+        return Backup(**result.json())
+
+    async def delete_backup(self, name: str, **kwargs) -> None:
+        """Delete a backup by its name.
+
+        Also deletes the backup's linked file-upload archives.
+
+        Args:
+            name (str): Backup name.
+        """
+        result = await self.c.delete(
+            url=f"{self.v2api_host}/v2/backups/{name}/",
+            headers=self.config.get_headers(**kwargs),
+        )
+        handle_server_errors(result)
+
+    # -------------------Restore--------------------------
+
+    async def list_restores(
+        self,
+        database: str,
+        cont: int = 0,
+        label_selector: list[str] | None = None,
+        limit: int = 50,
+        **kwargs,
+    ) -> RestoreList:
+        """List a database's restores.
+
+        Restore is a sub-resource of Database, so the target database is part of
+        the route rather than a filter.
+
+        Args:
+            database (str): Target database name.
+            cont (int, optional): Start index. Defaults to 0.
+            label_selector (List[str], optional): Filter by labels. Defaults to None.
+            limit (int, optional): Number of results. Defaults to 50.
+
+        Returns:
+            RestoreList: Paginated list of restores.
+        """
+        result = await self.c.get(
+            url=f"{self.v2api_host}/v2/databases/{database}/restores/",
+            headers=self.config.get_headers(**kwargs),
+            params={
+                "continue": cont,
+                "limit": limit,
+                "labelSelector": label_selector,
+            },
+        )
+        handle_server_errors(result)
+        return RestoreList(**result.json())
+
+    async def get_restore(self, database: str, name: str, **kwargs) -> Restore:
+        """Get one restore of a database.
+
+        Args:
+            database (str): Target database name.
+            name (str): Restore name.
+
+        Returns:
+            Restore: Restore details.
+        """
+        result = await self.c.get(
+            url=f"{self.v2api_host}/v2/databases/{database}/restores/{name}/",
+            headers=self.config.get_headers(**kwargs),
+        )
+        handle_server_errors(result)
+        return Restore(**result.json())
+
+    async def stop_restore(self, database: str, name: str, **kwargs) -> None:
+        """Stop a running restore.
+
+        The request is recorded and the device tears the restore down; the
+        restore reaches the Stopped phase once it has confirmed.
+
+        Args:
+            database (str): Target database name.
+            name (str): Restore name.
+        """
+        result = await self.c.post(
+            url=f"{self.v2api_host}/v2/databases/{database}/restores/{name}/stop/",
+            headers=self.config.get_headers(**kwargs),
+        )
+        handle_server_errors(result)
+
+    async def create_restore(
+        self, body: Restore | dict[str, Any], database: str | None = None, **kwargs
+    ) -> Restore:
+        """Restore logical databases into a live database.
+
+        The target database must be running. The operation is one-shot: it is
+        refused with a 409 while another restore is in flight against the same
+        database, and its record is kept afterwards for audit.
+
+        Args:
+            body (Restore | dict): Restore manifest.
+            database (str, optional): Target database. Defaults to
+                ``body.spec.database``.
+
+        Returns:
+            Restore: Created restore details.
+        """
+        if isinstance(body, dict):
+            body = Restore.model_validate(body)
+
+        database = database or body.spec.database
+        if not database:
+            raise ValueError("target database is not specified")
+
+        result = await self.c.post(
+            url=f"{self.v2api_host}/v2/databases/{database}/restores/",
+            headers=self.config.get_headers(**kwargs),
+            json=body.model_dump(by_alias=True),
+        )
+        handle_server_errors(result)
+        return Restore(**result.json())
 
     # -------------------Device--------------------------
 

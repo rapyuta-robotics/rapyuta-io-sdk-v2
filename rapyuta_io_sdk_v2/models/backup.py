@@ -1,0 +1,110 @@
+"""
+Pydantic models for Backup resources.
+"""
+
+from __future__ import annotations
+
+from typing import Literal
+
+from pydantic import BaseModel, ConfigDict, Field
+
+from rapyuta_io_sdk_v2.models.utils import BaseList, BaseMetadata, BaseObject
+
+
+class BackupSpec(BaseModel):
+    """Specification for a Backup resource."""
+
+    type: Literal["scheduled", "onDemand"] = Field(default="scheduled")
+    database: str = Field(description="Source database name (reference only)")
+    # Server-resolved at creation time.
+    barman_image: str | None = Field(default=None, alias="barmanImage")
+    device_guid: str | None = Field(default=None, alias="deviceGuid")
+    database_guid: str | None = Field(default=None, alias="databaseGuid")
+    schedule: str | None = Field(
+        default=None, description="Cron schedule (required when type=scheduled)"
+    )
+    postgres_version: str | None = Field(default=None, alias="postgresVersion")
+    primary_port: int | None = Field(default=None, alias="primaryPort")
+
+
+class BackupVerification(BaseModel):
+    """Verification outcomes for a backup run."""
+
+    check: Literal["Passed", "Failed", "Skipped"] | None = Field(default=None)
+    verify_backup: Literal["Passed", "Failed", "Skipped"] | None = Field(
+        default=None, alias="verifyBackup"
+    )
+    # Recovering into a temporary cluster: the only leg that proves it restores.
+    recover: Literal["Passed", "Failed", "Skipped"] | None = Field(default=None)
+
+
+class BackupRun(BaseModel):
+    """A single backup run."""
+
+    backup_id: str | None = Field(default=None, alias="backupID")
+    begin_wal: str | None = Field(default=None, alias="beginWAL")
+    end_wal: str | None = Field(default=None, alias="endWAL")
+    verification: BackupVerification | None = Field(default=None)
+    completed_at: str | None = Field(default=None, alias="completedAt")
+
+
+class BackupStatus(BaseModel):
+    """Status of a Backup resource."""
+
+    # An on-demand backup ends in Succeeded or Failed; Ready is scheduled-only.
+    phase: Literal["Pending", "Running", "Ready", "Succeeded", "Failed"] | None = Field(
+        default=None
+    )
+    message: str | None = Field(default=None)
+    # Which stage the current run is on; the per-run detail is in message.
+    step: Literal["Verifying", "Recovering", "Uploading"] | None = Field(default=None)
+    latest_run: BackupRun | None = Field(default=None, alias="latestRun")
+
+
+class Backup(BaseObject):
+    """Backup resource model."""
+
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
+    kind: Literal["Backup"] | None = "Backup"
+    metadata: BaseMetadata = Field(description="Metadata for the Backup resource")
+    spec: BackupSpec = Field(description="Specification for the Backup resource")
+    status: BackupStatus | None = Field(default=None)
+
+
+class BackupList(BaseList[Backup]):
+    """Paginated list of Backup resources."""
+
+    pass
+
+
+class BackupArchive(BaseModel):
+    """One uploaded archive of a database.
+
+    A projection of the file upload, not the record itself: `guid` is what
+    ``rio database restore create --file-upload`` takes.
+    """
+
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
+    guid: str = Field(description="File-upload GUID to restore from")
+    filename: str | None = Field(default=None)
+    # The handle a project-wide listing leaves you with: the database row itself
+    # may be long deleted.
+    database_guid: str | None = Field(default=None, alias="databaseGuid")
+    backup_name: str | None = Field(default=None, alias="backupName")
+    backup_run_id: str | None = Field(default=None, alias="backupRunID")
+    # The major version of the cluster the archive holds; it picks the restore
+    # image, and archives outlive the backup row that would otherwise carry it.
+    pg_version: str | None = Field(default=None, alias="pgVersion")
+    # Provenance only; an archive restores onto any device.
+    device_guid: str | None = Field(default=None, alias="deviceGUID")
+    status: str | None = Field(default=None)
+    total_size: int | None = Field(default=None, alias="totalSize")
+    created_at: str | None = Field(default=None, alias="createdAt")
+
+
+class BackupArchiveList(BaseList[BackupArchive]):
+    """Paginated list of a database's uploaded archives."""
+
+    pass
