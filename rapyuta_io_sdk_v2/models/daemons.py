@@ -30,16 +30,6 @@ class TracingConfig(BaseModel):
     )
 
 
-class AuthConfig(BaseModel):
-    """Authentication configuration for pull secrets."""
-
-    # This is a simplified AuthConfig for daemon pull secrets
-    # Add specific fields as needed based on actual requirements
-    username: str | None = Field(default=None, description="Username for authentication")
-    password: str | None = Field(default=None, description="Password for authentication")
-    registry: str | None = Field(default=None, description="Registry URL")
-
-
 class VPNConfig(BaseModel):
     """VPN configuration for daemons."""
 
@@ -56,11 +46,9 @@ class DockerProxyConfig(BaseModel):
     """Docker proxy configuration."""
 
     registry: str | None = Field(default=None, description="Registry URL")
-    username: str | None = Field(
-        default=None, description="Username for proxy authentication"
-    )
-    password: str | None = Field(
-        default=None, description="Password for proxy authentication"
+    secretName: str | None = Field(
+        default=None,
+        description="Name of the Secret resource holding the proxy's registry credential",
     )
     dataDirectory: str | None = Field(default=None, description="Data directory path")
 
@@ -89,9 +77,6 @@ class DaemonSpec(BaseModel):
 
     tracing_config: TracingConfig | None = Field(
         default=None, description="Tracing configuration"
-    )
-    pull_secret: AuthConfig | None = Field(
-        default=None, description="Pull secret configuration"
     )
     vpn_config: VPNConfig | None = Field(default=None, description="VPN configuration")
     docker_cache_config: DockerCacheConfig | None = Field(
