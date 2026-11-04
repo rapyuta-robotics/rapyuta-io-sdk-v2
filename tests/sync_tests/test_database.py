@@ -12,7 +12,7 @@ import pytest
 from pytest_mock import MockFixture
 
 from rapyuta_io_sdk_v2.models import Database, DatabaseList
-from rapyuta_io_sdk_v2.models.database import StandbySpec, StandbyStatus
+from rapyuta_io_sdk_v2.models.database import PostgresSpec, StandbySpec, StandbyStatus
 from tests.data import (
     database_body,
     database_model_mock,
@@ -283,3 +283,17 @@ def test_database_without_users_has_no_dependencies(database_model_mock):
 
     database_model_mock["spec"]["postgres"] = None
     assert Database(**database_model_mock).list_dependencies() is None
+
+
+def test_postgres_spec_exporter_round_trip():
+    spec = PostgresSpec.model_validate(
+        {"version": "17", "exporter": True, "primary": {"deviceName": "edge-node-01"}}
+    )
+    assert spec.exporter is True
+    assert spec.model_dump(by_alias=True)["exporter"] is True
+
+    # Omitted means off, and is sent as false so an update turns it off.
+    off = PostgresSpec.model_validate(
+        {"version": "17", "primary": {"deviceName": "edge-node-01"}}
+    )
+    assert off.model_dump(by_alias=True)["exporter"] is False

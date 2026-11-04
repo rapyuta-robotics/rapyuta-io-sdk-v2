@@ -83,6 +83,8 @@ class PostgresSpec(BaseModel):
 
     version: Literal["16", "17", "18"]
     postgres_image: str | None = Field(alias="postgresImage", default=None)
+    # Runs a postgres_exporter pod next to the primary. Off unless set.
+    exporter: bool = Field(default=False)
 
     primary: DeviceSpec
     standby: StandbySpec | None = Field(default=None)
