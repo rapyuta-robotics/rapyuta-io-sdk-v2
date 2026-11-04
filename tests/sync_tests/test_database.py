@@ -268,3 +268,18 @@ def test_delete_database_force(client, mocker: MockFixture):
 
     assert mock_delete.call_args.kwargs["url"].endswith("/v2/databases/orders-db/")
     assert mock_delete.call_args.kwargs["params"] == {"force": "true"}
+
+
+def test_database_depends_on_referenced_secrets(database_model_mock):
+    assert Database(**database_model_mock).list_dependencies() == [
+        "secret:orders-db-db-credentials",
+        "secret:orders-db-secret",
+    ]
+
+
+def test_database_without_users_has_no_dependencies(database_model_mock):
+    del database_model_mock["spec"]["postgres"]["users"]
+    assert Database(**database_model_mock).list_dependencies() is None
+
+    database_model_mock["spec"]["postgres"] = None
+    assert Database(**database_model_mock).list_dependencies() is None

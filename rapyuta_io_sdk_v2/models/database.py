@@ -162,6 +162,22 @@ class Database(BaseObject):
     spec: DatabaseSpec = Field(description="Specification for the Database resource")
     status: DatabaseStatus | None = Field(default=None)
 
+    def list_dependencies(self) -> list[str] | None:
+        postgres = self.spec.postgres
+        users = postgres.users if postgres is not None else None
+        if users is None:
+            return None
+
+        names: set[str] = set()
+        for creds in (users.primary, users.backup, users.replication):
+            if creds is None:
+                continue
+            for ref in (creds.username, creds.password):
+                if ref is not None and ref.name:
+                    names.add(ref.name)
+
+        return [f"secret:{name}" for name in sorted(names)] or None
+
 
 class DatabaseList(BaseList[Database]):
     """Paginated list of Database resources."""
