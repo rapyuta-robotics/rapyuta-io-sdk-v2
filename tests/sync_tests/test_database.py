@@ -273,14 +273,18 @@ def test_delete_database_force(client, mocker: MockFixture):
     assert mock_delete.call_args.kwargs["params"] == {"force": "true"}
 
 
-def test_database_depends_on_referenced_secrets(database_model_mock):
+def test_database_depends_only_on_the_primary_user_secret(database_model_mock):
+    # backup/replication refs point at the apiserver-generated secret, which exists
+    # only after the database is created.
     assert Database(**database_model_mock).list_dependencies() == [
-        "secret:orders-db-db-credentials",
         "secret:orders-db-secret",
     ]
 
 
 def test_database_without_users_has_no_dependencies(database_model_mock):
+    del database_model_mock["spec"]["postgres"]["users"]["primary"]
+    assert Database(**database_model_mock).list_dependencies() is None
+
     del database_model_mock["spec"]["postgres"]["users"]
     assert Database(**database_model_mock).list_dependencies() is None
 
