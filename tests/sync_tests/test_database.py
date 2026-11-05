@@ -12,7 +12,7 @@ import pytest
 from pytest_mock import MockFixture
 
 from rapyuta_io_sdk_v2.models import Database, DatabaseList
-from rapyuta_io_sdk_v2.models.database import StandbySpec, StandbyStatus
+from rapyuta_io_sdk_v2.models.database import PostgresSpec, StandbySpec, StandbyStatus
 from tests.data import (
     database_body,
     database_model_mock,
@@ -162,6 +162,9 @@ def test_get_database_success(client, database_model_mock, mocker: MockFixture):
     assert degraded.state.status == "waiting"
     assert degraded.restart_count == 3
 
+    exporter = response.status.postgres.exporter
+    assert (exporter.port, exporter.phase) == (15432, "running")
+
 
 def test_get_database_not_found(client, mocker: MockFixture):
     mock_get = mocker.patch("httpx.Client.get")
@@ -268,3 +271,36 @@ def test_delete_database_force(client, mocker: MockFixture):
 
     assert mock_delete.call_args.kwargs["url"].endswith("/v2/databases/orders-db/")
     assert mock_delete.call_args.kwargs["params"] == {"force": "true"}
+
+
+def test_database_depends_only_on_the_primary_user_secret(database_model_mock):
+    # backup/replication refs point at the apiserver-generated secret, which exists
+    # only after the database is created.
+    assert Database(**database_model_mock).list_dependencies() == [
+        "secret:orders-db-secret",
+    ]
+
+
+def test_database_without_users_has_no_dependencies(database_model_mock):
+    del database_model_mock["spec"]["postgres"]["users"]["primary"]
+    assert Database(**database_model_mock).list_dependencies() is None
+
+    del database_model_mock["spec"]["postgres"]["users"]
+    assert Database(**database_model_mock).list_dependencies() is None
+
+    database_model_mock["spec"]["postgres"] = None
+    assert Database(**database_model_mock).list_dependencies() is None
+
+
+def test_postgres_spec_exporter_round_trip():
+    spec = PostgresSpec.model_validate(
+        {"version": "17", "exporter": True, "primary": {"deviceName": "edge-node-01"}}
+    )
+    assert spec.exporter is True
+    assert spec.model_dump(by_alias=True)["exporter"] is True
+
+    # Omitted means off, and is sent as false so an update turns it off.
+    off = PostgresSpec.model_validate(
+        {"version": "17", "primary": {"deviceName": "edge-node-01"}}
+    )
+    assert off.model_dump(by_alias=True)["exporter"] is False
