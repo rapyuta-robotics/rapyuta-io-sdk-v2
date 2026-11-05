@@ -165,19 +165,19 @@ class Database(BaseObject):
     status: DatabaseStatus | None = Field(default=None)
 
     def list_dependencies(self) -> list[str] | None:
+        """Only the primary user's secret is caller-supplied; the apiserver generates
+        the backup and replication users into its own secret on create."""
         postgres = self.spec.postgres
         users = postgres.users if postgres is not None else None
-        if users is None:
+        primary = users.primary if users is not None else None
+        if primary is None:
             return None
 
-        names: set[str] = set()
-        for creds in (users.primary, users.backup, users.replication):
-            if creds is None:
-                continue
-            for ref in (creds.username, creds.password):
-                if ref is not None and ref.name:
-                    names.add(ref.name)
-
+        names = {
+            ref.name
+            for ref in (primary.username, primary.password)
+            if ref is not None and ref.name
+        }
         return [f"secret:{name}" for name in sorted(names)] or None
 
 
