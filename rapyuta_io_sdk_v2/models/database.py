@@ -41,7 +41,7 @@ class PostgresUsers(BaseModel):
     # Streaming-replication user consumed by standbys. Server-generated into the
     # managed secret on create; read-only, with ``value`` blanked on read.
     replication: Credentials | None = Field(default=None)
-    # pg_monitor user the postgres_exporter sidecar scrapes as. Server-generated
+    # pg_monitor user the postgres_exporter pod scrapes as. Server-generated
     # like ``replication``; read-only.
     monitor: Credentials | None = Field(default=None)
 
@@ -144,7 +144,7 @@ class PostgresStatus(BaseModel):
 
     primary: PrimaryStatus | None = Field(default=None)
     standby: list[StandbyStatus] | None = Field(default=None)
-    # postgres_exporter sidecar in the primary pod; ``port`` is the metrics port.
+    # postgres_exporter pod next to the primary; ``port`` is the metrics port.
     exporter: InstanceStatus | None = Field(default=None)
 
 
