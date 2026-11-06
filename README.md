@@ -459,6 +459,33 @@ and [async_chart.py](examples/chart/async_chart.py). Run the focused regression
 suite with `uv run pytest tests/chart -q`. The [Chart validation guide](specs/003-chart-support/quickstart.md)
 describes CLI fixture replay and the six postgis/gateway/gostproxy parity cases.
 
+### Native Database credentials
+
+For the credentials-based Database API, construct
+`rapyuta_io_sdk_v2.models.database.DatabaseCredentials(username=..., password=...)`
+and assign it to `database.spec.postgres.credentials`. Both fields accept literal
+strings and are stored as `SecretStr`. Normal representations and model dumps
+remain redacted; do not use a normal dump as a creation manifest. Synchronous and
+asynchronous `create_database`/`update_database` use
+`Database.to_request_payload()` to emit plaintext credentials only for HTTP
+transmission. Never log or persist that explicit wire payload. Pydantic error
+strings hide input values; callers exporting structured validation errors must
+use `errors(include_input=False)` to avoid retaining original inputs.
+
+Create requires nonempty username and password. Redacted server responses with
+empty credential strings remain readable. Updates can omit credentials because
+the platform owns credential immutability. The existing `users.primary` name/key
+secret-reference shape is retained for servers supporting that separate contract;
+it is **not** translated to literal credentials and is not sufficient for a server
+that requires `credentials`. Select the form supported by the target platform.
+Requests containing both forms are rejected. The SDK does not resolve secrets,
+stringify references, or treat a reference's `value` as a literal credential.
+
+HTTP 400 raises `HttpBadRequestError`, 403 raises `HttpForbiddenError`, and 405
+raises `MethodNotAllowedError` (all from `rapyuta_io_sdk_v2.exceptions`). Every
+HTTP exception raised by the response handler retains its numeric `status_code`.
+
+
 ## Contributing
 
 We welcome contributions. Please read our [contribution guidelines](CONTRIBUTING.md) to get started.

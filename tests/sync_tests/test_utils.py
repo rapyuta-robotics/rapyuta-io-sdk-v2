@@ -192,8 +192,8 @@ class TestWalkPagesWithSdkModelResponse:
 @pytest.mark.parametrize(
     ("status", "error_type"),
     [
-        (httpx.codes.BAD_REQUEST, exceptions.MethodNotAllowedError),
-        (httpx.codes.FORBIDDEN, exceptions.MethodNotAllowedError),
+        (httpx.codes.BAD_REQUEST, exceptions.HttpBadRequestError),
+        (httpx.codes.FORBIDDEN, exceptions.HttpForbiddenError),
         (httpx.codes.NOT_FOUND, exceptions.HttpNotFoundError),
         (httpx.codes.METHOD_NOT_ALLOWED, exceptions.MethodNotAllowedError),
         (httpx.codes.CONFLICT, exceptions.HttpAlreadyExistsError),
@@ -241,8 +241,8 @@ def test_handle_server_errors_skips_success_response_body() -> None:
 @pytest.mark.parametrize("status", [400, 403, 401, 404, 409])
 def test_error_shapes_preserve_status_mapping(payload: object, status: int) -> None:
     types = {
-        400: exceptions.MethodNotAllowedError,
-        403: exceptions.MethodNotAllowedError,
+        400: exceptions.HttpBadRequestError,
+        403: exceptions.HttpForbiddenError,
         401: exceptions.UnauthorizedAccessError,
         404: exceptions.HttpNotFoundError,
         409: exceptions.HttpAlreadyExistsError,
@@ -259,9 +259,9 @@ def test_non_json_error_body() -> None:
 @pytest.mark.parametrize(
     "case",
     [
-        (400, exceptions.MethodNotAllowedError),
+        (400, exceptions.HttpBadRequestError),
         (401, exceptions.UnauthorizedAccessError),
-        (403, exceptions.MethodNotAllowedError),
+        (403, exceptions.HttpForbiddenError),
         (404, exceptions.HttpNotFoundError),
         (409, exceptions.HttpAlreadyExistsError),
         (500, exceptions.InternalServerError),

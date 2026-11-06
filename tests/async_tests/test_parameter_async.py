@@ -13,9 +13,10 @@ from pydantic import ValidationError as ModelValidationError
 from rapyuta_io_sdk_v2 import AsyncClient, Configuration
 from rapyuta_io_sdk_v2.exceptions import (
     HttpAlreadyExistsError,
+    HttpBadRequestError,
+    HttpForbiddenError,
     HttpNotFoundError,
     InternalServerError,
-    MethodNotAllowedError,
     UnauthorizedAccessError,
     UnknownError,
     ValidationError,
@@ -163,8 +164,8 @@ def check_payload(name: str, request: httpx.Request) -> None:
 @pytest.mark.parametrize(
     "case",
     [
-        (400, MethodNotAllowedError),
-        (403, MethodNotAllowedError),
+        (400, HttpBadRequestError),
+        (403, HttpForbiddenError),
         (401, UnauthorizedAccessError),
         (404, HttpNotFoundError),
         (409, HttpAlreadyExistsError),
@@ -321,9 +322,9 @@ async def test_malformed_success_json(target: AsyncClient, body: bytes) -> None:
 @pytest.mark.parametrize(
     "case",
     [
-        (400, MethodNotAllowedError),
+        (400, HttpBadRequestError),
         (401, UnauthorizedAccessError),
-        (403, MethodNotAllowedError),
+        (403, HttpForbiddenError),
         (404, HttpNotFoundError),
         (409, HttpAlreadyExistsError),
         (500, InternalServerError),
@@ -391,7 +392,7 @@ async def test_version_conflict_preserves_supplied_version(
 
     target.c = httpx.AsyncClient(transport=httpx.MockTransport(conflict))
     error_type = (
-        MethodNotAllowedError
+        HttpBadRequestError
         if status == httpx.codes.BAD_REQUEST
         else HttpAlreadyExistsError
     )

@@ -11,7 +11,7 @@ from http import HTTPStatus
 from typing import TYPE_CHECKING
 
 from rapyuta_io_sdk_v2.exceptions import (
-    MethodNotAllowedError,
+    HttpForbiddenError,
     ParameterUploadCancelled,
     ParameterUploadError,
 )
@@ -126,7 +126,7 @@ def verify_blob(
         raise ValueError(message)
 
 
-def duplicate_commit(error: MethodNotAllowedError) -> bool:
+def duplicate_commit(error: HttpForbiddenError) -> bool:
     """Allow verification only for the known 403 ambiguous lifecycle error."""
     return (
         getattr(error, "status_code", None) == HTTPStatus.FORBIDDEN

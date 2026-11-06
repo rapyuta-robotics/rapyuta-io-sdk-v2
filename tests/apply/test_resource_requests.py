@@ -26,7 +26,11 @@ from rapyuta_io_sdk_v2.apply._resources.standard import (
     record_write_async,
 )
 from rapyuta_io_sdk_v2.apply.errors import ApplierValidationError
-from rapyuta_io_sdk_v2.exceptions import MethodNotAllowedError
+from rapyuta_io_sdk_v2.exceptions import (
+    HttpBadRequestError,
+    HttpForbiddenError,
+    MethodNotAllowedError,
+)
 from rapyuta_io_sdk_v2.models.applier import ResourceContext, ResourceScope
 from rapyuta_io_sdk_v2.models.progress import MutationJournal
 from rapyuta_io_sdk_v2.models.role import Role
@@ -206,30 +210,40 @@ def test_direct_delete_rejects_conflicting_scope_before_writing() -> None:
     assert writes == []
 
 
-def test_sync_write_rejection_is_not_reported_as_uncertain() -> None:
+@pytest.mark.parametrize(
+    "error_type", [MethodNotAllowedError, HttpBadRequestError, HttpForbiddenError]
+)
+def test_sync_write_rejection_is_not_reported_as_uncertain(
+    error_type: type[Exception],
+) -> None:
     journal = MutationJournal()
     context = ResourceContext(progress=journal)
 
     def reject() -> None:
         message = "rejected"
-        raise MethodNotAllowedError(message)
+        raise error_type(message)
 
-    with pytest.raises(MethodNotAllowedError):
+    with pytest.raises(error_type):
         record_write(context, "created", reject)
 
     assert journal.snapshot()[0].state == "rejected"
 
 
 @pytest.mark.asyncio
-async def test_async_write_rejection_is_not_reported_as_uncertain() -> None:
+@pytest.mark.parametrize(
+    "error_type", [MethodNotAllowedError, HttpBadRequestError, HttpForbiddenError]
+)
+async def test_async_write_rejection_is_not_reported_as_uncertain(
+    error_type: type[Exception],
+) -> None:
     journal = MutationJournal()
     context = ResourceContext(progress=journal)
 
     async def reject() -> None:
         message = "rejected"
-        raise MethodNotAllowedError(message)
+        raise error_type(message)
 
-    with pytest.raises(MethodNotAllowedError):
+    with pytest.raises(error_type):
         await record_write_async(context, "created", reject)
 
     assert journal.snapshot()[0].state == "rejected"

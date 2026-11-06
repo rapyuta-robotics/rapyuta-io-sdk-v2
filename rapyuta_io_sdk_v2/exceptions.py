@@ -96,6 +96,14 @@ class ValidationError(Exception):
         super().__init__(self.message)
 
 
+class HttpBadRequestError(Exception):
+    """The server rejected an invalid request (HTTP 400)."""
+
+
+class HttpForbiddenError(Exception):
+    """The server denied permission for the operation (HTTP 403)."""
+
+
 class MethodNotAllowedError(Exception):
     """The server rejected the request method or operation."""
 

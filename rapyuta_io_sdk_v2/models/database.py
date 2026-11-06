@@ -17,9 +17,9 @@
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Any, Literal
 
-from pydantic import ConfigDict, Field, field_validator
+from pydantic import ConfigDict, Field, SecretStr, field_validator
 
 from rapyuta_io_sdk_v2.models.base import SDKModel
 from rapyuta_io_sdk_v2.models.utils import (
@@ -49,6 +49,20 @@ class Credentials(SDKModel):
 
     username: SecretKeyRef | None = Field(default=None)
     password: SecretKeyRef | None = Field(default=None)
+
+
+class DatabaseCredentials(SDKModel):
+    """Literal credentials for the platform's credentials-based Database API.
+
+    Ordinary dumps and representations remain redacted. Only
+    ``Database.to_request_payload`` exposes plaintext for HTTP transmission.
+    Secret references are deliberately not accepted or resolved here.
+    """
+
+    model_config = ConfigDict(extra="forbid", hide_input_in_errors=True)
+
+    username: SecretStr
+    password: SecretStr
 
 
 class PostgresUsers(SDKModel):
@@ -109,6 +123,7 @@ class PostgresSpec(SDKModel):
     primary: DeviceSpec
     standby: StandbySpec | None = Field(default=None)
     users: PostgresUsers | None = Field(default=None)
+    credentials: DatabaseCredentials | None = Field(default=None, repr=False)
     multiple_database: list[str] | None = Field(default=None, alias="multipleDatabase")
     parameters: PostgresParameters | None = Field(default=None)
 
@@ -186,12 +201,61 @@ class DatabaseStatus(SDKModel):
 class Database(BaseObject):
     """Database resource model."""
 
-    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+    model_config = ConfigDict(
+        extra="forbid", populate_by_name=True, hide_input_in_errors=True
+    )
 
     kind: Literal["Database"] | None = "Database"
     metadata: BaseMetadata = Field(description="Metadata for the Database resource")
     spec: DatabaseSpec = Field(description="Specification for the Database resource")
     status: DatabaseStatus | None = Field(default=None)
+
+    def to_request_payload(self, *, creating: bool = False) -> dict[str, Any]:
+        """Serialize an HTTP request, exposing literal credentials only here.
+
+        Args:
+            creating: Require complete credentials or primary secret references.
+
+        Returns:
+            Wire payload containing secrets; never log or persist this result.
+        """
+        postgres = self.spec.postgres
+        if creating and postgres is None:
+            message = "Database creation requires a postgres specification"
+            raise ValueError(message)
+        if postgres is not None:
+            _validate_credentials(postgres, creating=creating)
+        payload = self.model_dump(by_alias=True, mode="json")
+        if postgres is not None and postgres.credentials is not None:
+            credentials = postgres.credentials
+            payload["spec"]["postgres"]["credentials"] = {
+                "username": credentials.username.get_secret_value(),
+                "password": credentials.password.get_secret_value(),
+            }
+        return payload
+
+
+def _validate_credentials(postgres: PostgresSpec, *, creating: bool) -> None:
+    if postgres.credentials is not None and postgres.users is not None:
+        message = "Specify credentials or users, not both"
+        raise ValueError(message)
+    if not creating:
+        return
+    if _has_creation_credentials(postgres):
+        return
+    message = "Database creation requires credentials or primary secret references"
+    raise ValueError(message)
+
+
+def _has_creation_credentials(postgres: PostgresSpec) -> bool:
+    if postgres.credentials is not None:
+        return bool(postgres.credentials.username and postgres.credentials.password)
+    if postgres.users is None or postgres.users.primary is None:
+        return False
+    refs = (postgres.users.primary.username, postgres.users.primary.password)
+    return all(
+        ref is not None and ref.name and ref.key and not ref.value for ref in refs
+    )
 
 
 class DatabaseList(BaseList[Database]):

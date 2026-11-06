@@ -1233,7 +1233,7 @@ class Client:
         result = self.c.post(
             url=f"{self.v2api_host}/v2/databases/",
             headers=self.config.get_headers(**kwargs),
-            json=body.model_dump(by_alias=True),
+            json=body.to_request_payload(creating=True),
         )
         handle_server_errors(result)
         return Database(**result.json())
@@ -1258,7 +1258,7 @@ class Client:
         result = self.c.put(
             url=f"{self.v2api_host}/v2/databases/{name}/",
             headers=self.config.get_headers(**kwargs),
-            json=body.model_dump(by_alias=True),
+            json=body.to_request_payload(),
         )
         handle_server_errors(result)
         return Database(**result.json())
@@ -3763,7 +3763,8 @@ class Client:
         Raises:
             ValidationError: If core routing configuration or scalar IDs are invalid.
             DeviceContractError: If the platform response violates the contract.
-            MethodNotAllowedError: For service refusals, including HTTP400/403.
+            HttpBadRequestError: For HTTP 400 request validation failures.
+            HttpForbiddenError: For HTTP 403 permission or service refusals.
             UnknownError: For other unmapped HTTP failures or redirects.
         """
         response = self.c.request(
@@ -3790,7 +3791,8 @@ class Client:
         Raises:
             ValidationError: If core routing configuration or scalar IDs are invalid.
             DeviceContractError: If the platform response violates the contract.
-            MethodNotAllowedError: For service refusals, including HTTP400/403.
+            HttpBadRequestError: For HTTP 400 request validation failures.
+            HttpForbiddenError: For HTTP 403 permission or service refusals.
             UnknownError: For other unmapped HTTP failures or redirects.
         """
         response = self.c.request(
@@ -3817,7 +3819,8 @@ class Client:
         Raises:
             ValidationError: If core routing configuration or scalar IDs are invalid.
             DeviceContractError: If the platform response violates the contract.
-            MethodNotAllowedError: For service refusals, including HTTP400/403.
+            HttpBadRequestError: For HTTP 400 request validation failures.
+            HttpForbiddenError: For HTTP 403 permission or service refusals.
             UnknownError: For other unmapped HTTP failures or redirects.
         """
         response = self.c.request(
@@ -3843,7 +3846,8 @@ class Client:
         Raises:
             ValidationError: If core routing configuration or scalar IDs are invalid.
             DeviceContractError: If the platform response violates the contract.
-            MethodNotAllowedError: For service refusals, including HTTP400/403.
+            HttpBadRequestError: For HTTP 400 request validation failures.
+            HttpForbiddenError: For HTTP 403 permission or service refusals.
             UnknownError: For other unmapped HTTP failures or redirects.
         """
         response = self.c.request(
@@ -3871,7 +3875,8 @@ class Client:
         Raises:
             ValidationError: If core routing configuration or scalar IDs are invalid.
             DeviceContractError: If the platform response violates the contract.
-            MethodNotAllowedError: For service refusals, including HTTP400/403.
+            HttpBadRequestError: For HTTP 400 request validation failures.
+            HttpForbiddenError: For HTTP 403 permission or service refusals.
             UnknownError: For other unmapped HTTP failures or redirects.
         """
         response = self.c.request(
@@ -3898,7 +3903,8 @@ class Client:
         Raises:
             ValidationError: If core routing configuration or scalar IDs are invalid.
             DeviceContractError: If the platform response violates the contract.
-            MethodNotAllowedError: For service refusals, including HTTP400/403.
+            HttpBadRequestError: For HTTP 400 request validation failures.
+            HttpForbiddenError: For HTTP 403 permission or service refusals.
             UnknownError: For other unmapped HTTP failures or redirects.
         """
         response = self.c.request(
@@ -3925,7 +3931,8 @@ class Client:
         Raises:
             ValidationError: If core routing configuration or scalar IDs are invalid.
             DeviceContractError: If the platform response violates the contract.
-            MethodNotAllowedError: For service refusals, including HTTP400/403.
+            HttpBadRequestError: For HTTP 400 request validation failures.
+            HttpForbiddenError: For HTTP 403 permission or service refusals.
             UnknownError: For other unmapped HTTP failures or redirects.
         """
         response = self.c.request(
@@ -3951,7 +3958,8 @@ class Client:
         Raises:
             ValidationError: If core routing configuration or scalar IDs are invalid.
             DeviceContractError: If the platform response violates the contract.
-            MethodNotAllowedError: For service refusals, including HTTP400/403.
+            HttpBadRequestError: For HTTP 400 request validation failures.
+            HttpForbiddenError: For HTTP 403 permission or service refusals.
             UnknownError: For other unmapped HTTP failures or redirects.
         """
         body = device_api.command_payload(body)
@@ -3988,7 +3996,8 @@ class Client:
         Raises:
             ValidationError: If core routing configuration or scalar IDs are invalid.
             DeviceContractError: If the platform response violates the contract.
-            MethodNotAllowedError: For service refusals, including HTTP400/403.
+            HttpBadRequestError: For HTTP 400 request validation failures.
+            HttpForbiddenError: For HTTP 403 permission or service refusals.
             UnknownError: For other unmapped HTTP failures or redirects.
         """
         params = device_api.command_query(query)
@@ -4020,7 +4029,8 @@ class Client:
         Raises:
             ValidationError: If core routing configuration or scalar IDs are invalid.
             DeviceContractError: If the platform response violates the contract.
-            MethodNotAllowedError: For service refusals, including HTTP400/403.
+            HttpBadRequestError: For HTTP 400 request validation failures.
+            HttpForbiddenError: For HTTP 403 permission or service refusals.
             UnknownError: For other unmapped HTTP failures or redirects.
         """
         response = self.c.request(
@@ -4050,7 +4060,8 @@ class Client:
         Raises:
             ValidationError: If core routing configuration or scalar IDs are invalid.
             DeviceContractError: If the platform response violates the contract.
-            MethodNotAllowedError: For service refusals, including HTTP400/403.
+            HttpBadRequestError: For HTTP 400 request validation failures.
+            HttpForbiddenError: For HTTP 403 permission or service refusals.
             UnknownError: For other unmapped HTTP failures or redirects.
         """
         payload = device_api.labels_payload(body)
@@ -4079,7 +4090,8 @@ class Client:
         Raises:
             ValidationError: If core routing configuration or scalar IDs are invalid.
             DeviceContractError: If the platform response violates the contract.
-            MethodNotAllowedError: For service refusals, including HTTP400/403.
+            HttpBadRequestError: For HTTP 400 request validation failures.
+            HttpForbiddenError: For HTTP 403 permission or service refusals.
             UnknownError: For other unmapped HTTP failures or redirects.
         """
         payload = device_api.wire_payload(body, DeviceLabelUpdate)
@@ -4107,7 +4119,8 @@ class Client:
         Raises:
             ValidationError: If core routing configuration or scalar IDs are invalid.
             DeviceContractError: If the platform response violates the contract.
-            MethodNotAllowedError: For service refusals, including HTTP400/403.
+            HttpBadRequestError: For HTTP 400 request validation failures.
+            HttpForbiddenError: For HTTP 403 permission or service refusals.
             UnknownError: For other unmapped HTTP failures or redirects.
         """
         response = self.c.request(
@@ -4133,7 +4146,8 @@ class Client:
         Raises:
             ValidationError: If core routing configuration or scalar IDs are invalid.
             DeviceContractError: If the platform response violates the contract.
-            MethodNotAllowedError: For service refusals, including HTTP400/403.
+            HttpBadRequestError: For HTTP 400 request validation failures.
+            HttpForbiddenError: For HTTP 403 permission or service refusals.
             UnknownError: For other unmapped HTTP failures or redirects.
         """
         response = self.c.request(
@@ -4163,7 +4177,8 @@ class Client:
         Raises:
             ValidationError: If core routing configuration or scalar IDs are invalid.
             DeviceContractError: If the platform response violates the contract.
-            MethodNotAllowedError: For service refusals, including HTTP400/403.
+            HttpBadRequestError: For HTTP 400 request validation failures.
+            HttpForbiddenError: For HTTP 403 permission or service refusals.
             UnknownError: For other unmapped HTTP failures or redirects.
         """
         payload = device_api.wire_payload(body, DeviceConfigVariableCreate)
@@ -4195,7 +4210,8 @@ class Client:
         Raises:
             ValidationError: If core routing configuration or scalar IDs are invalid.
             DeviceContractError: If the platform response violates the contract.
-            MethodNotAllowedError: For service refusals, including HTTP400/403.
+            HttpBadRequestError: For HTTP 400 request validation failures.
+            HttpForbiddenError: For HTTP 403 permission or service refusals.
             UnknownError: For other unmapped HTTP failures or redirects.
         """
         payload = device_api.wire_payload(body, DeviceConfigVariableUpdate)
@@ -4223,7 +4239,8 @@ class Client:
         Raises:
             ValidationError: If core routing configuration or scalar IDs are invalid.
             DeviceContractError: If the platform response violates the contract.
-            MethodNotAllowedError: For service refusals, including HTTP400/403.
+            HttpBadRequestError: For HTTP 400 request validation failures.
+            HttpForbiddenError: For HTTP 403 permission or service refusals.
             UnknownError: For other unmapped HTTP failures or redirects.
         """
         response = self.c.request(
@@ -4250,7 +4267,8 @@ class Client:
         Raises:
             ValidationError: If core routing configuration or scalar IDs are invalid.
             DeviceContractError: If the platform response violates the contract.
-            MethodNotAllowedError: For service refusals, including HTTP400/403.
+            HttpBadRequestError: For HTTP 400 request validation failures.
+            HttpForbiddenError: For HTTP 403 permission or service refusals.
             UnknownError: For other unmapped HTTP failures or redirects.
         """
         payload = device_api.vpn_payload(body)
@@ -4278,7 +4296,8 @@ class Client:
         Raises:
             ValidationError: If core routing configuration or scalar IDs are invalid.
             DeviceContractError: If the platform response violates the contract.
-            MethodNotAllowedError: For service refusals, including HTTP400/403.
+            HttpBadRequestError: For HTTP 400 request validation failures.
+            HttpForbiddenError: For HTTP 403 permission or service refusals.
             UnknownError: For other unmapped HTTP failures or redirects.
         """
         payload = device_api.wire_payload(body, DeviceParameterApply)
@@ -4307,7 +4326,8 @@ class Client:
         Raises:
             ValidationError: If core routing configuration or scalar IDs are invalid.
             DeviceContractError: If the platform response violates the contract.
-            MethodNotAllowedError: For service refusals, including HTTP400/403.
+            HttpBadRequestError: For HTTP 400 request validation failures.
+            HttpForbiddenError: For HTTP 403 permission or service refusals.
             UnknownError: For other unmapped HTTP failures or redirects.
         """
         payload = device_api.wire_payload(body, DeviceMigration)

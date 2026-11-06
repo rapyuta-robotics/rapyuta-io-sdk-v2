@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 import httpx
 
 from rapyuta_io_sdk_v2._parameter_api import blob_id
-from rapyuta_io_sdk_v2.exceptions import MethodNotAllowedError
+from rapyuta_io_sdk_v2.exceptions import HttpForbiddenError
 from rapyuta_io_sdk_v2.helpers._parameter_source import (
     check_source,
     classify_file,
@@ -130,13 +130,13 @@ class _Uploader:
         tree = source.entry.tree_path.split("/", 1)[0]
         try:
             self.client.commit_parameter_upload(tree, reference)
-        except MethodNotAllowedError as error:
+        except HttpForbiddenError as error:
             if not duplicate_commit(error):
                 raise
             self._verify_commit(source, reference, error)
 
     def _verify_commit(
-        self, source: ClassifiedFile, reference: str, error: MethodNotAllowedError
+        self, source: ClassifiedFile, reference: str, error: HttpForbiddenError
     ) -> None:
         try:
             self.verify(source, reference)

@@ -11,8 +11,8 @@ from pydantic import Field
 
 from rapyuta_io_sdk_v2 import Configuration
 from rapyuta_io_sdk_v2.exceptions import (
+    HttpBadRequestError,
     HttpNotFoundError,
-    MethodNotAllowedError,
     UnknownError,
     ValidationError,
 )
@@ -120,7 +120,7 @@ def test_bad_json_and_redirects_are_terminal(api: ModuleType) -> None:
 
 @pytest.mark.parametrize(
     ("status", "kind"),
-    [(404, HttpNotFoundError), (400, MethodNotAllowedError), (429, UnknownError)],
+    [(404, HttpNotFoundError), (400, HttpBadRequestError), (429, UnknownError)],
 )
 def test_nested_errors_preserve_sdk_categories(
     status: int, kind: type[Exception]
@@ -158,7 +158,7 @@ def test_top_level_errors_keep_precedence() -> None:
 def test_pending_rejects_other_envelopes(
     api: ModuleType, payload: dict[str, object]
 ) -> None:
-    with pytest.raises(MethodNotAllowedError):
+    with pytest.raises(HttpBadRequestError):
         api.command_result(httpx.Response(400, json=payload))
 
 

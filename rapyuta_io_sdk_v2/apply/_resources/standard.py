@@ -23,6 +23,8 @@ from typing import TYPE_CHECKING, Protocol, TypedDict, TypeVar, cast
 from rapyuta_io_sdk_v2.apply.errors import ApplierValidationError
 from rapyuta_io_sdk_v2.exceptions import (
     HttpAlreadyExistsError,
+    HttpBadRequestError,
+    HttpForbiddenError,
     HttpNotFoundError,
     MethodNotAllowedError,
     UnauthorizedAccessError,
@@ -148,6 +150,8 @@ def _recorded_write(context: ResourceContext, action: MutationAction) -> Iterato
     except (
         HttpAlreadyExistsError,
         HttpNotFoundError,
+        HttpBadRequestError,
+        HttpForbiddenError,
         MethodNotAllowedError,
         UnauthorizedAccessError,
     ):

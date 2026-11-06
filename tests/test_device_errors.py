@@ -53,9 +53,9 @@ async def test_service_refusal_is_terminal(
             transport=httpx.MockTransport(refusal), timeout=original
         )
     category = {
-        400: exceptions.MethodNotAllowedError,
+        400: exceptions.HttpBadRequestError,
         401: exceptions.UnauthorizedAccessError,
-        403: exceptions.MethodNotAllowedError,
+        403: exceptions.HttpForbiddenError,
         404: exceptions.HttpNotFoundError,
         429: exceptions.UnknownError,
     }[status]

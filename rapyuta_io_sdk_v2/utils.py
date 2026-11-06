@@ -31,8 +31,8 @@ if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Awaitable, Callable, Iterator
 
 _HTTP_ERROR_TYPES: dict[int, type[Exception]] = {
-    httpx.codes.BAD_REQUEST: exceptions.MethodNotAllowedError,
-    httpx.codes.FORBIDDEN: exceptions.MethodNotAllowedError,
+    httpx.codes.BAD_REQUEST: exceptions.HttpBadRequestError,
+    httpx.codes.FORBIDDEN: exceptions.HttpForbiddenError,
     httpx.codes.NOT_FOUND: exceptions.HttpNotFoundError,
     httpx.codes.METHOD_NOT_ALLOWED: exceptions.MethodNotAllowedError,
     httpx.codes.CONFLICT: exceptions.HttpAlreadyExistsError,

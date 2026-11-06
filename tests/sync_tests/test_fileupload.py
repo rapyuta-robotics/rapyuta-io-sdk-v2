@@ -22,8 +22,8 @@ import pytest
 
 from rapyuta_io_sdk_v2.exceptions import (
     HttpAlreadyExistsError,
+    HttpBadRequestError,
     HttpNotFoundError,
-    MethodNotAllowedError,
 )
 from rapyuta_io_sdk_v2.models import (
     FileUpload,
@@ -389,7 +389,7 @@ def test_create_sharedurl_invalid_status(
         json={"error": "cannot create shared URL for file in FAILED status"},
     )
 
-    with pytest.raises(MethodNotAllowedError) as exc:
+    with pytest.raises(HttpBadRequestError) as exc:
         client.create_sharedurl(
             fileupload_guid=MOCK_FILEUPLOAD_GUID,
             body=SharedURL.model_validate(sharedurl_body),
