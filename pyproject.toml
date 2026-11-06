@@ -30,6 +30,9 @@ allow-direct-references = true
 packages = ["rapyuta_io_sdk_v2"]
 
 [dependency-groups]
+reference = [
+    "rapyuta-io @ git+https://github.com/rapyuta-robotics/rapyuta-io-sdk@739a6fe44600ff0964fa56b04878ddb21e76b5be",
+]
 dev = [
     "coverage>=7.6.1",
     "pytest-cov>=5.0.0",
