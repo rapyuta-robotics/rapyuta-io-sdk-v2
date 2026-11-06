@@ -35,6 +35,8 @@ from rapyuta_io_sdk_v2.models import (
     SecretList as SecretList,
     SecretCreate as SecretCreate,
     StaticRoute as StaticRoute,
+    StaticRouteSpec as StaticRouteSpec,
+    StaticRouteRateLimit as StaticRouteRateLimit,
     StaticRouteList as StaticRouteList,
     User as User,
     UserList as UserList,
