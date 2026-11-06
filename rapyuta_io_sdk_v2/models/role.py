@@ -16,12 +16,11 @@
 
 from typing import Literal
 
-from pydantic import BaseModel
-
+from rapyuta_io_sdk_v2.models.base import SDKModel
 from rapyuta_io_sdk_v2.models.utils import BaseList, BaseMetadata, BaseObject
 
 
-class Rule(BaseModel):
+class Rule(SDKModel):
     """Resources and actions permitted by a role."""
 
     resource: str
@@ -29,7 +28,7 @@ class Rule(BaseModel):
     actions: list[str] | None = None
 
 
-class RoleSpec(BaseModel):
+class RoleSpec(SDKModel):
     """Role description and authorization rules."""
 
     description: str | None = None

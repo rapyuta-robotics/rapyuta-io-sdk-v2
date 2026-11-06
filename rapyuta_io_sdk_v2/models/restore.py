@@ -19,8 +19,9 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import ConfigDict, Field
 
+from rapyuta_io_sdk_v2.models.base import SDKModel
 from rapyuta_io_sdk_v2.models.utils import (
     BaseList,
     BaseMetadata,
@@ -29,7 +30,7 @@ from rapyuta_io_sdk_v2.models.utils import (
 )
 
 
-class RestoreOptions(BaseModel):
+class RestoreOptions(SDKModel):
     """``pg_restore`` behaviours the caller may select."""
 
     # Drop the objects being restored before recreating them.
@@ -41,7 +42,7 @@ class RestoreOptions(BaseModel):
     if_exists: bool | None = Field(default=None, alias="ifExists")
 
 
-class RestoreArchive(BaseModel):
+class RestoreArchive(SDKModel):
     """One uploaded backup file the device downloads.
 
     Server-resolved and only populated on the device-facing copy. The URL is
@@ -54,7 +55,7 @@ class RestoreArchive(BaseModel):
     url: str | None = Field(default=None)
 
 
-class RestoreSource(BaseModel):
+class RestoreSource(SDKModel):
     """Where the restored data comes from.
 
     ``backup`` restores from a Backup's uploaded archives; ``dataDirectory``
@@ -95,7 +96,7 @@ class RestoreSource(BaseModel):
     archives: list[RestoreArchive] | None = Field(default=None)
 
 
-class RestoreSpec(BaseModel):
+class RestoreSpec(SDKModel):
     """Specification for a Restore resource."""
 
     # Target database. The restore runs against the live instance, so this is the
@@ -124,7 +125,7 @@ class RestoreSpec(BaseModel):
     credentials: dict[str, SecretKeyRef] | None = Field(default=None)
 
 
-class RestoreStatus(BaseModel):
+class RestoreStatus(SDKModel):
     """Status of a Restore resource."""
 
     # Stopped is terminal and is set by the apiserver when the target database is

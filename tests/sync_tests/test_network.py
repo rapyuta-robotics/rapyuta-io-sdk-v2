@@ -21,7 +21,10 @@ import httpx
 import pytest
 
 from rapyuta_io_sdk_v2.exceptions import HttpAlreadyExistsError, HttpNotFoundError
-from rapyuta_io_sdk_v2.models import Network, NetworkList
+from rapyuta_io_sdk_v2.models import (
+    Network,
+    NetworkList,
+)
 
 if TYPE_CHECKING:
     from pytest_mock import MockFixture
@@ -114,7 +117,7 @@ def test_create_network_success(
     )
 
     # Call the create_network method
-    response = client.create_network(body=network_body)
+    response = client.create_network(body=Network.model_validate(network_body))
 
     # Validate the response
     assert isinstance(response, Network)
@@ -135,7 +138,7 @@ def test_create_network_failure(
     )
 
     with pytest.raises(HttpAlreadyExistsError) as exc:
-        client.create_network(body=network_body)
+        client.create_network(body=Network.model_validate(network_body))
 
     assert str(exc.value) == "already exists"
 

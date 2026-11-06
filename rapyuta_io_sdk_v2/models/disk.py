@@ -21,12 +21,13 @@ incorrect fields.
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import ConfigDict, Field, field_validator
 
+from rapyuta_io_sdk_v2.models.base import SDKModel
 from rapyuta_io_sdk_v2.models.utils import BaseList, BaseMetadata, BaseObject, Runtime
 
 
-class DiskSpec(BaseModel):
+class DiskSpec(SDKModel):
     """Specification for Disk resource."""
 
     runtime: Runtime = Field(
@@ -35,14 +36,14 @@ class DiskSpec(BaseModel):
     capacity: int = Field(multiple_of=2, ge=4, le=512)
 
 
-class DiskBound(BaseModel):
+class DiskBound(SDKModel):
     """Deployment currently bound to a disk."""
 
     deployment_guid: str | None
     deployment_name: str | None
 
 
-class DiskStatus(BaseModel):
+class DiskStatus(SDKModel):
     """Disk lifecycle, capacity usage, and deployment binding."""
 
     status: Literal["Available", "Bound", "Released", "Failed", "Pending"]

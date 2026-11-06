@@ -103,7 +103,9 @@ async def test_create_restore_success(
         json=restore_model_mock,
     )
 
-    response = await async_client.create_restore(body=restore_body)
+    response = await async_client.create_restore(
+        body=Restore.model_validate(restore_body)
+    )
 
     assert isinstance(response, Restore)
     assert "/v2/databases/orders-db/restores/" in mock_post.call_args.kwargs["url"]
@@ -123,7 +125,9 @@ async def test_create_restore_migration_source(
         json=restore_model_mock,
     )
 
-    await async_client.create_restore(body=restore_migration_body)
+    await async_client.create_restore(
+        body=Restore.model_validate(restore_migration_body)
+    )
 
     sent = mock_post.call_args.kwargs["json"]
     assert sent["spec"]["source"]["type"] == "dataDirectory"
@@ -142,7 +146,7 @@ async def test_create_restore_requires_target_database(
     }
 
     with pytest.raises(ValueError, match="target database is not specified"):
-        await async_client.create_restore(body=body)
+        await async_client.create_restore(body=Restore.model_validate(body))
 
 
 @pytest.mark.asyncio
@@ -158,6 +162,6 @@ async def test_create_restore_conflict(
     # Two concurrent pg_restores into one live cluster is data loss, so the
     # apiserver refuses the second.
     with pytest.raises(Exception, match=r".+") as exc:
-        await async_client.create_restore(body=restore_body)
+        await async_client.create_restore(body=Restore.model_validate(restore_body))
 
     assert "already in progress" in str(exc.value)
