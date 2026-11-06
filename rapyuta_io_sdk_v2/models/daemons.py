@@ -21,7 +21,7 @@ incorrect fields.
 
 from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, StrictBool
 
 from rapyuta_io_sdk_v2.models.base import SDKModel
 from rapyuta_io_sdk_v2.models.utils import BaseMetadata
@@ -44,6 +44,8 @@ class TracingConfig(SDKModel):
 
 class AuthConfig(SDKModel):
     """Authentication configuration for pull secrets."""
+
+    auth: str | None = Field(default=None, repr=False)
 
     # This is a simplified AuthConfig for daemon pull secrets
     # Add specific fields as needed based on actual requirements
@@ -105,10 +107,17 @@ class DockerCacheConfig(SDKModel):
     )
 
 
+class SSHCertConfig(SDKModel):
+    """Reported device SSH certificate daemon configuration."""
+
+    enable: StrictBool
+
+
 # --- Daemon Specification ---
 class DaemonSpec(SDKModel):
     """Specification for Daemon resource."""
 
+    ssh_cert_config: SSHCertConfig | None = Field(default=None, alias="sshcert_config")
     tracing_config: TracingConfig | None = Field(
         default=None, description="Tracing configuration"
     )

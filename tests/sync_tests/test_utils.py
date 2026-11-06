@@ -272,3 +272,12 @@ def test_non_utf8_error_preserves_mapping(case: tuple[int, type[Exception]]) -> 
     with pytest.raises(error_type, match="proxy error") as caught:
         handle_server_errors(httpx.Response(status, content=b"\xffproxy error"))
     assert caught.value.status_code == status
+
+
+def test_device_error_envelope_message_is_preserved() -> None:
+    response = httpx.Response(
+        404,
+        json={"status": "error", "response": {"error": "device not found", "data": {}}},
+    )
+    with pytest.raises(exceptions.HttpNotFoundError, match="device not found"):
+        handle_server_errors(response)

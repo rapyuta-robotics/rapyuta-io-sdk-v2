@@ -64,7 +64,7 @@ def handle_server_errors(response: httpx.Response) -> None:
         return
     try:
         payload = response.json()
-        error = payload.get("error") if isinstance(payload, dict) else response.text
+        error = _error_message(payload, response.text)
     except (json.JSONDecodeError, UnicodeDecodeError):
         error = response.text
     error_type = _HTTP_ERROR_TYPES.get(status_code, exceptions.UnknownError)
@@ -72,6 +72,16 @@ def handle_server_errors(response: httpx.Response) -> None:
     error_instance = error_type(message)
     error_instance.status_code = status_code
     raise error_instance
+
+
+def _error_message(payload: object, fallback: str) -> object:
+    """Read either current or legacy error envelopes, preferring current keys."""
+    if not isinstance(payload, dict):
+        return fallback
+    if payload.get("error"):
+        return payload["error"]
+    nested = payload.get("response")
+    return nested.get("error") if isinstance(nested, dict) else None
 
 
 def decode_config_key_content(response: httpx.Response) -> object:
