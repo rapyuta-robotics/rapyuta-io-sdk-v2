@@ -51,6 +51,12 @@ from rapyuta_io_sdk_v2.models.configtree import (
     ConfigValue,
     ConfigValues,
 )
+from rapyuta_io_sdk_v2.models.configtree_operations import (
+    ConfigContent,
+    ImportOptions,
+    MergeOptions,
+    RevisionOptions,
+)
 from rapyuta_io_sdk_v2.models.daemons import (
     Daemon,
 )
@@ -167,6 +173,7 @@ __all__ = [
     "AuthSubject",
     "AuthSubjectResponse",
     "BulkRoleBindingUpdate",
+    "ConfigContent",
     "ConfigKeyContent",
     "ConfigKeyRename",
     "ConfigKeyUpload",
@@ -192,6 +199,7 @@ __all__ = [
     "FileUploadList",
     "FileUploadSpec",
     "FileUploadStatus",
+    "ImportOptions",
     "LoginRequest",
     "ManagedServiceBinding",
     "ManagedServiceBindingList",
@@ -199,6 +207,7 @@ __all__ = [
     "ManagedServiceInstanceList",
     "ManagedServiceProvider",
     "ManagedServiceProviderList",
+    "MergeOptions",
     "Network",
     "NetworkList",
     "OAuth2Client",
@@ -209,6 +218,7 @@ __all__ = [
     "PackageList",
     "Project",
     "ProjectList",
+    "RevisionOptions",
     "Role",
     "RoleBinding",
     "RoleBindingList",
