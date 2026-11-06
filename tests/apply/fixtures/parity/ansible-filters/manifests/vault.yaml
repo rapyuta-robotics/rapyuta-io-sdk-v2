@@ -1,0 +1,6 @@
+kind: Role
+metadata:
+  name: vault
+spec:
+  description: "{{ 'synthetic-secret' | vault('synthetic-password', salt='0123456789abcdef0123456789abcdef') | replace('\n', '|') }}"
+  rules: []

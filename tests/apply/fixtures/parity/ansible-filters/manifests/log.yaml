@@ -1,0 +1,6 @@
+kind: Role
+metadata:
+  name: log
+spec:
+  description: "{{ 100 | log(10) }}"
+  rules: []

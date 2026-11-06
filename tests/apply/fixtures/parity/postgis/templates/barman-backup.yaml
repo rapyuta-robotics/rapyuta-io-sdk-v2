@@ -1,0 +1,110 @@
+{% if database.backup.enable and not database.recovery.enable %}
+apiVersion: "apiextensions.rapyuta.io/v1"
+kind: "Package"
+metadata:
+  name: barman-backup
+  version: "{{ database.backup.version | default("16-3.11.1") }}"
+  labels:
+    app: barman
+spec:
+  runtime: device
+  device:
+    arch: amd64
+    restart: always
+  executables:
+    - name: "barman-backup"
+      type: docker
+      docker:
+        image: "quay.io/rapyuta/chart-barman-backup:{{ database.backup.version | default("16-3.11.1") }}"
+        imagePullPolicy: "Always"
+  environmentVars:
+    - name: "BARMAN_CRON_SCHEDULE"
+      default: "* * * * *"
+      description: "The Cron Schedule for Barman's maintenance tasks."
+      exposed: False
+    - name: "BARMAN_BACKUP_SCHEDULE"
+      default: "* */6 * * *"
+      description: "The Cron Schedule for Barman backup."
+      exposed: False
+    - name: "AZURE_STORAGE_ACCOUNT"
+      default: ""
+      description: "Name of the Azure StorageAccount for uploading backups."
+      exposed: False
+    - name: "AZURE_STORAGE_CONTAINER"
+      default: ""
+      description: "Name of the Blob Container under Azure StorageAccount for uploading backups."
+      exposed: False
+    - name: "AZURE_STORAGE_KEY"
+      default: ""
+      description: "Secret Key for the Azure StorageAccount"
+      exposed: False
+    - name: "BARMAN_BACKUP_DIR"
+      default: "/data"
+      description: "Directory for storing backed-up data."
+      exposed: False
+    - name: "BARMAN_LOG_DIR"
+      default: "/log"
+      description: "Directory for storing Barman logs."
+      exposed: False
+    - name: "BARMAN_DATABASE_NAME"
+      default: "postgres"
+      description: "Name used for the Database in Barman."
+      exposed: False
+    - name: "BARMAN_RETENTION_POLICY"
+      default: "REDUNDANCY 7"
+      description: "Retention Policy for the Local backups."
+      exposed: False
+---
+apiVersion: apiextensions.rapyuta.io/v1
+kind: Deployment
+metadata:
+  name: barman-backup
+  depends:
+    kind: package
+    nameOrGUID: barman-backup
+    version: "{{ database.backup.version | default("16-3.11.1") }}"
+  labels:
+    app: barman
+spec:
+  runtime: device
+  device:
+    depends:
+      kind: device
+      nameOrGUID: {{ devices.primary }}
+  depends:
+  - kind: deployment
+    nameOrGUID: postgresql-primary
+    wait: True
+  restart: always
+  volumes:
+    - execName: "barman-backup"
+      mountPath: "/data"
+      subPath: "{{ database.backup.data_dir | default('/opt/rapyuta/volumes/barman/data') }}"
+    - execName: "barman-backup"
+      mountPath: "/log"
+      subPath: "{{ database.backup.log_dir | default('/opt/rapyuta/volumes/barman/log') }}"
+  envArgs:
+    - name: "BARMAN_CRON_SCHEDULE"
+      value: "* * * * *"
+    - name: "BARMAN_BACKUP_SCHEDULE"
+      value: "{{ database.backup.backup_schedule | default("* */6 * * *") }}"
+    - name: "AZURE_STORAGE_ACCOUNT"
+      value: "{{ database.backup.azure_storage_account
+                 or secrets.package.barman.azure.storage_account }}"
+    - name: "AZURE_STORAGE_CONTAINER"
+      value: "{{ database.backup.azure_storage_container 
+                 or secrets.package.barman.azure.storage_account }}"
+    - name: "AZURE_STORAGE_KEY"
+      value: "{{ database.backup.azure_storage_key
+                 or secrets.package.barman.azure.storage_key }}"
+    - name: "BARMAN_BACKUP_DIR"
+      value: "/data"
+    - name: "BARMAN_LOG_DIR"
+      value: "/log"
+    - name: "BARMAN_DATABASE_NAME"
+      value: "{{ database.backup.backup_name | default("postgres") }}"
+    - name: "BARMAN_RETENTION_POLICY"
+      value: "{{ database.backup.retention_policy | default("REDUNDANCY 7")}}"
+    - name: "POSTGRES_HOST"
+      value: "127.0.0.1"
+{% endif %}

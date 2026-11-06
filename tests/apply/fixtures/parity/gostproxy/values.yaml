@@ -1,0 +1,40 @@
+# [Optional] Docker section configures the image tag for Gostproxy.
+docker:
+  tag:
+    cloud_proxy: v1.0.0
+
+# Device section configures the upstream device for the Gostproxy. You can
+# choose to directly specify the IP Address of the Device. It is also possible
+# to specify the Network interface and IP Address will be fetched at runtime.
+device:
+  # [Optional] edge_pc is the name of the device on rapyuta.io.
+  edge_pc: test-gostproxy
+
+  # [Optional] edge_vpn_interface is the VPN Network interface on the device.
+  edge_vpn_interface: "tailscale0" # Default
+
+  # [Optional] edge_vpn_ip is the IP address of the device on the VPN interface.
+  edge_vpn_ip: "100.64.x.x"
+
+# Package section configures the Gostproxy package on rapyuta.io.
+package:
+  proxy:
+    # [Optional] limits configure the resource limits on the Cloud deployment
+    # running Gostproxy.
+    limits:
+      cpu: 0.25
+      memory: 128
+    # [Optional] replicas configures the Gostproxy replicas on the Cloud.
+    # Currently only single replica is supported.
+    replicas: 1
+    # routes defines the reverse proxy routes.
+    # * The endpoint will be of the format: $name-$suffix-$org.ep-r.io
+    # * The target_port is the Port on the device where request will be forwarded.
+    # * [Optional] type defines the type of the route. The default value is
+    #   "external-https".
+    routes:
+    - name: "nginx"
+      # [Optional] suffix is the suffix of the endpoint. The default value is project name.
+      suffix: ""
+      target_port: 80
+      # type: external-https

@@ -1,0 +1,82 @@
+branches:
+- feature-x
+- bug/fix some
+- feat?oops
+- "bran\xA9h@!"
+index:
+  apiVersion: v1
+  entries:
+    Zed:
+    - name: Zed
+      version: '1'
+      urls:
+      - https://charts.example/Zed.tgz
+    sample:
+    - name: sample
+      version: '2'
+      description: first entry
+      created: '2026-01-01T00:00:00Z'
+      digest: synthetic-digest
+      urls:
+      - https://charts.example/sample-2.tgz
+      - https://charts.example/fallback.tgz
+      custom:
+        labels:
+        - recorded
+    - name: sample
+      version: 1.0.0
+      urls:
+      - https://charts.example/sample-1.tgz
+    - name: sample
+      version: 1.0.0
+      urls:
+      - https://charts.example/duplicate.tgz
+selectors:
+- sample
+- sample:1.0.0
+- sample:2
+- missing
+- sample:9
+forwarding:
+- id: defaults
+  operation: apply
+  values: []
+  secrets: []
+  dryrun: true
+  delete_existing: false
+- id: explicit
+  operation: apply
+  values:
+  - first.yaml
+  - second.yaml
+  secrets:
+  - secrets.yaml
+  dryrun: true
+  delete_existing: true
+- id: delete
+  operation: delete
+  values: []
+  secrets: []
+  dryrun: true
+recreation:
+- id: normal
+  recreate: false
+  dryrun: true
+  fail_delete: false
+- id: recreate
+  recreate: true
+  dryrun: false
+  fail_delete: false
+- id: preview
+  recreate: true
+  dryrun: true
+  fail_delete: false
+- id: failed-delete
+  recreate: true
+  dryrun: false
+  fail_delete: true
+failures:
+  branch: bug/fix some
+  package_urls:
+  - relative.tgz
+  - https://charts.example/second.tgz

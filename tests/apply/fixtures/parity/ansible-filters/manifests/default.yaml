@@ -1,0 +1,6 @@
+kind: Role
+metadata:
+  name: default
+spec:
+  description: "{{ missing_value | default('fallback') }}"
+  rules: []

@@ -1,0 +1,7 @@
+apiVersion: v1
+description: >-
+  Gateway is the entrypoint for the services running on the Edge. It
+  authenticates and authorizes the requests before proxying them to the
+  designated server.
+name: gateway
+version: 1.0.0

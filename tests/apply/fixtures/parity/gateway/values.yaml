@@ -1,0 +1,195 @@
+database:
+  # username is the default user for the PostgreSQL cluster.
+  username: "rr_user"
+  # password is the password of the default user for the PostgreSQL cluster.
+  password: "rr_pass"
+
+gateway:
+  # The entrypoint is the URL prefix where the Gateway is exposed.
+  # Defaults to https://gateway-**rio.project.name**-**rio.organization.short_id**.ep-r.io if not set.
+  entrypoint:
+  # Allowed_origins is the list of allowed origins for CORS in the Gateway.
+  # The default proxy URLS, IO console and sui prod are included by default.
+  allowed_origins:
+  # version is the container image tag for the Gateway.
+  version: "pr-304"
+  # [Optional] image_secret is the rapyuta.io Secret for pulling the private
+  # container images from the registry.
+  #
+  # Default value: quay
+  image_secret: "quay"
+  # [Optional] device_name is the rapyuta.io Device where Gateway will run.
+  #
+  # Default value: edge01
+  device_name: "edge01"
+  # [Optional] param_tree is the rapyuta.io Legacy configuration tree with the
+  # Gateway configurations.
+  #
+  # Default value: gateway
+  param_tree: "gateway"
+
+  # ports maps service names to the real upstream service ports. Keys must
+  # match the path prefixes used in the gateway config.yaml routes.
+  # These are also used by toxiproxy to derive upstream and listen ports.
+  ports:
+    interface: 5000
+    gwm: 8000
+    wms: 8081
+    kratos: 4433
+    kratos_admin: 4434
+    kratos_ui: 4455
+    system_ui: 3001
+    diagnostics_ui: 3011
+
+  # image_proxy configures the built-in image proxy in the Gateway.
+  image_proxy:
+    # secret_key is the AWS S3 Secret Key.
+    secret_key: ""
+    # access_key_id is the AWS S3 Access Key ID.
+    access_key_id: ""
+
+  # spicedb_authz configures SpiceDB server embedded in the Gateway. Gateway
+  # integrates with SpiceDB for authorization.
+  spicedb_authz:
+    # [Optional] force_preseed determines if the SpiceDB preseed file will be
+    # force-applied.
+    #
+    # Default value: false
+    force_preseed: false
+
+  # kratos_identity configures Ory Kratos identity server. Gateway integrates
+  # with Ory Kratos for authentication. Uses quay.io/rapyuta/kratos which
+  # bundles identity schemas and Jsonnet files. All scalar config values are
+  # overridden via Kratos native environment variables.
+  kratos_identity:
+    # Enable determines if Ory Kratos is used for identity.
+    #
+    # Default value: false
+    enable: false
+
+    # self_service_ui is the Sample UI for Ory Kratos for testing the Kratos
+    # Server. This is not supposed to be used in Production.
+    self_service_ui:
+      # Enable determines if Self Service UI is deployed.
+      #
+      # Default value: false
+      enable: false
+      # cookie_secret is the secret used for authenticating browser cookies used
+      # by Self Service UI.
+      cookie_secret:
+
+    # migration migrates the identities from rr_amr_auth to Ory Kratos server.
+    migration:
+      # Enable determines if migration will run.
+      enable: false
+
+      # [Optional] data_dir is the directory where Lmdb data is present on the
+      # device.
+      # Default value: /var/lib/auth_data/auth_data
+      data_dir: /var/lib/auth_data/auth_data
+
+      # system_token is the Legacy system token.
+      system_token: SYSTEM_TOKEN
+
+      tokens:
+        - TOKEN_VALUE:TOKEN_NAME:TOKEN_SCOPE
+
+    # bootstrap creates the identities if the name is (1) not already in kratos and (2) not in the migration, if enabled.
+    bootstrap:
+      # Enable determines if bootstrap will run.
+      enable: false
+
+      # Kratos servicetoken username, hashed password and sha256 hash. Note that '$' characters must be double escaped.
+      tokens:
+        - name:
+          # bcrypt.hashpw(raw.encode(), bcrypt.gensalt()).decode().replace('$', '$$')
+          value:
+          # hashlib.sha256(raw.encode()).hexdigest().replace('$', '$$')
+          sha256:
+      # Kratos user usernames, passwords and groups. Groups are required for UI2 compatability.
+      users:
+        - name:
+          # bcrypt.hashpw(raw.encode(), bcrypt.gensalt()).decode().replace('$', '$$')
+          password:
+          group:
+
+    # [Optional] version is the container image tag for quay.io/rapyuta/kratos.
+    #
+    # Default value: v1.3.1
+    version: "v1.3.1"
+    # user_schema configures optional fields and validation in the Kratos user
+    # identity schema.
+    user_schema:
+      # require_barcode adds details.barcode as a required string field.
+      #
+      # Default value: false
+      require_barcode: false
+    # cookie_secret is the secret used for authenticating browser cookies, used
+    # by Kratos.
+    cookie_secret:
+    # cookie_cipher is the secret used for encrypting browser cookies, used by
+    # Kratos.
+    cookie_cipher:
+    # cookie_same_site_disable should never be set to true in production.
+    # Setting this flag allows clients to authenticate from local origins, primarily for integration testing purposes.
+    cookie_same_site_disable:
+    # registration_hook_api_key is the API Key used by Ory Kratos for
+    # authenticating to the Kratos Hooks implemented in Caddy server.
+    registration_hook_api_key:
+    # oidc_client_id is the OAuth2 Client ID for rapyuta.io OIDC server.
+    oidc_client_id:
+    # oidc_client_secret is the OAuth2 Client Secret for rapyuta.io OIDC server.
+    oidc_client_secret:
+    # [Optional] oidc_issuer_url is the OIDC issuer URL.
+    #
+    # Default value: https://oidc.rapyuta.io
+    oidc_issuer_url: "https://oidc.rapyuta.io"
+
+  # toxiproxy wraps Shopify Toxiproxy to simulate degraded network conditions
+  # between the gateway and upstream services. When enabled, caddy routes
+  # traffic through toxiproxy listen ports instead of directly to upstreams.
+  # See: system/submodules/gateway/toxiproxy/README.md
+  toxiproxy:
+    # enabled controls whether toxiproxy is deployed and caddy routes
+    # traffic through it. Both enabled and services must be set.
+    #
+    # Default value: false
+    enabled: false
+    # version is the container image tag for quay.io/rapyuta/toxiproxy.
+    version:
+    # api_port is the toxiproxy management REST API port.
+    #
+    # Default value: 8474
+    api_port: 8474
+    # port_offset is added to the upstream port (from gateway.ports) to
+    # derive the toxiproxy listen port for each enabled service.
+    # e.g. interface (port 5000) → listen on 15000 with offset 10000.
+    #
+    # Default value: 10000
+    port_offset: 10000
+    # services is a dict of service names (matching gateway.ports keys) to
+    # route through toxiproxy, with per-service toxic configuration.
+    # Both enabled: true and at least one service entry are required for
+    # toxiproxy to be deployed and caddy to route through it.
+    #
+    # Toxic values: set to 0 to disable a specific toxic.
+    #   latency     — downstream delay in ms
+    #   jitter      — random variation in ms added to latency
+    #   bandwidth   — downstream throughput limit in KB/s
+    #   timeout     — kills connection after N ms (network blackout, NOT
+    #                 a response timeout). Leave at 0 in most setups.
+    #   slow_close  — delays TCP close by N ms
+    #   slicer_average_size — slices data into chunks of N bytes
+    #   slicer_delay        — delay in microseconds between sliced chunks
+    #   slicer_size_variation — variation in bytes of chunk size
+    #
+    services:
+      interface:
+        latency: 0
+        jitter: 0
+        bandwidth: 0
+        timeout: 0
+        slow_close: 0
+        slicer_average_size: 0
+        slicer_delay: 0
+        slicer_size_variation: 0
