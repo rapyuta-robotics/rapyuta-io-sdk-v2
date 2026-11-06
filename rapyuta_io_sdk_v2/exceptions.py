@@ -13,7 +13,22 @@
 # limitations under the License.
 
 
-"""Exceptions raised for rapyuta.io HTTP errors."""
+"""Exceptions raised for rapyuta.io HTTP errors and upload failures."""
+
+from __future__ import annotations
+
+from asyncio import CancelledError
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from rapyuta_io_sdk_v2.models.device_command import (
+        DeviceCommandFailure,
+        DeviceCommandOutcome,
+    )
+    from rapyuta_io_sdk_v2.models.parameter import (
+        ParameterUploadFailure,
+        ParameterUploadResult,
+    )
 
 
 class AuthenticationError(Exception):
@@ -184,3 +199,104 @@ class UnknownError(Exception):
         """
         self.message = message
         super().__init__(self.message)
+
+
+class DeviceContractError(UnknownError):
+    """A Device service payload violates its documented response contract."""
+
+    def __init__(self, message: str, *, jid: str | None = None) -> None:
+        """Retain a validated job identity when malformed acknowledgment permits.
+
+        Args:
+            message: Redacted contract failure description.
+            jid: Validated job identifier, if received despite malformed data.
+        """
+        self.jid = jid
+        super().__init__(message)
+
+
+class ParameterUploadError(Exception):
+    """An upload failed after the operations recorded in partial_result."""
+
+    def __init__(
+        self, failure: ParameterUploadFailure, partial_result: ParameterUploadResult
+    ) -> None:
+        """Retain typed failure/progress; the helper chains the original cause.
+
+        Args:
+            failure: Attributable path/stage and redacted message.
+            partial_result: Immutable snapshot of acknowledged operations.
+        """
+        self.failure = failure
+        self.partial_result = partial_result
+        super().__init__(f"{failure.stage}: {failure.path}: {failure.message}")
+
+
+# Public cancellation name follows asyncio conventions and the SDK contract.
+class ParameterUploadCancelled(CancelledError):  # noqa: N818
+    """Cancellation preserving known upload progress and task semantics."""
+
+    def __init__(
+        self, failure: ParameterUploadFailure, partial_result: ParameterUploadResult
+    ) -> None:
+        """Retain cancellation context and the immutable acknowledged progress.
+
+        Args:
+            failure: Last path/stage observed when cancellation arrived.
+            partial_result: Snapshot including completed identities and skips.
+        """
+        self.failure = failure
+        self.partial_result = partial_result
+        super().__init__(f"{failure.stage}: {failure.path}: {failure.message}")
+
+
+class DeviceCommandError(Exception):
+    """Command failure with immutable known progress and a chained cause."""
+
+    def __init__(
+        self, failure: DeviceCommandFailure, partial_result: DeviceCommandOutcome
+    ) -> None:
+        """Retain matching failure and outcome identities.
+
+        Args:
+            failure: Redacted failure stage and identities.
+            partial_result: Immutable outputs known at failure.
+        """
+        _check_command_snapshot(failure, partial_result)
+        self.failure = failure
+        self.partial_result = partial_result
+        super().__init__(f"{failure.stage}: {failure.message}")
+
+
+# Public timeout name follows TimeoutError and the documented SDK contract.
+class DeviceCommandTimeout(DeviceCommandError, TimeoutError):  # noqa: N818
+    """Local command waiting expired; remote execution may continue."""
+
+
+# Public cancellation name preserves the SDK's asyncio naming convention.
+class DeviceCommandCancelled(CancelledError):  # noqa: N818
+    """External cancellation carrying acknowledged progress."""
+
+    def __init__(
+        self, failure: DeviceCommandFailure, partial_result: DeviceCommandOutcome
+    ) -> None:
+        """Retain cancellation identity and task cancellation semantics.
+
+        Args:
+            failure: Redacted cancellation context.
+            partial_result: Immutable outputs known at cancellation.
+        """
+        _check_command_snapshot(failure, partial_result)
+        self.failure = failure
+        self.partial_result = partial_result
+        super().__init__(f"{failure.stage}: {failure.message}")
+
+
+def _check_command_snapshot(
+    failure: DeviceCommandFailure, result: DeviceCommandOutcome
+) -> None:
+    """Require exact identity equality between paired snapshots."""
+    fields = ("jid", "requested_devices", "missing_devices")
+    if any(getattr(failure, field) != getattr(result, field) for field in fields):
+        message = "Command failure and outcome identities must match"
+        raise ValueError(message)
