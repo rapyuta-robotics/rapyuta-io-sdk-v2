@@ -1,0 +1,249 @@
+base:
+- apiVersion: api.rapyuta.io/v2
+  kind: Package
+  metadata:
+    name: caddy-gateway
+    version: pr-304
+    description: Gateway is the entrypoint for the services running on the Edge. It
+      authenticates and authorizes the requests before proxying them to the designated
+      server.
+  spec:
+    runtime: device
+    device:
+      arch: amd64
+      restarts: always
+    executables:
+    - name: gateway
+      type: docker
+      docker:
+        image: quay.io/rapyuta/caddy-gateway:pr-304
+        pullSecret:
+          depends:
+            kind: secret
+            nameOrGUID: quay
+      runAsBash: false
+- apiVersion: api.rapyuta.io/v2
+  kind: Deployment
+  metadata:
+    name: caddy-gateway
+    depends:
+      kind: package
+      nameOrGUID: caddy-gateway
+      version: pr-304
+  spec:
+    runtime: device
+    depends:
+    - kind: deployment
+      nameOrGUID: auth
+    - kind: deployment
+      nameOrGUID: postgresql-primary
+    device:
+      depends:
+        kind: device
+        nameOrGUID: edge01
+    features:
+      params:
+        enabled: true
+        trees:
+        - gateway
+    volumes:
+    - execName: gateway
+      mountPath: /etc/caddy/config.yaml
+      subPath: /opt/rapyuta/configs/gateway/config.yaml
+    - execName: gateway
+      mountPath: /preseed.yaml
+      subPath: /opt/rapyuta/configs/gateway/preseed.yaml
+    envArgs:
+    - name: ALLOWED_ORIGIN_0
+      value: https://gateway-fixture-project-fixture.ep-r.io
+    - name: ALLOWED_ORIGIN_1
+      value: https://sui-fixture-project-fixture.ep-r.io
+    - name: ALLOWED_ORIGIN_2
+      value: https://sui-wos-kqdbp.ep-r.io
+    - name: ALLOWED_ORIGIN_3
+      value: https://sui.prod.rapyuta.io
+    - name: ALLOWED_ORIGIN_4
+      value: https://console.rapyuta.io
+    - name: MIGRATION
+      value: 'true'
+    - name: FORCE_PRESEED
+      value: 'False'
+    - name: PRESEED_FILE
+      value: /opt/rapyuta/configs/gateway/preseed.yaml
+    - name: PG_DSN
+      value: postgres://rr_user:rr_pass@127.0.0.1:5432/spicedb?sslmode=disable
+    - name: USE_KRATOS
+      value: 'False'
+    - name: KRATOS_HOOK_TOKEN
+      value: ''
+    - name: ADMIN_PORT
+      value: '9500'
+    - name: INTERFACE_PORT
+      value: '5000'
+    - name: GWM_PORT
+      value: '8000'
+    - name: WMS_PORT
+      value: '8081'
+    - name: KRATOS_PORT
+      value: '4433'
+    - name: KRATOS_ADMIN_PORT
+      value: '4434'
+    - name: KRATOS_UI_PORT
+      value: '4455'
+    - name: SYSTEM_UI_PORT
+      value: '3001'
+    - name: DIAGNOSTICS_UI_PORT
+      value: '3011'
+toxiproxy:
+- apiVersion: api.rapyuta.io/v2
+  kind: Package
+  metadata:
+    name: caddy-gateway
+    version: pr-304
+    description: Gateway is the entrypoint for the services running on the Edge. It
+      authenticates and authorizes the requests before proxying them to the designated
+      server.
+  spec:
+    runtime: device
+    device:
+      arch: amd64
+      restarts: always
+    executables:
+    - name: gateway
+      type: docker
+      docker:
+        image: quay.io/rapyuta/caddy-gateway:pr-304
+        pullSecret:
+          depends:
+            kind: secret
+            nameOrGUID: quay
+      runAsBash: false
+- apiVersion: api.rapyuta.io/v2
+  kind: Deployment
+  metadata:
+    name: caddy-gateway
+    depends:
+      kind: package
+      nameOrGUID: caddy-gateway
+      version: pr-304
+  spec:
+    runtime: device
+    depends:
+    - kind: deployment
+      nameOrGUID: auth
+    - kind: deployment
+      nameOrGUID: postgresql-primary
+    device:
+      depends:
+        kind: device
+        nameOrGUID: edge01
+    features:
+      params:
+        enabled: true
+        trees:
+        - gateway
+    volumes:
+    - execName: gateway
+      mountPath: /etc/caddy/config.yaml
+      subPath: /opt/rapyuta/configs/gateway/config.yaml
+    - execName: gateway
+      mountPath: /preseed.yaml
+      subPath: /opt/rapyuta/configs/gateway/preseed.yaml
+    envArgs:
+    - name: ALLOWED_ORIGIN_0
+      value: https://gateway-fixture-project-fixture.ep-r.io
+    - name: ALLOWED_ORIGIN_1
+      value: https://sui-fixture-project-fixture.ep-r.io
+    - name: ALLOWED_ORIGIN_2
+      value: https://sui-wos-kqdbp.ep-r.io
+    - name: ALLOWED_ORIGIN_3
+      value: https://sui.prod.rapyuta.io
+    - name: ALLOWED_ORIGIN_4
+      value: https://console.rapyuta.io
+    - name: MIGRATION
+      value: 'true'
+    - name: FORCE_PRESEED
+      value: 'False'
+    - name: PRESEED_FILE
+      value: /opt/rapyuta/configs/gateway/preseed.yaml
+    - name: PG_DSN
+      value: postgres://rr_user:rr_pass@127.0.0.1:5432/spicedb?sslmode=disable
+    - name: USE_KRATOS
+      value: 'False'
+    - name: KRATOS_HOOK_TOKEN
+      value: ''
+    - name: ADMIN_PORT
+      value: '9500'
+    - name: INTERFACE_PORT
+      value: '15000'
+    - name: GWM_PORT
+      value: '8000'
+    - name: WMS_PORT
+      value: '8081'
+    - name: KRATOS_PORT
+      value: '4433'
+    - name: KRATOS_ADMIN_PORT
+      value: '4434'
+    - name: KRATOS_UI_PORT
+      value: '4455'
+    - name: SYSTEM_UI_PORT
+      value: '3001'
+    - name: DIAGNOSTICS_UI_PORT
+      value: '3011'
+- apiVersion: apiextensions.rapyuta.io/v1
+  kind: Package
+  metadata:
+    name: toxiproxy
+    version: synthetic-v1
+  spec:
+    runtime: device
+    device:
+      arch: amd64
+      restart: always
+    executables:
+    - name: server
+      type: docker
+      runAsBash: false
+      docker:
+        image: quay.io/rapyuta/toxiproxy:synthetic-v1
+        imagePullPolicy: IfNotPresent
+- apiVersion: apiextensions.rapyuta.io/v1
+  kind: Deployment
+  metadata:
+    name: toxiproxy
+    depends:
+      kind: package
+      nameOrGUID: toxiproxy
+      version: synthetic-v1
+  spec:
+    runtime: device
+    device:
+      depends:
+        kind: device
+        nameOrGUID: edge01
+    restart: always
+    envArgs:
+    - name: TOXIPROXY_API_PORT
+      value: '8474'
+    - name: TOXIPROXY_PROXY_0_NAME
+      value: interface
+    - name: TOXIPROXY_PROXY_0_LISTEN
+      value: 0.0.0.0:15000
+    - name: TOXIPROXY_PROXY_0_UPSTREAM
+      value: localhost:5000
+    - name: TOXIPROXY_PROXY_0_LATENCY
+      value: '0'
+    - name: TOXIPROXY_PROXY_0_JITTER
+      value: '0'
+    - name: TOXIPROXY_PROXY_0_BANDWIDTH
+      value: '0'
+    - name: TOXIPROXY_PROXY_0_TIMEOUT
+      value: '0'
+    - name: TOXIPROXY_PROXY_0_SLOW_CLOSE
+      value: '0'
+    - name: TOXIPROXY_PROXY_0_SLICER_AVERAGE_SIZE
+      value: '0'
+    - name: TOXIPROXY_PROXY_0_SLICER_DELAY
+      value: '0'
+    - name: TOXIPROXY_PROXY_0_SLICER_SIZE_VARIATION
+      value: '0'

@@ -1,0 +1,42 @@
+---
+apiVersion: "apiextensions.rapyuta.io/v1"
+kind: "Package"
+metadata:
+  name: "gostproxy"
+  version: "{{ docker.tag.cloud_proxy | default('v1.0.0') }}"
+  description: >-
+    GostProxy is an open-source non-caching web-proxy. This package is designed
+    to work with Rapyuta.io's VPN Functionality to expose services running on
+    Device to the Public web.
+  labels:
+    app: "gostproxy"
+spec:
+  runtime: cloud
+  cloud:
+    replicas: {{ package.proxy.replicas| default('1') }}
+  executables:
+    - name: "gostproxy"
+      type: docker
+      simulation: False
+      limits:
+        cpu: {{ package.proxy.limits.cpu| default('0.25') }}
+        memory: {{ package.proxy.limits.memory| default('128') }}
+      docker:
+        image: "quay.io/rapyuta/gostproxy:{{ docker.tag.cloud_proxy | default('v1.0.0') }}"
+  environmentVars:
+    - name: "DEVICE_NAME"
+      description: "Device Name in Tailscale"
+      exposed: False
+  endpoints:
+    {% for route in package.proxy.routes %}
+    - name: "{{ route.name }}"
+      type: {{ route.type | default('external-https') }}
+      port: 443
+      targetPort: {{ route.target_port }}
+    {% if route.suffix and route.suffix != rio.project.name %}
+    - name: "{{ route.name }}-suffix"
+      type: {{ route.type | default('external-https') }}
+      port: 443
+      targetPort: {{ route.target_port }}
+    {% endif %}
+    {% endfor %}

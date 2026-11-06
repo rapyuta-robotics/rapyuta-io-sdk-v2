@@ -5,11 +5,18 @@ build/
 dist/
 wheels/
 *.egg-info
+*.log
+.DS_Store
+Thumbs.db
+*.tmp
+*.swp
+.env*
 
 # venv
 .venv*/
 venv/
 .ruff_cache
+.pytest_cache/
 .idea
 .vscode
 main_test.py

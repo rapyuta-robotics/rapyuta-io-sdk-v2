@@ -1,0 +1,117 @@
+# devices section configures the Devices for deploying the Manifests.
+devices:
+  # virtual configures the Virtual Devices for Testing the Chart.
+  virtual: false
+  primary: postgres-primary
+  standby: postgres-replica
+
+database:
+  # dbname is the name of the database that is configured automatically. It can
+  # be a single name or a comma-separated list of names.
+  dbname: "rr_db_1,rr_db_2,rr_db_3"
+  # username is the default user for the PostgreSQL cluster.
+  username: "rr_user"
+  # password is the password of the default user for the PostgreSQL cluster.
+  password: "rr_pass"
+  # replication_user is the user with Streaming Replication permissions. This
+  # user is configured on the primary and then injected in the standby
+  # automatically.
+  replication_user: "rr_replicator"
+  # replication_password is the password for the replication_user.
+  replication_password: "rr_replicator_pass"
+  postgresql_version: "16.4"
+  # wal_level determines the verbosity of the WAL segments. The replica
+  # (default) is sufficient for streaming replication.
+  wal_level: "replica"
+  # max_wal_senders determines the maximum number of concurrent connections from
+  # streaming or backup clients. This number must be higher than the actual
+  # expected clients to allow for failed clients to connect immediately instead
+  # of waiting for the timeout.
+  max_wal_senders: "10"
+  # max_replication_slots determines the maximum number of replication slots
+  # maintained by the primary.
+  max_replication_slots: "10"
+  # hot_standby_feedback determines if the Standby will send feedback about
+  # queries currently executing on the standby.
+  hot_standby_feedback: "off"
+  # synchronous_commit determines the strictness of WAL processing before the
+  # server responds with success.
+  #
+  # Possible Values:
+  #          off - The WAL need not be committed to the Disk.
+  #           on - The WAL must be committed to the Disk. (Default)
+  # remote_apply - The WAL must be applied to the Hot Standby.
+  # remote_write - The WAL must be committed to the Disk of Hot Standby.
+  synchronous_commit: "on"
+  # synchronous_standby_names determines the Streaming Replicas that require
+  # sychronous replication.
+  #
+  # Ref: https://www.postgresql.org/docs/current/runtime-config-replication.html#GUC-SYNCHRONOUS-STANDBY-NAMES
+  synchronous_standby_names: ""
+  #
+  #
+  #shared_buffers sets the amount of memory PostgreSQL uses for caching table and index data,
+  #directly affecting how much database work can be served from RAM instead of disk.
+  shared_buffers: "512MB"
+  # data_dir specifies the directory where the PostgreSQL data files will be stored.
+  data_dir: /opt/rapyuta/volumes/postgres
+  standby:
+    # enable determines if the Hot Standby replica is required.
+    enable: false
+    # cidr determines the HBA rules for allowing Streaming Replication.
+    cidr: 10.224.0.0/12
+    # primary_host is the PostgreSQL Host for the primary.
+    primary_host: 10.0.21.200
+  # backup section controls the Barman backup behaviour. The Barman container
+  # runs on the Primary Host. It uses the Streaming Replication strategy for
+  # backups. The full-backups are uploaded to Azure Blob Storage.
+  backup:
+    # enable determines if the Barman backup is required.
+    enable: false
+    # backup_schedule determines the cron schedule for full backups.
+    backup_schedule: "*/10 * * * *"
+    # azure_storage_account configures the Azure StorageAccount to be used for
+    # off-site backups.
+    azure_storage_account: "STORAGE_ACCOUNT"
+    # azure_storage_container configures the Blob Container under the Azure
+    # StorageAccount to be used for off-site backups.
+    azure_storage_container: "STORAGE_CONTAINER"
+    # azure_storage_key configures the secret key for Azure StorageAccount.
+    azure_storage_key: "STORAGE_KEY"
+    # backup_name configures the top-level Prefix in the Azure Blob Container.
+    backup_name: "hwil"
+    # retention_policy configures the Barman retention for Local backups.
+    #
+    # Ref: https://docs.pgbarman.org/release/3.11.1/barman.5.html#options
+    retention_policy: "REDUNDANCY 5"
+    # version determines the Barman version used for backups.
+    # Format: PG_VERSION-BARMAN_VERSION
+    version: 16-3.11.1
+    # data_dir specifies the directory where backup data will be stored locally by Barman.
+    data_dir: /opt/rapyuta/volumes/barman/data
+    # log_dir specifies the directory where Barman logs will be stored.
+    log_dir: /opt/rapyuta/volumes/barman/log
+
+  # recovery section configures the Barman recovery. By default this needs to be
+  # disabled. When recovery is required, make sure that the PostgreSQL server is
+  # not running and the data directory is empty.
+  recovery:
+    enable: false
+    # Barman backupID to be used for base recovery.
+    backup_id: "20240927T065001"
+    # [Optional] Restore Timestamp can be specified for Point-In-Time Recovery.
+    # The Timestamp must be newer than the base backup time.
+    restore_timestamp: ""
+    # [Optional] Disaster Recovery can be toggled if the local Barman data is
+    # not available. In this mode, the Recovery will pull the backups from the
+    # Cloud.
+    disaster_recovery: "true"
+    # version determines the Barman version used for recovery.
+    # Format: PG_VERSION-POSTGIS_VERSION-BARMAN_VERSION
+    version: 16-3.4-3.11.1
+
+benchmark:
+  enable: false
+  test: oltp_read_write
+  threads: "1"
+  time: "10"

@@ -1,0 +1,63 @@
+{% if benchmark and benchmark.enable | default(false) %}
+apiVersion: "apiextensions.rapyuta.io/v1"
+kind: "Package"
+metadata:
+  name: sysbench
+  version: "latest"
+  labels:
+    app: sysbench
+spec:
+  runtime: device
+  device:
+    arch: amd64
+    restart: always
+  executables:
+    - name: "benchmark"
+      type: docker
+      command:
+      docker:
+        image: "quay.io/rapyuta/chart-sysbench"
+        imagePullPolicy: "IfNotPresent"
+  environmentArgs:
+    - name: "SYSBENCH_TEST"
+      default: "olt_read_write"
+      description: "The Sysbench Test Script"
+      exposed: False
+    - name: "SYSBENCH_TIME"
+      default: "10"
+      description: "Time Limit for the Sysbench Test"
+      exposed: False
+    - name: "SYSBENCH_THREADS"
+      default: "1"
+      description: "Thread Limit for the Sysbench Test"
+      exposed: False
+---
+apiVersion: apiextensions.rapyuta.io/v1
+kind: Deployment
+metadata:
+  name: sysbench
+  depends:
+    kind: package
+    nameOrGUID: sysbench
+    version: "latest"
+  labels:
+    app: postgres
+spec:
+  runtime: device
+  depends:
+  - kind: deployment
+    nameOrGUID: postgresql-primary
+    wait: True
+  device:
+    depends:
+      kind: device
+      nameOrGUID: {{ devices.primary }}
+  restart: onfailure
+  envArgs:
+    - name: "SYSBENCH_TEST"
+      value: "{{ benchmark.test | default("oltp_read_write") }}"
+    - name: "SYSBENCH_TIME"
+      value: "{{ benchmark.time | default("10") }}"
+    - name: "SYSBENCH_THREADS"
+      value: "{{ benchmark.threads | default("1") }}"
+{% endif %}

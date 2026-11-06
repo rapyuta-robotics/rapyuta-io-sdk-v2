@@ -48,3 +48,10 @@ def test_empty_entrypoint_is_unset_and_keeps_run_as_bash() -> None:
         executable = Executable(entrypoint=empty, command="echo hello", runAsBash=True)
         assert executable.entrypoint is None
         assert executable.command == ["/bin/bash", "-c", "echo hello"]
+
+
+def test_omitted_entrypoint_stays_absent_from_partial_payload() -> None:
+    executable = Executable(command="echo hello", runAsBash=True)
+    payload = executable.model_dump(by_alias=True, exclude_unset=True)
+    assert "entrypoint" not in payload
+    assert payload["command"] == ["/bin/bash", "-c", "echo hello"]

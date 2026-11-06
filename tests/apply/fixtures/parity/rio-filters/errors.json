@@ -1,0 +1,12 @@
+[
+  {
+    "id": "interface-no-address",
+    "type": "Exception",
+    "message": "Error rendering template manifests/interface-no-address.yaml: interface \"eth0,tailscale0\" not found on device \"edge-test\""
+  },
+  {
+    "id": "getenv-invalid",
+    "type": "Exception",
+    "message": "Error rendering template manifests/getenv-invalid.yaml: str expected, not int"
+  }
+]

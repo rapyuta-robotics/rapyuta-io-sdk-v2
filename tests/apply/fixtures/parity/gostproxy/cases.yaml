@@ -1,0 +1,42 @@
+base_values: values.yaml
+cases:
+- id: direct-ip
+  overrides:
+    device:
+      edge_vpn_ip: 100.64.42.1
+  rio:
+    project:
+      name: fixture-project
+      guid: project-fixture
+    organization:
+      name: fixture-org
+      guid: org-fixture
+      short_id: fixture
+    email_id: fixture@example.test
+  project_guid: project-fixture
+- id: interface-ip
+  overrides:
+    device:
+      edge_vpn_ip: ''
+      edge_vpn_interface: eth0,tailscale0
+    package:
+      proxy:
+        routes:
+        - name: nginx
+          suffix: alternate
+          target_port: 80
+  device:
+    eth0: []
+    tailscale0:
+    - 100.64.42.2
+    - 100.64.42.3
+  rio:
+    project:
+      name: fixture-project
+      guid: project-fixture
+    organization:
+      name: fixture-org
+      guid: org-fixture
+      short_id: fixture
+    email_id: fixture@example.test
+  project_guid: project-fixture
