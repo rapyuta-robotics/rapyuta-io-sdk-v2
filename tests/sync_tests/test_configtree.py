@@ -1,13 +1,37 @@
+# Copyright 2026 Rapyuta Robotics
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
 import httpx
 import pytest
-from pytest_mock import MockFixture
 
-# ruff: noqa: F811, F401
-from tests.data.mock_data import configtree_body
-from tests.utils.fixtures import client
+from rapyuta_io_sdk_v2.exceptions import (
+    BadGatewayError,
+    ServiceUnavailableError,
+)
+
+if TYPE_CHECKING:
+    from pytest_mock import MockFixture
+
+    from rapyuta_io_sdk_v2 import Client
 
 
-def test_list_configtrees_success(client, mocker: MockFixture):
+def test_list_configtrees_success(*, client: Client, mocker: MockFixture) -> None:
     mock_get = mocker.patch("httpx.Client.get")
     mock_get.return_value = httpx.Response(
         status_code=200,
@@ -22,18 +46,20 @@ def test_list_configtrees_success(client, mocker: MockFixture):
     ]
 
 
-def test_list_configtrees_bad_gateway(client, mocker: MockFixture):
+def test_list_configtrees_bad_gateway(*, client: Client, mocker: MockFixture) -> None:
     mock_get = mocker.patch("httpx.Client.get")
     mock_get.return_value = httpx.Response(
         status_code=502,
         json={"error": "bad gateway"},
     )
-    with pytest.raises(Exception) as exc:
+    with pytest.raises(BadGatewayError) as exc:
         client.list_configtrees()
     assert str(exc.value) == "bad gateway"
 
 
-def test_create_configtree_success(client, mocker: MockFixture):
+def test_create_configtree_success(
+    *, client: Client, mocker: MockFixture, configtree_body: dict[str, Any]
+) -> None:
     mock_post = mocker.patch("httpx.Client.post")
     mock_post.return_value = httpx.Response(
         status_code=201,
@@ -45,18 +71,20 @@ def test_create_configtree_success(client, mocker: MockFixture):
     assert response["metadata"]["guid"] == "test_configtree_guid"
 
 
-def test_create_configtree_service_unavailable(client, mocker: MockFixture):
+def test_create_configtree_service_unavailable(
+    *, client: Client, mocker: MockFixture, configtree_body: dict[str, Any]
+) -> None:
     mock_post = mocker.patch("httpx.Client.post")
     mock_post.return_value = httpx.Response(
         status_code=503,
         json={"error": "service unavailable"},
     )
-    with pytest.raises(Exception) as exc:
+    with pytest.raises(ServiceUnavailableError) as exc:
         client.create_configtree(configtree_body)
     assert str(exc.value) == "service unavailable"
 
 
-def test_get_configtree_success(client, mocker: MockFixture):
+def test_get_configtree_success(*, client: Client, mocker: MockFixture) -> None:
     mock_get = mocker.patch("httpx.Client.get")
     mock_get.return_value = httpx.Response(
         status_code=200,
@@ -69,7 +97,9 @@ def test_get_configtree_success(client, mocker: MockFixture):
     assert response["metadata"]["name"] == "test_configtree"
 
 
-def test_set_configtree_revision_success(client, mocker: MockFixture):
+def test_set_configtree_revision_success(
+    *, client: Client, mocker: MockFixture, configtree_body: dict[str, Any]
+) -> None:
     mock_put = mocker.patch("httpx.Client.put")
     mock_put.return_value = httpx.Response(
         status_code=200,
@@ -84,7 +114,9 @@ def test_set_configtree_revision_success(client, mocker: MockFixture):
     assert response["metadata"]["name"] == "test_configtree"
 
 
-def test_update_configtree_success(client, mocker: MockFixture):
+def test_update_configtree_success(
+    *, client: Client, mocker: MockFixture, configtree_body: dict[str, Any]
+) -> None:
     mock_put = mocker.patch("httpx.Client.put")
     mock_put.return_value = httpx.Response(
         status_code=200,
@@ -92,12 +124,14 @@ def test_update_configtree_success(client, mocker: MockFixture):
             "metadata": {"guid": "test_configtree_guid", "name": "test_configtree"},
         },
     )
-    response = client.update_configtree(name="mock_configtree_name", body=configtree_body)
+    response = client.update_configtree(
+        name="mock_configtree_name", body=configtree_body
+    )
     assert response["metadata"]["guid"] == "test_configtree_guid"
     assert response["metadata"]["name"] == "test_configtree"
 
 
-def test_delete_configtree_success(client, mocker: MockFixture):
+def test_delete_configtree_success(*, client: Client, mocker: MockFixture) -> None:
     mock_delete = mocker.patch("httpx.Client.delete")
     mock_delete.return_value = httpx.Response(
         status_code=204,
@@ -107,7 +141,7 @@ def test_delete_configtree_success(client, mocker: MockFixture):
     assert response is None
 
 
-def test_list_revisions_success(client, mocker: MockFixture):
+def test_list_revisions_success(*, client: Client, mocker: MockFixture) -> None:
     mock_get = mocker.patch("httpx.Client.get")
     mock_get.return_value = httpx.Response(
         status_code=200,
@@ -122,7 +156,9 @@ def test_list_revisions_success(client, mocker: MockFixture):
     ]
 
 
-def test_create_revision_success(client, mocker: MockFixture):
+def test_create_revision_success(
+    *, client: Client, mocker: MockFixture, configtree_body: dict[str, Any]
+) -> None:
     mock_post = mocker.patch("httpx.Client.post")
     mock_post.return_value = httpx.Response(
         status_code=201,
@@ -134,7 +170,7 @@ def test_create_revision_success(client, mocker: MockFixture):
     assert response["metadata"]["guid"] == "test_revision_guid"
 
 
-def test_put_keys_in_revision_success(client, mocker: MockFixture):
+def test_put_keys_in_revision_success(*, client: Client, mocker: MockFixture) -> None:
     mock_put = mocker.patch("httpx.Client.put")
     mock_put.return_value = httpx.Response(
         status_code=200,
@@ -151,7 +187,7 @@ def test_put_keys_in_revision_success(client, mocker: MockFixture):
     assert response["metadata"]["name"] == "test_revision"
 
 
-def test_commit_revision_success(client, mocker: MockFixture):
+def test_commit_revision_success(*, client: Client, mocker: MockFixture) -> None:
     mock_patch = mocker.patch("httpx.Client.patch")
     mock_patch.return_value = httpx.Response(
         status_code=200,
@@ -167,7 +203,7 @@ def test_commit_revision_success(client, mocker: MockFixture):
     assert response["metadata"]["name"] == "test_revision"
 
 
-def test_commit_revision_with_labels(client, mocker: MockFixture):
+def test_commit_revision_with_labels(*, client: Client, mocker: MockFixture) -> None:
     mock_patch = mocker.patch("httpx.Client.patch")
     mock_patch.return_value = httpx.Response(
         status_code=200,
@@ -193,7 +229,7 @@ def test_commit_revision_with_labels(client, mocker: MockFixture):
     assert body["metadata"]["labels"] == {"rapyuta.io/milestone": "v1.0"}
 
 
-def test_get_key_in_revision_str(client, mocker: MockFixture):  # noqa: F811
+def test_get_key_in_revision_str(*, client: Client, mocker: MockFixture) -> None:
     # Mock the httpx.Client.get method
     mock_get = mocker.patch("httpx.Client.get")
 
@@ -213,8 +249,9 @@ def test_get_key_in_revision_str(client, mocker: MockFixture):  # noqa: F811
     assert response == "test_value"
 
 
-def test_get_key_in_revision_int(client, mocker: MockFixture):  # noqa: F811
+def test_get_key_in_revision_int(*, client: Client, mocker: MockFixture) -> None:
     # Mock the httpx.Client.get method
+    expected_value = 1500
     mock_get = mocker.patch("httpx.Client.get")
 
     # Set up the mock response
@@ -230,10 +267,10 @@ def test_get_key_in_revision_int(client, mocker: MockFixture):  # noqa: F811
 
     # Validate the response
     assert isinstance(response, int)
-    assert response == 1500
+    assert response == expected_value
 
 
-def test_get_key_in_revision_bool(client, mocker: MockFixture):  # noqa: F811
+def test_get_key_in_revision_bool(*, client: Client, mocker: MockFixture) -> None:
     # Mock the httpx.Client.get method
     mock_get = mocker.patch("httpx.Client.get")
     mock_get.return_value = httpx.Response(
@@ -249,7 +286,7 @@ def test_get_key_in_revision_bool(client, mocker: MockFixture):  # noqa: F811
     assert response
 
 
-def test_put_key_in_revision_success(client, mocker: MockFixture):
+def test_put_key_in_revision_success(*, client: Client, mocker: MockFixture) -> None:
     mock_put = mocker.patch("httpx.Client.put")
     mock_put.return_value = httpx.Response(
         status_code=200,
@@ -267,7 +304,7 @@ def test_put_key_in_revision_success(client, mocker: MockFixture):
     assert response["metadata"]["name"] == "test_revision"
 
 
-def test_delete_key_in_revision_success(client, mocker: MockFixture):
+def test_delete_key_in_revision_success(*, client: Client, mocker: MockFixture) -> None:
     mock_delete = mocker.patch("httpx.Client.delete")
     mock_delete.return_value = httpx.Response(
         status_code=204,
@@ -279,7 +316,7 @@ def test_delete_key_in_revision_success(client, mocker: MockFixture):
     assert response is None
 
 
-def test_rename_key_in_revision_success(client, mocker: MockFixture):
+def test_rename_key_in_revision_success(*, client: Client, mocker: MockFixture) -> None:
     mock_patch = mocker.patch("httpx.Client.patch")
     mock_patch.return_value = httpx.Response(
         status_code=200,

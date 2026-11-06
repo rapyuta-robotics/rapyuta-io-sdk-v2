@@ -1,22 +1,40 @@
+# Copyright 2026 Rapyuta Robotics
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
 import httpx
 import pytest
-from pytest_mock import MockFixture
 
-# ruff: noqa: F811, F401
+if TYPE_CHECKING:
+    from pytest_mock import MockFixture
+
+    from rapyuta_io_sdk_v2 import AsyncClient
+
 from rapyuta_io_sdk_v2.models import Restore, RestoreList
-from tests.data import (
-    restore_body,
-    restore_migration_body,
-    restore_model_mock,
-    restorelist_model_mock,
-)
-from tests.utils.fixtures import async_client
 
 
 @pytest.mark.asyncio
 async def test_list_restores_success(
-    async_client, restorelist_model_mock, mocker: MockFixture
-):
+    *,
+    async_client: AsyncClient,
+    restorelist_model_mock: dict[str, Any],
+    mocker: MockFixture,
+) -> None:
     mock_get = mocker.patch("httpx.AsyncClient.get")
     mock_get.return_value = httpx.Response(
         status_code=200,
@@ -33,7 +51,12 @@ async def test_list_restores_success(
 
 
 @pytest.mark.asyncio
-async def test_get_restore_success(async_client, restore_model_mock, mocker: MockFixture):
+async def test_get_restore_success(
+    *,
+    async_client: AsyncClient,
+    restore_model_mock: dict[str, Any],
+    mocker: MockFixture,
+) -> None:
     mock_get = mocker.patch("httpx.AsyncClient.get")
     mock_get.return_value = httpx.Response(
         status_code=200,
@@ -51,14 +74,16 @@ async def test_get_restore_success(async_client, restore_model_mock, mocker: Moc
 
 
 @pytest.mark.asyncio
-async def test_get_restore_not_found(async_client, mocker: MockFixture):
+async def test_get_restore_not_found(
+    *, async_client: AsyncClient, mocker: MockFixture
+) -> None:
     mock_get = mocker.patch("httpx.AsyncClient.get")
     mock_get.return_value = httpx.Response(
         status_code=404,
         json={"error": "restore not found"},
     )
 
-    with pytest.raises(Exception) as exc:
+    with pytest.raises(Exception, match=r".+") as exc:
         await async_client.get_restore(database="orders-db", name="notfound")
 
     assert str(exc.value) == "restore not found"
@@ -66,8 +91,12 @@ async def test_get_restore_not_found(async_client, mocker: MockFixture):
 
 @pytest.mark.asyncio
 async def test_create_restore_success(
-    async_client, restore_body, restore_model_mock, mocker: MockFixture
-):
+    *,
+    async_client: AsyncClient,
+    restore_body: dict[str, Any],
+    restore_model_mock: dict[str, Any],
+    mocker: MockFixture,
+) -> None:
     mock_post = mocker.patch("httpx.AsyncClient.post")
     mock_post.return_value = httpx.Response(
         status_code=202,
@@ -82,8 +111,12 @@ async def test_create_restore_success(
 
 @pytest.mark.asyncio
 async def test_create_restore_migration_source(
-    async_client, restore_migration_body, restore_model_mock, mocker: MockFixture
-):
+    *,
+    async_client: AsyncClient,
+    restore_migration_body: dict[str, Any],
+    restore_model_mock: dict[str, Any],
+    mocker: MockFixture,
+) -> None:
     mock_post = mocker.patch("httpx.AsyncClient.post")
     mock_post.return_value = httpx.Response(
         status_code=202,
@@ -98,7 +131,9 @@ async def test_create_restore_migration_source(
 
 
 @pytest.mark.asyncio
-async def test_create_restore_requires_target_database(async_client, mocker: MockFixture):
+async def test_create_restore_requires_target_database(
+    *, async_client: AsyncClient, mocker: MockFixture
+) -> None:
     mocker.patch("httpx.AsyncClient.post")
 
     body = {
@@ -106,12 +141,14 @@ async def test_create_restore_requires_target_database(async_client, mocker: Moc
         "spec": {"source": {"type": "backup", "backupName": "orders-nightly"}},
     }
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="target database is not specified"):
         await async_client.create_restore(body=body)
 
 
 @pytest.mark.asyncio
-async def test_create_restore_conflict(async_client, restore_body, mocker: MockFixture):
+async def test_create_restore_conflict(
+    *, async_client: AsyncClient, restore_body: dict[str, Any], mocker: MockFixture
+) -> None:
     mock_post = mocker.patch("httpx.AsyncClient.post")
     mock_post.return_value = httpx.Response(
         status_code=409,
@@ -120,7 +157,7 @@ async def test_create_restore_conflict(async_client, restore_body, mocker: MockF
 
     # Two concurrent pg_restores into one live cluster is data loss, so the
     # apiserver refuses the second.
-    with pytest.raises(Exception) as exc:
+    with pytest.raises(Exception, match=r".+") as exc:
         await async_client.create_restore(body=restore_body)
 
     assert "already in progress" in str(exc.value)

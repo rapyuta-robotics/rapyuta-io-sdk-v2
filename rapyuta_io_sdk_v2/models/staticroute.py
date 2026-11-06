@@ -1,12 +1,23 @@
-"""
-Pydantic models for StaticRoute resource validation.
+# Copyright 2026 Rapyuta Robotics
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""Pydantic models for StaticRoute resource validation.
 
 This module contains Pydantic models that correspond to the StaticRoute JSON schema,
 providing validation for StaticRoute resources to help users identify missing or
 incorrect fields.
 """
-
-from __future__ import annotations
 
 import re
 from typing import Literal
@@ -29,16 +40,22 @@ class StaticRouteSpec(BaseModel):
     @field_validator("source_ip_range")
     @staticmethod
     def validate_ip_ranges(v: list[str] | None) -> list[str] | None:
-        """Validate IP range format (CIDR notation)."""
+        """Validate IP range format (CIDR notation).
+
+        Args:
+            v: Field value supplied to the validator.
+        """
         ip_pattern = (
             r"^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}(?:/([1-9]|1\d|2\d|3[0-2]))?$"
         )
         if v is not None:
             for ip_range in v:
                 if not re.match(ip_pattern, ip_range):
-                    raise ValueError(
-                        f"Invalid IP range format: {ip_range}. Must be a valid CIDR notation (e.g., 192.168.1.0/24)"
+                    message = (
+                        f"Invalid IP range format: {ip_range}. "
+                        "Must be a valid CIDR notation (e.g., 192.168.1.0/24)"
                     )
+                    raise ValueError(message)
         return v
 
 
@@ -61,8 +78,7 @@ class StaticRouteStatus(BaseModel):
 
 
 class StaticRoute(BaseObject):
-    """
-    StaticRoute resource model for validation.
+    """StaticRoute resource model for validation.
 
     This model validates StaticRoute resources according to the JSON schema,
     helping users identify missing or incorrect configuration.
@@ -82,4 +98,4 @@ class StaticRoute(BaseObject):
 
 
 class StaticRouteList(BaseList[StaticRoute]):
-    pass
+    """Paginated static route resources."""

@@ -16,16 +16,25 @@ uv run pytest tests/sync_tests/test_project.py::test_list_projects_success -v
 uv run pytest tests/async_tests/test_project_async.py::test_list_projects_success -v
 
 # Lint and format
-uvx ruff check --fix
-uvx ruff format
+uvx ruff==0.16.9 check --fix .
+uvx ruff==0.16.9 format .
+uvx ruff==0.16.9 check .
+uvx ruff==0.16.9 format --check .
 
 # Build
 uv build
 ```
 
+Ruff is strict: 88-character lines, complexity <= 5, and explicit limits on
+arguments, branches, statements, local variables, and nesting. See
+`pyproject.toml` and `CONTRIBUTING.md` for the complete policy. Refactor to satisfy
+the rules; do not weaken the configuration or add blanket suppressions. Any
+necessary rule-specific suppression needs an explanation. Run both lint and
+format checks before completing a change, and report any remaining violations.
+
 ## Architecture
 
-This is a Python SDK for the rapyuta.io platform v2 API (Python 3.10+, managed with `uv`).
+This is a Python SDK for the rapyuta.io platform v2 API (Python 3.13+, managed with `uv`).
 
 ### Client Layer
 

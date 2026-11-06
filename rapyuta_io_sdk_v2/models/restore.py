@@ -1,6 +1,19 @@
-"""
-Pydantic models for Restore resources.
-"""
+# Copyright 2026 Rapyuta Robotics
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
+"""Pydantic models for Restore resources."""
 
 from __future__ import annotations
 
@@ -29,9 +42,11 @@ class RestoreOptions(BaseModel):
 
 
 class RestoreArchive(BaseModel):
-    """One uploaded backup file the device downloads. Server-resolved and only
-    ever populated on the device-facing copy — ``url`` is blanked on every
-    user-facing read."""
+    """One uploaded backup file the device downloads.
+
+    Server-resolved and only populated on the device-facing copy. The URL is
+    blanked on every user-facing read.
+    """
 
     guid: str | None = Field(default=None)
     role: Literal["base", "wal"] | None = Field(default=None)
@@ -116,8 +131,8 @@ class RestoreStatus(BaseModel):
     # deleted under a restore that is still running — the only way to end one
     # early, since a restore has no delete of its own. Omitting it here makes
     # every client crash on reading a stopped restore rather than displaying it.
-    phase: Literal["Pending", "Running", "Completed", "Failed", "Stopped"] | None = Field(
-        default=None
+    phase: Literal["Pending", "Running", "Completed", "Failed", "Stopped"] | None = (
+        Field(default=None)
     )
     message: str | None = Field(default=None)
     # Which stage the device is on; the per-run detail is in message.
@@ -128,7 +143,9 @@ class RestoreStatus(BaseModel):
     completed_at: str | None = Field(default=None, alias="completedAt")
     # The logical databases the device actually loaded. A partial run reports
     # exactly what landed, which is what decides whether to re-run.
-    restored_databases: list[str] | None = Field(default=None, alias="restoredDatabases")
+    restored_databases: list[str] | None = Field(
+        default=None, alias="restoredDatabases"
+    )
 
 
 class Restore(BaseObject):
@@ -150,5 +167,3 @@ class Restore(BaseObject):
 
 class RestoreList(BaseList[Restore]):
     """Paginated list of Restore resources."""
-
-    pass

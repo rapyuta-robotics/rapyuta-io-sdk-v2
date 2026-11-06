@@ -1,19 +1,36 @@
+# Copyright 2026 Rapyuta Robotics
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
 import httpx
 import pytest
-from pytest_mock import MockFixture
 
-# ruff: noqa: F811, F401
+if TYPE_CHECKING:
+    from pytest_mock import MockFixture
+
+    from rapyuta_io_sdk_v2 import Client
+
 from rapyuta_io_sdk_v2.models import Restore, RestoreList
-from tests.data import (
-    restore_body,
-    restore_migration_body,
-    restore_model_mock,
-    restorelist_model_mock,
-)
-from tests.utils.fixtures import client
 
 
-def test_list_restores_success(client, restorelist_model_mock, mocker: MockFixture):
+def test_list_restores_success(
+    *, client: Client, restorelist_model_mock: dict[str, Any], mocker: MockFixture
+) -> None:
     mock_get = mocker.patch("httpx.Client.get")
     mock_get.return_value = httpx.Response(
         status_code=200,
@@ -35,7 +52,9 @@ def test_list_restores_success(client, restorelist_model_mock, mocker: MockFixtu
     assert "/v2/databases/orders-db/restores/" in mock_get.call_args.kwargs["url"]
 
 
-def test_get_restore_success(client, restore_model_mock, mocker: MockFixture):
+def test_get_restore_success(
+    *, client: Client, restore_model_mock: dict[str, Any], mocker: MockFixture
+) -> None:
     mock_get = mocker.patch("httpx.Client.get")
     mock_get.return_value = httpx.Response(
         status_code=200,
@@ -51,22 +70,26 @@ def test_get_restore_success(client, restore_model_mock, mocker: MockFixture):
     assert response.spec.source.archives[0].url is None
 
 
-def test_get_restore_not_found(client, mocker: MockFixture):
+def test_get_restore_not_found(*, client: Client, mocker: MockFixture) -> None:
     mock_get = mocker.patch("httpx.Client.get")
     mock_get.return_value = httpx.Response(
         status_code=404,
         json={"error": "restore not found"},
     )
 
-    with pytest.raises(Exception) as exc:
+    with pytest.raises(Exception, match=r".+") as exc:
         client.get_restore(database="orders-db", name="notfound")
 
     assert str(exc.value) == "restore not found"
 
 
 def test_create_restore_success(
-    client, restore_body, restore_model_mock, mocker: MockFixture
-):
+    *,
+    client: Client,
+    restore_body: dict[str, Any],
+    restore_model_mock: dict[str, Any],
+    mocker: MockFixture,
+) -> None:
     mock_post = mocker.patch("httpx.Client.post")
     mock_post.return_value = httpx.Response(
         status_code=202,
@@ -86,8 +109,12 @@ def test_create_restore_success(
 
 
 def test_create_restore_migration_source(
-    client, restore_migration_body, restore_model_mock, mocker: MockFixture
-):
+    *,
+    client: Client,
+    restore_migration_body: dict[str, Any],
+    restore_model_mock: dict[str, Any],
+    mocker: MockFixture,
+) -> None:
     mock_post = mocker.patch("httpx.Client.post")
     mock_post.return_value = httpx.Response(
         status_code=202,
@@ -99,12 +126,16 @@ def test_create_restore_migration_source(
     # A migration is the same operation with a dataDirectory source.
     sent = mock_post.call_args.kwargs["json"]
     assert sent["spec"]["source"]["type"] == "dataDirectory"
-    assert sent["spec"]["source"]["oldDataDirectory"] == "/opt/rapyuta/volumes/orders-db"
+    assert (
+        sent["spec"]["source"]["oldDataDirectory"] == "/opt/rapyuta/volumes/orders-db"
+    )
     assert sent["spec"]["source"]["sourceVersion"] == "17"
     assert "/v2/databases/orders-db-v18/restores/" in mock_post.call_args.kwargs["url"]
 
 
-def test_create_restore_requires_target_database(client, mocker: MockFixture):
+def test_create_restore_requires_target_database(
+    *, client: Client, mocker: MockFixture
+) -> None:
     mocker.patch("httpx.Client.post")
 
     body = {
@@ -114,11 +145,13 @@ def test_create_restore_requires_target_database(client, mocker: MockFixture):
 
     # Without a target there is no route to post to, and a restore always runs
     # against a live database.
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="target database is not specified"):
         client.create_restore(body=body)
 
 
-def test_create_restore_conflict(client, restore_body, mocker: MockFixture):
+def test_create_restore_conflict(
+    *, client: Client, restore_body: dict[str, Any], mocker: MockFixture
+) -> None:
     mock_post = mocker.patch("httpx.Client.post")
     mock_post.return_value = httpx.Response(
         status_code=409,
@@ -127,7 +160,7 @@ def test_create_restore_conflict(client, restore_body, mocker: MockFixture):
 
     # Two concurrent pg_restores into one live cluster is data loss, so the
     # apiserver refuses the second.
-    with pytest.raises(Exception) as exc:
+    with pytest.raises(Exception, match=r".+") as exc:
         client.create_restore(body=restore_body)
 
     assert "already in progress" in str(exc.value)

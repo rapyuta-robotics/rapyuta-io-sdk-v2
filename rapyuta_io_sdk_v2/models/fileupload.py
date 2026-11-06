@@ -1,5 +1,18 @@
-"""
-Pydantic models for FileUpload and SharedURL resource validation.
+# Copyright 2026 Rapyuta Robotics
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""Pydantic models for FileUpload and SharedURL resource validation.
 
 This module contains Pydantic models that correspond to the FileUpload and SharedURL
 JSON schemas, providing validation for device file upload resources.
@@ -141,8 +154,6 @@ class SharedURL(BaseObject):
 class SharedURLList(BaseList[SharedURL]):
     """List of shared URLs using BaseList."""
 
-    pass
-
 
 class FileUpload(BaseObject):
     """FileUpload model."""
@@ -154,11 +165,11 @@ class FileUpload(BaseObject):
         default=None,
         description="Metadata for the FileUpload resource",
     )
-    spec: FileUploadSpec = Field(description="Specification for the FileUpload resource")
+    spec: FileUploadSpec = Field(
+        description="Specification for the FileUpload resource"
+    )
     status: FileUploadStatus | None = Field(default=None)
 
 
 class FileUploadList(BaseList[FileUpload]):
     """List of file uploads using BaseList."""
-
-    pass

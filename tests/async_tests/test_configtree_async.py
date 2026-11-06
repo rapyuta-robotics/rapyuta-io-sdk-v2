@@ -1,15 +1,40 @@
+# Copyright 2026 Rapyuta Robotics
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
 import httpx
 import pytest
-import pytest_asyncio
-from asyncmock import AsyncMock
 
-# ruff: noqa: F811, F401
-from tests.data.mock_data import configtree_body
-from tests.utils.fixtures import async_client
+from rapyuta_io_sdk_v2.exceptions import (
+    BadGatewayError,
+    ServiceUnavailableError,
+)
+
+if TYPE_CHECKING:
+    from pytest_mock import MockFixture
+
+    from rapyuta_io_sdk_v2 import AsyncClient
 
 
 @pytest.mark.asyncio
-async def test_list_configtrees_success(async_client, mocker: AsyncMock):
+async def test_list_configtrees_success(
+    *, async_client: AsyncClient, mocker: MockFixture
+) -> None:
     # Mock the httpx.AsyncClient.get method
     mock_get = mocker.patch("httpx.AsyncClient.get")
 
@@ -32,7 +57,9 @@ async def test_list_configtrees_success(async_client, mocker: AsyncMock):
 
 
 @pytest.mark.asyncio
-async def test_list_configtrees_bad_gateway(async_client, mocker: AsyncMock):
+async def test_list_configtrees_bad_gateway(
+    *, async_client: AsyncClient, mocker: MockFixture
+) -> None:
     # Mock the httpx.AsyncClient.get method
     mock_get = mocker.patch("httpx.AsyncClient.get")
 
@@ -43,14 +70,16 @@ async def test_list_configtrees_bad_gateway(async_client, mocker: AsyncMock):
     )
 
     # Call the list_configtrees method
-    with pytest.raises(Exception) as exc:
+    with pytest.raises(BadGatewayError) as exc:
         await async_client.list_configtrees()
 
     assert str(exc.value) == "bad gateway"
 
 
 @pytest.mark.asyncio
-async def test_create_configtree_success(async_client, mocker: AsyncMock):
+async def test_create_configtree_success(
+    *, async_client: AsyncClient, mocker: MockFixture, configtree_body: dict[str, Any]
+) -> None:
     # Mock the httpx.AsyncClient.post method
     mock_post = mocker.patch("httpx.AsyncClient.post")
 
@@ -70,7 +99,9 @@ async def test_create_configtree_success(async_client, mocker: AsyncMock):
 
 
 @pytest.mark.asyncio
-async def test_create_configtree_service_unavailable(async_client, mocker: AsyncMock):
+async def test_create_configtree_service_unavailable(
+    *, async_client: AsyncClient, mocker: MockFixture, configtree_body: dict[str, Any]
+) -> None:
     # Mock the httpx.AsyncClient.post method
     mock_post = mocker.patch("httpx.AsyncClient.post")
 
@@ -81,14 +112,16 @@ async def test_create_configtree_service_unavailable(async_client, mocker: Async
     )
 
     # Call the create_configtree method
-    with pytest.raises(Exception) as exc:
+    with pytest.raises(ServiceUnavailableError) as exc:
         await async_client.create_configtree(configtree_body)
 
     assert str(exc.value) == "service unavailable"
 
 
 @pytest.mark.asyncio
-async def test_get_configtree_success(async_client, mocker: AsyncMock):
+async def test_get_configtree_success(
+    *, async_client: AsyncClient, mocker: MockFixture
+) -> None:
     # Mock the httpx.AsyncClient.get method
     mock_get = mocker.patch("httpx.AsyncClient.get")
 
@@ -109,7 +142,9 @@ async def test_get_configtree_success(async_client, mocker: AsyncMock):
 
 
 @pytest.mark.asyncio
-async def test_set_configtree_revision_success(async_client, mocker: AsyncMock):
+async def test_set_configtree_revision_success(
+    *, async_client: AsyncClient, mocker: MockFixture, configtree_body: dict[str, Any]
+) -> None:
     # Mock the httpx.AsyncClient.put method
     mock_put = mocker.patch("httpx.AsyncClient.put")
 
@@ -132,7 +167,9 @@ async def test_set_configtree_revision_success(async_client, mocker: AsyncMock):
 
 
 @pytest.mark.asyncio
-async def test_update_configtree_success(async_client, mocker: AsyncMock):
+async def test_update_configtree_success(
+    *, async_client: AsyncClient, mocker: MockFixture, configtree_body: dict[str, Any]
+) -> None:
     # Mock the httpx.AsyncClient.put method
     mock_put = mocker.patch("httpx.AsyncClient.put")
     mock_put.return_value = httpx.Response(
@@ -149,7 +186,9 @@ async def test_update_configtree_success(async_client, mocker: AsyncMock):
 
 
 @pytest.mark.asyncio
-async def test_delete_configtree_success(async_client, mocker: AsyncMock):
+async def test_delete_configtree_success(
+    *, async_client: AsyncClient, mocker: MockFixture
+) -> None:
     # Mock the httpx.AsyncClient.delete method
     mock_delete = mocker.patch("httpx.AsyncClient.delete")
 
@@ -167,7 +206,9 @@ async def test_delete_configtree_success(async_client, mocker: AsyncMock):
 
 
 @pytest.mark.asyncio
-async def test_list_revisions_success(async_client, mocker: AsyncMock):
+async def test_list_revisions_success(
+    *, async_client: AsyncClient, mocker: MockFixture
+) -> None:
     # Mock the httpx.AsyncClient.get method
     mock_get = mocker.patch("httpx.AsyncClient.get")
 
@@ -190,7 +231,9 @@ async def test_list_revisions_success(async_client, mocker: AsyncMock):
 
 
 @pytest.mark.asyncio
-async def test_create_revision_success(async_client, mocker: AsyncMock):
+async def test_create_revision_success(
+    *, async_client: AsyncClient, mocker: MockFixture, configtree_body: dict[str, Any]
+) -> None:
     # Mock the httpx.AsyncClient.post method
     mock_post = mocker.patch("httpx.AsyncClient.post")
 
@@ -212,7 +255,9 @@ async def test_create_revision_success(async_client, mocker: AsyncMock):
 
 
 @pytest.mark.asyncio
-async def test_put_keys_in_revision_success(async_client, mocker: AsyncMock):
+async def test_put_keys_in_revision_success(
+    *, async_client: AsyncClient, mocker: MockFixture
+) -> None:
     # Mock the httpx.AsyncClient.put method
     mock_put = mocker.patch("httpx.AsyncClient.put")
 
@@ -237,7 +282,9 @@ async def test_put_keys_in_revision_success(async_client, mocker: AsyncMock):
 
 
 @pytest.mark.asyncio
-async def test_commit_revision_success(async_client, mocker: AsyncMock):
+async def test_commit_revision_success(
+    *, async_client: AsyncClient, mocker: MockFixture
+) -> None:
     # Mock the httpx.AsyncClient.put method
     mock_patch = mocker.patch("httpx.AsyncClient.patch")
 
@@ -261,7 +308,9 @@ async def test_commit_revision_success(async_client, mocker: AsyncMock):
 
 
 @pytest.mark.asyncio
-async def test_commit_revision_with_labels(async_client, mocker: AsyncMock):
+async def test_commit_revision_with_labels(
+    *, async_client: AsyncClient, mocker: MockFixture
+) -> None:
     mock_patch = mocker.patch("httpx.AsyncClient.patch")
     mock_patch.return_value = httpx.Response(
         status_code=200,
@@ -288,7 +337,9 @@ async def test_commit_revision_with_labels(async_client, mocker: AsyncMock):
 
 
 @pytest.mark.asyncio
-async def test_get_key_in_revision_str(async_client, mocker: AsyncMock):  # noqa: F811
+async def test_get_key_in_revision_str(
+    *, async_client: AsyncClient, mocker: MockFixture
+) -> None:
     # Mock the httpx.AsyncClient.get method
     mock_get = mocker.patch("httpx.AsyncClient.get")
 
@@ -306,8 +357,11 @@ async def test_get_key_in_revision_str(async_client, mocker: AsyncMock):  # noqa
 
 
 @pytest.mark.asyncio
-async def test_get_key_in_revision_int(async_client, mocker: AsyncMock):  # noqa: F811
+async def test_get_key_in_revision_int(
+    *, async_client: AsyncClient, mocker: MockFixture
+) -> None:
     # Mock the httpx.AsyncClient.get method
+    expected_value = 999
     mock_get = mocker.patch("httpx.AsyncClient.get")
 
     # Set up the mock response
@@ -320,11 +374,13 @@ async def test_get_key_in_revision_int(async_client, mocker: AsyncMock):  # noqa
 
     # Validate the response
     assert isinstance(response, int)
-    assert response == 999
+    assert response == expected_value
 
 
 @pytest.mark.asyncio
-async def test_get_key_in_revision_bool(async_client, mocker: AsyncMock):  # noqa: F811
+async def test_get_key_in_revision_bool(
+    *, async_client: AsyncClient, mocker: MockFixture
+) -> None:
     # Mock the httpx.AsyncClient.get method
     mock_get = mocker.patch("httpx.AsyncClient.get")
 
@@ -342,7 +398,9 @@ async def test_get_key_in_revision_bool(async_client, mocker: AsyncMock):  # noq
 
 
 @pytest.mark.asyncio
-async def test_put_key_in_revision_success(async_client, mocker: AsyncMock):
+async def test_put_key_in_revision_success(
+    *, async_client: AsyncClient, mocker: MockFixture
+) -> None:
     # Mock the httpx.AsyncClient.put method
     mock_put = mocker.patch("httpx.AsyncClient.put")
 
@@ -368,7 +426,9 @@ async def test_put_key_in_revision_success(async_client, mocker: AsyncMock):
 
 
 @pytest.mark.asyncio
-async def test_delete_key_in_revision_success(async_client, mocker: AsyncMock):
+async def test_delete_key_in_revision_success(
+    *, async_client: AsyncClient, mocker: MockFixture
+) -> None:
     mock_delete = mocker.patch("httpx.AsyncClient.delete")
 
     mock_delete.return_value = httpx.Response(
@@ -384,7 +444,9 @@ async def test_delete_key_in_revision_success(async_client, mocker: AsyncMock):
 
 
 @pytest.mark.asyncio
-async def test_rename_key_in_revision_success(async_client, mocker: AsyncMock):
+async def test_rename_key_in_revision_success(
+    *, async_client: AsyncClient, mocker: MockFixture
+) -> None:
     mock_patch = mocker.patch("httpx.AsyncClient.patch")
 
     mock_patch.return_value = httpx.Response(

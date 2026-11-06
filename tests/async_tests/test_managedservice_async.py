@@ -1,27 +1,44 @@
+# Copyright 2026 Rapyuta Robotics
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
 import httpx
 import pytest
-from asyncmock import AsyncMock
 
-# ruff: noqa: F811, F401
 from rapyuta_io_sdk_v2.models import (
     ManagedServiceBinding,
-    ManagedServiceInstanceList,
     ManagedServiceBindingList,
     ManagedServiceInstance,
+    ManagedServiceInstanceList,
     ManagedServiceProvider,
     ManagedServiceProviderList,
 )
-from tests.utils.fixtures import async_client
-from tests.data import (
-    managedservice_binding_model_mock,
-    managedservice_model_mock,
-    managedservicebindinglist_model_mock,
-    managedservicelist_model_mock,
-)
+
+if TYPE_CHECKING:
+    from pytest_mock import MockFixture
+
+    from rapyuta_io_sdk_v2 import AsyncClient
 
 
 @pytest.mark.asyncio
-async def test_list_providers_success(async_client, mocker: AsyncMock):
+async def test_list_providers_success(
+    *, async_client: AsyncClient, mocker: MockFixture
+) -> None:
     # Mock the httpx.AsyncClient.get method
     mock_get = mocker.patch("httpx.AsyncClient.get")
 
@@ -45,8 +62,11 @@ async def test_list_providers_success(async_client, mocker: AsyncMock):
 
 @pytest.mark.asyncio
 async def test_list_instances_success(
-    async_client, managedservicelist_model_mock, mocker: AsyncMock
-):
+    *,
+    async_client: AsyncClient,
+    managedservicelist_model_mock: dict[str, Any],
+    mocker: MockFixture,
+) -> None:
     # Mock the httpx.AsyncClient.get method
     mock_get = mocker.patch("httpx.AsyncClient.get")
 
@@ -73,8 +93,11 @@ async def test_list_instances_success(
 
 @pytest.mark.asyncio
 async def test_get_instance_success(
-    async_client, managedservice_model_mock, mocker: AsyncMock
-):
+    *,
+    async_client: AsyncClient,
+    managedservice_model_mock: dict[str, Any],
+    mocker: MockFixture,
+) -> None:
     # Mock the httpx.AsyncClient.get method
     mock_get = mocker.patch("httpx.AsyncClient.get")
 
@@ -97,8 +120,11 @@ async def test_get_instance_success(
 
 @pytest.mark.asyncio
 async def test_create_instance_success(
-    async_client, managedservice_model_mock, mocker: AsyncMock
-):
+    *,
+    async_client: AsyncClient,
+    managedservice_model_mock: dict[str, Any],
+    mocker: MockFixture,
+) -> None:
     # Mock the httpx.AsyncClient.post method
     mock_post = mocker.patch("httpx.AsyncClient.post")
 
@@ -126,7 +152,9 @@ async def test_create_instance_success(
 
 
 @pytest.mark.asyncio
-async def test_delete_instance_success(async_client, mocker: AsyncMock):
+async def test_delete_instance_success(
+    *, async_client: AsyncClient, mocker: MockFixture
+) -> None:
     # Mock the httpx.AsyncClient.delete method
     mock_delete = mocker.patch("httpx.AsyncClient.delete")
 
@@ -145,8 +173,11 @@ async def test_delete_instance_success(async_client, mocker: AsyncMock):
 
 @pytest.mark.asyncio
 async def test_list_instance_bindings_success(
-    async_client, managedservicebindinglist_model_mock, mocker: AsyncMock
-):
+    *,
+    async_client: AsyncClient,
+    managedservicebindinglist_model_mock: dict[str, Any],
+    mocker: MockFixture,
+) -> None:
     # Mock the httpx.AsyncClient.get method
     mock_get = mocker.patch("httpx.AsyncClient.get")
 
@@ -174,8 +205,11 @@ async def test_list_instance_bindings_success(
 
 @pytest.mark.asyncio
 async def test_get_instance_binding_success(
-    async_client, managedservice_binding_model_mock, mocker: AsyncMock
-):
+    *,
+    async_client: AsyncClient,
+    managedservice_binding_model_mock: dict[str, Any],
+    mocker: MockFixture,
+) -> None:
     # Mock the httpx.AsyncClient.get method
     mock_get = mocker.patch("httpx.AsyncClient.get")
 
@@ -200,8 +234,11 @@ async def test_get_instance_binding_success(
 
 @pytest.mark.asyncio
 async def test_create_instance_binding_success(
-    async_client, managedservice_binding_model_mock, mocker: AsyncMock
-):
+    *,
+    async_client: AsyncClient,
+    managedservice_binding_model_mock: dict[str, Any],
+    mocker: MockFixture,
+) -> None:
     # Mock the httpx.AsyncClient.post method
     mock_post = mocker.patch("httpx.AsyncClient.post")
 
@@ -234,7 +271,9 @@ async def test_create_instance_binding_success(
 
 
 @pytest.mark.asyncio
-async def test_delete_instance_binding_success(async_client, mocker: AsyncMock):
+async def test_delete_instance_binding_success(
+    *, async_client: AsyncClient, mocker: MockFixture
+) -> None:
     # Mock the httpx.AsyncClient.delete method
     mock_delete = mocker.patch("httpx.AsyncClient.delete")
 

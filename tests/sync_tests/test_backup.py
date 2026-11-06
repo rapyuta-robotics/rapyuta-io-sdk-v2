@@ -1,20 +1,38 @@
+# Copyright 2026 Rapyuta Robotics
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
 import httpx
 import pytest
-from pytest_mock import MockFixture
 
-# ruff: noqa: F811, F401
+if TYPE_CHECKING:
+    from pytest_mock import MockFixture
+
+    from rapyuta_io_sdk_v2 import Client
+
 import copy
 
 from rapyuta_io_sdk_v2.models import Backup, BackupList
-from tests.data import (
-    backup_body,
-    backup_model_mock,
-    backuplist_model_mock,
-)
-from tests.utils.fixtures import client
 
 
-def test_list_backups_success(client, backuplist_model_mock, mocker: MockFixture):
+def test_list_backups_success(
+    *, client: Client, backuplist_model_mock: dict[str, Any], mocker: MockFixture
+) -> None:
     mock_get = mocker.patch("httpx.Client.get")
     mock_get.return_value = httpx.Response(
         status_code=200,
@@ -35,7 +53,9 @@ def test_list_backups_success(client, backuplist_model_mock, mocker: MockFixture
     assert backup.spec.barman_image == "barman:17"
 
 
-def test_get_backup_success(client, backup_model_mock, mocker: MockFixture):
+def test_get_backup_success(
+    *, client: Client, backup_model_mock: dict[str, Any], mocker: MockFixture
+) -> None:
     mock_get = mocker.patch("httpx.Client.get")
     mock_get.return_value = httpx.Response(
         status_code=200,
@@ -50,22 +70,26 @@ def test_get_backup_success(client, backup_model_mock, mocker: MockFixture):
     assert response.status.latest_run.verification.check == "Passed"
 
 
-def test_get_backup_not_found(client, mocker: MockFixture):
+def test_get_backup_not_found(*, client: Client, mocker: MockFixture) -> None:
     mock_get = mocker.patch("httpx.Client.get")
     mock_get.return_value = httpx.Response(
         status_code=404,
         json={"error": "backup not found"},
     )
 
-    with pytest.raises(Exception) as exc:
+    with pytest.raises(Exception, match=r".+") as exc:
         client.get_backup(name="notfound")
 
     assert str(exc.value) == "backup not found"
 
 
 def test_create_backup_success(
-    client, backup_body, backup_model_mock, mocker: MockFixture
-):
+    *,
+    client: Client,
+    backup_body: dict[str, Any],
+    backup_model_mock: dict[str, Any],
+    mocker: MockFixture,
+) -> None:
     mock_post = mocker.patch("httpx.Client.post")
     mock_post.return_value = httpx.Response(
         status_code=202,
@@ -79,20 +103,22 @@ def test_create_backup_success(
     assert response.spec.database == "orders-db"
 
 
-def test_create_backup_unauthorized(client, backup_body, mocker: MockFixture):
+def test_create_backup_unauthorized(
+    *, client: Client, backup_body: dict[str, Any], mocker: MockFixture
+) -> None:
     mock_post = mocker.patch("httpx.Client.post")
     mock_post.return_value = httpx.Response(
         status_code=401,
         json={"error": "unauthorized"},
     )
 
-    with pytest.raises(Exception) as exc:
+    with pytest.raises(Exception, match=r".+") as exc:
         client.create_backup(body=backup_body)
 
     assert str(exc.value) == "unauthorized"
 
 
-def test_delete_backup_success(client, mocker: MockFixture):
+def test_delete_backup_success(*, client: Client, mocker: MockFixture) -> None:
     mock_delete = mocker.patch("httpx.Client.delete")
     mock_delete.return_value = httpx.Response(
         status_code=204,
@@ -105,8 +131,8 @@ def test_delete_backup_success(client, mocker: MockFixture):
 
 
 def test_get_backup_surfaces_the_current_step(
-    client, backup_model_mock, mocker: MockFixture
-):
+    *, client: Client, backup_model_mock: dict[str, Any], mocker: MockFixture
+) -> None:
     mock_get = mocker.patch("httpx.Client.get")
     mock_get.return_value = httpx.Response(status_code=200, json=backup_model_mock)
 
@@ -118,7 +144,9 @@ def test_get_backup_surfaces_the_current_step(
     assert backup.status.phase == "Ready"
 
 
-def test_get_ondemand_backup_succeeded(client, backup_model_mock, mocker: MockFixture):
+def test_get_ondemand_backup_succeeded(
+    *, client: Client, backup_model_mock: dict[str, Any], mocker: MockFixture
+) -> None:
     body = copy.deepcopy(backup_model_mock)
     body["spec"]["type"] = "onDemand"
     body["spec"].pop("schedule", None)
@@ -134,8 +162,8 @@ def test_get_ondemand_backup_succeeded(client, backup_model_mock, mocker: MockFi
 
 
 def test_get_backup_keeps_recover_and_database_guid(
-    client, backup_model_mock, mocker: MockFixture
-):
+    *, client: Client, backup_model_mock: dict[str, Any], mocker: MockFixture
+) -> None:
     body = copy.deepcopy(backup_model_mock)
     body["spec"]["databaseGuid"] = "database-mock"
     body["status"]["latestRun"]["verification"]["recover"] = "Failed"

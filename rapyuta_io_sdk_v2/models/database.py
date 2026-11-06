@@ -1,10 +1,23 @@
-"""
-Pydantic models for Database and Backup resources.
-"""
+# Copyright 2026 Rapyuta Robotics
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
+"""Pydantic models for Database and Backup resources."""
 
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -26,16 +39,20 @@ class DeviceSpec(BaseModel):
 
 
 class Credentials(BaseModel):
-    """References to the secret keys holding a Postgres user's username and
-    password. Only ``name``+``key`` are sent on create; the apiserver resolves
+    """References to Postgres username and password secret keys.
+
+    Only ``name``+``key`` are sent on create; the apiserver resolves
     ``value`` onto the device-facing copy and never persists it. Immutable after
-    creation."""
+    creation.
+    """
 
     username: SecretKeyRef | None = Field(default=None)
     password: SecretKeyRef | None = Field(default=None)
 
 
 class PostgresUsers(BaseModel):
+    """Secret references for Postgres users."""
+
     primary: Credentials | None = Field(default=None)
     backup: Credentials | None = Field(default=None)
     # Streaming-replication user consumed by standbys. Server-generated into the
@@ -44,8 +61,10 @@ class PostgresUsers(BaseModel):
 
 
 class StandbySpec(BaseModel):
-    """Optional hot-standby topology. Each standby sits on a device distinct from
-    the primary and from every other standby."""
+    """Optional hot-standby topology.
+
+    Each standby sits on a distinct device from the primary and other standbys.
+    """
 
     primary_interface: str | None = Field(alias="primaryInterface", default=None)
     # Server-managed: resolved from the primary device record; consumed by
@@ -59,8 +78,10 @@ class StandbySpec(BaseModel):
 
 
 class PostgresParameters(BaseModel):
-    """Tunable ``postgresql.conf`` parameters. Omitted fields keep the Postgres
-    defaults."""
+    """Tunable ``postgresql.conf`` parameters.
+
+    Omitted fields keep the Postgres defaults.
+    """
 
     # YAML manifests naturally write `max_connections: 200` unquoted, so coerce
     # numbers to strings here rather than rejecting them. The wire payload must
@@ -101,14 +122,18 @@ class DatabaseSpec(BaseModel):
 class ContainerState(BaseModel):
     """Container state details."""
 
-    status: str | None = Field(default=None, description="running | terminated | waiting")
+    status: str | None = Field(
+        default=None, description="running | terminated | waiting"
+    )
     started_at: str | None = Field(default=None, alias="startedAt")
 
 
 class InstanceStatus(BaseModel):
-    """Status of one Postgres instance on one device. Primary and standby
-    instances report the same shape; the aliases below keep the field names at
-    the call sites self-describing."""
+    """Status of one Postgres instance on one device.
+
+    Primary and standby instances report the same shape. The aliases keep names at
+    the call sites self-describing.
+    """
 
     device_name: str = Field(alias="deviceName")
     port: int
@@ -124,7 +149,12 @@ class InstanceStatus(BaseModel):
 
     @field_validator("state", "last_state", mode="before")
     @staticmethod
-    def normalize_container_state(value: Any) -> dict[str, Any] | None:
+    def normalize_container_state(value: object) -> object:
+        """Normalize empty container states returned by the API.
+
+        Args:
+            value: Raw API state value.
+        """
         if isinstance(value, dict) and not value:
             return None
         return value
@@ -165,5 +195,3 @@ class Database(BaseObject):
 
 class DatabaseList(BaseList[Database]):
     """Paginated list of Database resources."""
-
-    pass

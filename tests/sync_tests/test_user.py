@@ -1,14 +1,38 @@
+# Copyright 2026 Rapyuta Robotics
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
+from __future__ import annotations
+
+import json
+from typing import TYPE_CHECKING, Any
+
 import httpx
 import pytest
 
-# ruff: noqa: F811, F401
-from pytest_mock import MockFixture
 from rapyuta_io_sdk_v2.exceptions import UnauthorizedAccessError
-from tests.data.mock_data import mock_response_user, user_body, user_permissions_mock
-from tests.utils.fixtures import client
+from rapyuta_io_sdk_v2.models import User
+
+if TYPE_CHECKING:
+    from pytest_mock import MockFixture
+
+    from rapyuta_io_sdk_v2 import Client
 
 
-def test_get_user_success(client, mock_response_user, mocker: MockFixture):
+def test_get_user_success(
+    *, client: Client, mock_response_user: dict[str, Any], mocker: MockFixture
+) -> None:
     mock_get = mocker.patch("httpx.Client.get")
 
     mock_get.return_value = httpx.Response(
@@ -22,7 +46,7 @@ def test_get_user_success(client, mock_response_user, mocker: MockFixture):
     assert response.spec.email_id == "test.user@example.com"
     assert response.spec.first_name == "Test"
     assert response.spec.last_name == "User"
-    assert len(response.spec.projects) == 2
+    assert len(response.spec.projects) == len(mock_response_user["spec"]["projects"])
     assert response.spec.projects[0].name == "test-project1"
     assert response.spec.projects[0].role_names == ["project_admin", "project_member"]
     assert len(response.spec.organizations) == 1
@@ -30,7 +54,7 @@ def test_get_user_success(client, mock_response_user, mocker: MockFixture):
     assert len(response.spec.user_groups) == 1
 
 
-def test_get_user_unauthorized(client, mocker: MockFixture):
+def test_get_user_unauthorized(*, client: Client, mocker: MockFixture) -> None:
     mock_get = mocker.patch("httpx.Client.get")
 
     mock_get.return_value = httpx.Response(
@@ -43,7 +67,13 @@ def test_get_user_unauthorized(client, mocker: MockFixture):
     assert "user cannot be authenticated" in str(exc.value)
 
 
-def test_update_user_success(client, user_body, mock_response_user, mocker: MockFixture):
+def test_update_user_success(
+    *,
+    client: Client,
+    user_body: dict[str, Any],
+    mock_response_user: dict[str, Any],
+    mocker: MockFixture,
+) -> None:
     mock_put = mocker.patch("httpx.Client.put")
     mock_put.return_value = httpx.Response(
         status_code=200,
@@ -57,7 +87,9 @@ def test_update_user_success(client, user_body, mock_response_user, mocker: Mock
     assert response.spec.last_name == "User"
 
 
-def test_update_user_unauthorized(client, user_body, mocker: MockFixture):
+def test_update_user_unauthorized(
+    *, client: Client, user_body: dict[str, Any], mocker: MockFixture
+) -> None:
     mock_put = mocker.patch("httpx.Client.put")
 
     mock_put.return_value = httpx.Response(
@@ -70,7 +102,9 @@ def test_update_user_unauthorized(client, user_body, mocker: MockFixture):
     assert "user cannot be authenticated" in str(exc.value)
 
 
-def test_get_user_permissions_success(client, user_permissions_mock, mocker: MockFixture):
+def test_get_user_permissions_success(
+    *, client: Client, user_permissions_mock: dict[str, Any], mocker: MockFixture
+) -> None:
     """Test get_user_permissions with successful response."""
     mock_get = mocker.patch("httpx.Client.get")
 
@@ -113,8 +147,8 @@ def test_get_user_permissions_success(client, user_permissions_mock, mocker: Moc
 
 
 def test_get_user_permissions_with_config_org(
-    client, user_permissions_mock, mocker: MockFixture
-):
+    *, client: Client, user_permissions_mock: dict[str, Any], mocker: MockFixture
+) -> None:
     """Test get_user_permissions using organization_guid from config."""
     mock_get = mocker.patch("httpx.Client.get")
 
@@ -135,7 +169,9 @@ def test_get_user_permissions_with_config_org(
     mock_get.assert_called_once()
 
 
-def test_get_user_permissions_unauthorized(client, mocker: MockFixture):
+def test_get_user_permissions_unauthorized(
+    *, client: Client, mocker: MockFixture
+) -> None:
     """Test get_user_permissions with unauthorized error."""
     mock_get = mocker.patch("httpx.Client.get")
 
@@ -150,3 +186,38 @@ def test_get_user_permissions_unauthorized(client, mocker: MockFixture):
             organization_guid="org-testorg123456789abcdef",
         )
     assert "user cannot be authenticated" in str(exc.value)
+
+
+@pytest.mark.parametrize("input_type", ["dict", "model"])
+def test_add_user_sends_json_and_returns_user(
+    *, client: Client, mocker: MockFixture, input_type: str
+) -> None:
+    user = User.model_validate(
+        {
+            "metadata": {"name": "operator"},
+            "spec": {"emailID": "operator@example.com", "firstName": "Operator"},
+        }
+    )
+    payload = user.model_dump(by_alias=True)
+
+    def handle_request(request: httpx.Request) -> httpx.Response:
+        assert request.method == "POST"
+        assert request.url.path == "/v2/users/"
+        assert json.loads(request.content) == payload
+        assert request.headers["Content-Type"] == "application/json"
+        assert request.headers["X-Checksum"] == "checksum"
+        assert request.headers["organizationguid"] == "override-org"
+        assert "project" not in request.headers
+        return httpx.Response(httpx.codes.CREATED, json=payload)
+
+    with httpx.Client(transport=httpx.MockTransport(handle_request)) as connection:
+        mocker.patch.object(client, "c", connection)
+        result = client.add_user(
+            payload if input_type == "dict" else user,
+            content_type="application/json",
+            x_checksum="checksum",
+            organization_guid="override-org",
+        )
+
+    assert isinstance(result, User)
+    assert result == user
