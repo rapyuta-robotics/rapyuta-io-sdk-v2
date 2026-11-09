@@ -5,6 +5,14 @@ using [git-cliff](https://git-cliff.org/).
 
 <!-- git-cliff: end of header -->
 
+## [0.11.1] - 2026-11-09
+
+### 🐛 Bug Fixes
+
+- Add rules - security major, minor in single group, all  major in single group, disable automerge for any prs raised renovate
+- *(daemons)* Align DockerProxyConfig and DaemonSpec with secrets-phase2
+
+
 ## [0.11.0] - 2026-10-27
 
 ### ✨ Features
