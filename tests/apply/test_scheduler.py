@@ -21,9 +21,9 @@ import asyncio
 import pytest
 
 from rapyuta_io_sdk_v2.apply.applier import Applier, AsyncApplier
-from rapyuta_io_sdk_v2.apply.errors import ApplierExecutionError
+from rapyuta_io_sdk_v2.apply.errors import ApplierExecutionError, ReadinessError
 from rapyuta_io_sdk_v2.apply.source import ManifestSource
-from rapyuta_io_sdk_v2.models.applier import ApplierOptions
+from rapyuta_io_sdk_v2.models.applier import ApplierOptions, ResourceIdentity
 from rapyuta_io_sdk_v2.models.role import Role
 from rapyuta_io_sdk_v2.models.rolebinding import (
     BulkRoleBindingUpdate,
@@ -208,3 +208,29 @@ def test_delete_reverses_managed_role_binding_edge(
 
     assert result.successful
     assert events == ["lookup", "revoke", "role"]
+
+
+@pytest.mark.asyncio
+async def test_execution_error_retains_safe_readiness_identity(
+    configured_async_client: object,
+) -> None:
+    identity = ResourceIdentity(kind="deployment", name="prerequisite")
+
+    async def create_role(_resource: Role, **_kwargs: object) -> Role:
+        message = "unsafe response text must not be retained"
+        raise ReadinessError(
+            message,
+            identity=identity,
+            category="ambiguous",
+        )
+
+    configured_async_client.create_role = create_role
+    applier = AsyncApplier(ManifestSource(resources=(_role("dependent"),)))
+    with pytest.raises(ApplierExecutionError) as caught:
+        await applier.apply(configured_async_client)
+    failure = caught.value.result.outcomes[0].failure
+    assert failure.stage == "readiness"
+    assert failure.readiness_category == "ambiguous"
+    assert failure.readiness_identity == identity
+    assert failure in caught.value.causes
+    assert "unsafe response text" not in caught.value.result.model_dump_json()

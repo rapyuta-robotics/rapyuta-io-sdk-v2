@@ -84,12 +84,15 @@ def _safe_failure(
     category = (
         "cancelled" if isinstance(exception, asyncio.CancelledError) else "lifecycle"
     )
-    stage = "readiness" if isinstance(exception, ReadinessError) else operation
+    readiness = exception if isinstance(exception, ReadinessError) else None
+    stage = "readiness" if readiness is not None else operation
     return OperationFailure(
         category=category,
         stage=stage,
         message=f"{operation} raised {type(exception).__name__}",
         exception_type=type(exception).__name__,
+        readiness_category=readiness.category if readiness is not None else None,
+        readiness_identity=readiness.identity if readiness is not None else None,
     )
 
 

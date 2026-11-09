@@ -119,6 +119,8 @@ def _exact_deployment(
         item
         for item in items
         if (item.metadata.guid if by_guid else item.metadata.name) == name_or_guid
+        # Deleted instances no longer occupy a name; GUIDs still identify them.
+        and (by_guid or not item.metadata.deleted_at)
     ]
     return _one_match(matches, identity)
 

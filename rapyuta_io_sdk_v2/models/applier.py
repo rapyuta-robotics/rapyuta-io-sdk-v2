@@ -232,6 +232,8 @@ class OperationFailure(SDKModel):
     stage: str
     message: str
     exception_type: str | None = None
+    readiness_category: str | None = None
+    readiness_identity: ResourceIdentity | None = None
 
 
 class ResourceOutcome(SDKModel):

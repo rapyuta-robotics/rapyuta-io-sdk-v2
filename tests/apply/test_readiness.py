@@ -20,6 +20,7 @@ import pytest
 
 from rapyuta_io_sdk_v2.apply._readiness import (
     wait_for_deployment_dependencies,
+    wait_for_deployment_dependencies_async,
     wait_for_resource,
     wait_for_resource_async,
 )
@@ -282,3 +283,98 @@ async def test_async_readiness_uses_native_awaitable_reads(
     fake_client = SimpleNamespace(list_disks=list_disks)
     await wait_for_resource_async(disk, fake_client, context=_context(), kind="disk")
     assert calls == 1
+
+
+def _deployment_row(*, guid: str, deleted: str | None, phase: str) -> Deployment:
+    return Deployment.model_construct(
+        metadata=DeploymentMetadata(name="prerequisite", guid=guid, deleted_at=deleted),
+        spec=DeploymentSpec.model_construct(),
+        status=DeploymentStatus(
+            phase=phase, status="Running" if phase == "Succeeded" else "Stopped"
+        ),
+    )
+
+
+@pytest.mark.parametrize("mode", ["sync", "async"])
+@pytest.mark.parametrize(
+    ("scenario", "category"),
+    [
+        ("tombstones", None),
+        ("ambiguous", "ambiguous"),
+        ("all_deleted", "exhausted"),
+        ("terminal", "terminal"),
+        ("guid_deleted", "terminal"),
+    ],
+)
+@pytest.mark.asyncio
+async def test_deployment_readiness_ignores_only_deleted_name_matches(
+    mode: str, scenario: str, category: str | None
+) -> None:
+    pages = _dependency_pages(scenario)
+    target = "old-guid" if scenario == "guid_deleted" else "prerequisite"
+    resource = Deployment.model_construct(
+        spec=DeploymentSpec.model_construct(
+            depends=[DeploymentDepends(nameOrGUID=target, wait=True)]
+        )
+    )
+    calls: list[dict[str, object]] = []
+
+    def list_page(**kwargs: object) -> object:
+        calls.append(kwargs)
+        return _dependency_page(pages, target, kwargs)
+
+    async def async_page(**kwargs: object) -> object:
+        return list_page(**kwargs)
+
+    if category is None:
+        await _run_dependency_wait(
+            mode, resource, sync_page=list_page, async_page=async_page
+        )
+    else:
+        with pytest.raises(ReadinessError) as caught:
+            await _run_dependency_wait(
+                mode, resource, sync_page=list_page, async_page=async_page
+            )
+        assert caught.value.category == category
+        assert caught.value.identity.name == target
+        if category == "terminal":
+            assert caught.value.last_state == "Stopped"
+    assert [call["cont"] for call in calls[:2]] == [0, 1]
+
+
+def _dependency_pages(scenario: str) -> list[list[Deployment]]:
+    old = _deployment_row(
+        guid="old-guid", deleted="2026-11-09T10:15:47Z", phase="Stopped"
+    )
+    live = _deployment_row(guid="live-guid", deleted=None, phase="Succeeded")
+    if scenario in {"all_deleted", "guid_deleted"}:
+        return [[old], []]
+    if scenario == "ambiguous":
+        other = _deployment_row(guid="other-guid", deleted="", phase="Succeeded")
+        return [[old, other], [live]]
+    if scenario == "terminal":
+        live.status = DeploymentStatus(phase="Stopped")
+    return [[old], [live]]
+
+
+def _dependency_page(
+    pages: list[list[Deployment]], target: str, kwargs: dict[str, object]
+) -> object:
+    if "guids" in kwargs:
+        rows = [row for page in pages for row in page if row.metadata.guid == target]
+        return _list_page(rows)
+    index = int(kwargs["cont"])
+    return _list_page(pages[index], 1 if index == 0 else None)
+
+
+async def _run_dependency_wait(
+    mode: str, resource: Deployment, *, sync_page: object, async_page: object
+) -> None:
+    if mode == "sync":
+        wait_for_deployment_dependencies(
+            resource, SimpleNamespace(list_deployments=sync_page), context=_context(1)
+        )
+    else:
+        await wait_for_deployment_dependencies_async(
+            resource, SimpleNamespace(list_deployments=async_page), context=_context(1)
+        )
