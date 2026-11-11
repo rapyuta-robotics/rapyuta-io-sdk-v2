@@ -52,3 +52,26 @@ print(projects)
 ## Contributing
 
 We welcome contributions. Please read our [contribution guidelines](CONTRIBUTING.md) to get started.
+### StaticRoute rate limits
+
+StaticRoute HTTP/HTTPS limits are optional, per client IP and per Traefik instance:
+
+```python
+from rapyuta_io_sdk_v2 import StaticRoute, StaticRouteSpec, StaticRouteRateLimit
+
+route = StaticRoute(
+    metadata={"name": "limited-route"},
+    spec=StaticRouteSpec(
+        rate_limit=StaticRouteRateLimit(average=100, period="1m", burst=20),
+    ),
+)
+client.create_staticroute(route)
+```
+
+`average` must be an integer from 1 to 1,000,000. `period` is an optional
+positive Go duration string, validated by the backend; its server default is
+`1s`. `burst` is an optional non-negative int64. The companion backend defaults
+an omitted or zero burst to `average`. The SDK preserves omitted fields and
+explicit nulls without injecting server defaults. Omit `rateLimit` or set
+`rate_limit=None` to disable limiting when creating or updating a route.
+Existing deployments need a restart or reapply to copy updated route settings.
