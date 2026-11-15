@@ -16,7 +16,7 @@ jobs:
   publish-release:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
           persist-credentials: false
@@ -31,7 +31,7 @@ jobs:
           repositories: rapyuta-io-actions
 
       - name: Checkout private actions
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           repository: rapyuta-robotics/rapyuta-io-actions
           ref: main
