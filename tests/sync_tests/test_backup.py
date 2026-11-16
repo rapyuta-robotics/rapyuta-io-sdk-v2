@@ -150,3 +150,7 @@ def test_get_backup_keeps_recover_and_database_guid(
     assert response.status.latest_run.verification.recover == "Failed"
     assert dumped["status"]["latestRun"]["verification"]["recover"] == "Failed"
     assert dumped["spec"]["databaseGuid"] == "database-mock"
+
+
+def test_backup_depends_on_its_database(backup_model_mock):
+    assert Backup(**backup_model_mock).list_dependencies() == ["database:orders-db"]

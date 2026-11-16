@@ -41,6 +41,9 @@ class PostgresUsers(BaseModel):
     # Streaming-replication user consumed by standbys. Server-generated into the
     # managed secret on create; read-only, with ``value`` blanked on read.
     replication: Credentials | None = Field(default=None)
+    # pg_monitor user the postgres_exporter pod scrapes as. Server-generated
+    # like ``replication``; read-only.
+    monitor: Credentials | None = Field(default=None)
 
 
 class StandbySpec(BaseModel):
@@ -83,6 +86,8 @@ class PostgresSpec(BaseModel):
 
     version: Literal["16", "17", "18"]
     postgres_image: str | None = Field(alias="postgresImage", default=None)
+    # Runs a postgres_exporter pod next to the primary. Off unless set.
+    exporter: bool = Field(default=False)
 
     primary: DeviceSpec
     standby: StandbySpec | None = Field(default=None)
@@ -139,6 +144,8 @@ class PostgresStatus(BaseModel):
 
     primary: PrimaryStatus | None = Field(default=None)
     standby: list[StandbyStatus] | None = Field(default=None)
+    # postgres_exporter pod next to the primary; ``port`` is the metrics port.
+    exporter: InstanceStatus | None = Field(default=None)
 
 
 class DatabaseStatus(BaseModel):
@@ -161,6 +168,22 @@ class Database(BaseObject):
     metadata: BaseMetadata = Field(description="Metadata for the Database resource")
     spec: DatabaseSpec = Field(description="Specification for the Database resource")
     status: DatabaseStatus | None = Field(default=None)
+
+    def list_dependencies(self) -> list[str] | None:
+        """Only the primary user's secret is caller-supplied; the apiserver generates
+        the backup and replication users into its own secret on create."""
+        postgres = self.spec.postgres
+        users = postgres.users if postgres is not None else None
+        primary = users.primary if users is not None else None
+        if primary is None:
+            return None
+
+        names = {
+            ref.name
+            for ref in (primary.username, primary.password)
+            if ref is not None and ref.name
+        }
+        return [f"secret:{name}" for name in sorted(names)] or None
 
 
 class DatabaseList(BaseList[Database]):

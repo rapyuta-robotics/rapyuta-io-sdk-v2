@@ -71,6 +71,9 @@ class Backup(BaseObject):
     spec: BackupSpec = Field(description="Specification for the Backup resource")
     status: BackupStatus | None = Field(default=None)
 
+    def list_dependencies(self) -> list[str] | None:
+        return [f"database:{self.spec.database}"]
+
 
 class BackupList(BaseList[Backup]):
     """Paginated list of Backup resources."""
