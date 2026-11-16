@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_validator
 
 from rapyuta_io_sdk_v2.models.utils import (
     BaseList,
@@ -14,7 +14,9 @@ from rapyuta_io_sdk_v2.models.utils import (
 
 
 class RoleBindingMetadata(BaseMetadata):
-    name: None = Field(default=None, exclude=True)
+    # Role bindings have no name on the server. Manifests carry one as their
+    # key for rio apply, so accept it but never send it.
+    name: str | None = Field(default=None, exclude=True)
 
 
 class RoleRef(BaseModel):
@@ -31,9 +33,14 @@ class RoleRef(BaseModel):
 
 
 class RoleBindingSpec(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
     role_ref: RoleRef = Field(alias="roleRef")
     domain: Domain
     subject: Subject
+    # The binding is time-bound when not_after is set. Older servers ignore both.
+    not_before: AwareDatetime | None = Field(default=None, alias="notBefore")
+    not_after: AwareDatetime | None = Field(default=None, alias="notAfter")
 
 
 class RoleBinding(BaseObject):
@@ -60,8 +67,10 @@ class RoleBinding(BaseObject):
 
 
 class BulkRoleBindingUpdate(BaseModel):
-    new_bindings: list[RoleBinding] = Field(alias="newBindings")
-    old_bindings: list[RoleBinding | None] = Field(alias="oldBindings")
+    new_bindings: list[RoleBinding] = Field(default_factory=list, alias="newBindings")
+    old_bindings: list[RoleBinding | None] = Field(
+        default_factory=list, alias="oldBindings"
+    )
 
 
 class RoleBindingList(BaseList[RoleBinding]):
