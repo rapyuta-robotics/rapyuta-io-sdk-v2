@@ -42,6 +42,26 @@ async def test_list_deployments_success(
 
 
 @pytest.mark.asyncio
+async def test_list_deployments_name_regex_and_sort(async_client, mocker: MockFixture):
+    mock_get = mocker.patch("httpx.AsyncClient.get")
+    mock_get.return_value = httpx.Response(
+        status_code=200,
+        json={"metadata": {"continue": 2, "totalItems": 7, "totalPages": 4}, "items": []},
+    )
+
+    response = await async_client.list_deployments(
+        limit=2, name_regex="^warehouse-", sort_by="name", sort_order="asc"
+    )
+
+    params = mock_get.call_args.kwargs["params"]
+    assert params["nameRegEx"] == "^warehouse-"
+    assert params["sortBy"] == "name"
+    assert params["sortOrder"] == "asc"
+    assert response.metadata.total_items == 7
+    assert response.metadata.total_pages == 4
+
+
+@pytest.mark.asyncio
 async def test_list_deployments_not_found(async_client, mocker: MockFixture):
     mock_get = mocker.patch("httpx.AsyncClient.get")
     mock_get.return_value = httpx.Response(
