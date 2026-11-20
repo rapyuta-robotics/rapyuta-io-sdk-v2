@@ -72,6 +72,16 @@ class ListMeta(BaseModel):
         alias="continue",
         description="Continue token for pagination (int64)",
     )
+    total_items: int | None = Field(
+        default=None,
+        alias="totalItems",
+        description="Total number of items matching the query (int64)",
+    )
+    total_pages: int | None = Field(
+        default=None,
+        alias="totalPages",
+        description="Total number of pages for the requested limit (int64)",
+    )
 
 
 class BaseList(BaseModel, Generic[T]):

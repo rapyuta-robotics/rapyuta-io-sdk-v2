@@ -692,6 +692,9 @@ class Client:
         package_version: str | None = None,
         phases: list[str] | None = None,
         regions: list[str] | None = None,
+        name_regex: str | None = None,
+        sort_by: str | None = None,
+        sort_order: str | None = None,
         **kwargs,
     ) -> DeploymentList:
         """List all deployments in a project.
@@ -709,6 +712,9 @@ class Client:
             package_version (str, optional): Filter by package version. Defaults to None.
             phases (List[str], optional): Filter by phases. Available values : InProgress, Provisioning, Succeeded, FailedToUpdate, FailedToStart, Stopped. Defaults to None.
             regions (List[str], optional): Filter by regions. Defaults to None.
+            name_regex (str, optional): Regex matched against deployment name or package name (max 75 characters). Defaults to None.
+            sort_by (str, optional): Sort column. Available values: name, createdAt, status. Defaults to None (createdAt).
+            sort_order (str, optional): Sort order. Available values: asc, desc. Defaults to None (desc).
 
         Returns:
             Dict[str, Any]: List of deployments with items validated as Deployment objects.
@@ -730,6 +736,9 @@ class Client:
                 "packageVersion": package_version,
                 "phases": phases,
                 "regions": regions,
+                "nameRegEx": name_regex,
+                "sortBy": sort_by,
+                "sortOrder": sort_order,
             },
         )
 

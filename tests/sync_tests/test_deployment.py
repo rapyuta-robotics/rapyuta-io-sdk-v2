@@ -40,6 +40,25 @@ def test_list_deployments_success(client, deploymentlist_model_mock, mocker: Moc
     assert device_dep.metadata.guid == "dep-device-001"
 
 
+def test_list_deployments_name_regex_and_sort(client, mocker: MockFixture):
+    mock_get = mocker.patch("httpx.Client.get")
+    mock_get.return_value = httpx.Response(
+        status_code=200,
+        json={"metadata": {"continue": 2, "totalItems": 7, "totalPages": 4}, "items": []},
+    )
+
+    response = client.list_deployments(
+        limit=2, name_regex="^warehouse-", sort_by="name", sort_order="asc"
+    )
+
+    params = mock_get.call_args.kwargs["params"]
+    assert params["nameRegEx"] == "^warehouse-"
+    assert params["sortBy"] == "name"
+    assert params["sortOrder"] == "asc"
+    assert response.metadata.total_items == 7
+    assert response.metadata.total_pages == 4
+
+
 def test_list_deployments_not_found(client, mocker: MockFixture):
     # Mock the httpx.Client.get method
     mock_get = mocker.patch("httpx.Client.get")
