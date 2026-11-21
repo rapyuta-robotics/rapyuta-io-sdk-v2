@@ -103,3 +103,48 @@ async def test_sign_ssh_public_key_server_error(
         )
 
     assert str(exc.value) == "internal server error"
+
+
+@pytest.mark.asyncio
+async def test_sign_org_ssh_public_key_success(
+    async_client,
+    ssh_key_sign_request_body,
+    ssh_key_sign_response_mock,
+    mocker: MockFixture,
+):
+    mock_post = mocker.patch("httpx.AsyncClient.post")
+    mock_post.return_value = httpx.Response(
+        status_code=200,
+        json=ssh_key_sign_response_mock,
+    )
+
+    response = await async_client.sign_org_ssh_public_key(
+        body=ssh_key_sign_request_body,
+    )
+
+    assert isinstance(response, SSHKeySignResponse)
+    assert response.certificate == ssh_key_sign_response_mock["certificate"]
+
+    # The organization route is distinct from the project one; hitting the wrong
+    # URL would silently issue a certificate with the wrong scope.
+    call_kwargs = mock_post.call_args
+    assert call_kwargs.kwargs["url"].endswith("/v2/certs/ssh/org/sign/")
+
+
+@pytest.mark.asyncio
+async def test_sign_org_ssh_public_key_unauthorized(
+    async_client, ssh_key_sign_request_body, mocker: MockFixture
+):
+    """A caller without organization-scope permission is rejected."""
+    mock_post = mocker.patch("httpx.AsyncClient.post")
+    mock_post.return_value = httpx.Response(
+        status_code=401,
+        json={"error": "subject is not authorized for this operation"},
+    )
+
+    with pytest.raises(Exception) as exc:
+        await async_client.sign_org_ssh_public_key(
+            body=ssh_key_sign_request_body,
+        )
+
+    assert str(exc.value) == "subject is not authorized for this operation"

@@ -99,3 +99,78 @@ def test_sign_ssh_public_key_server_error(
         )
 
     assert str(exc.value) == "internal server error"
+
+
+def test_sign_org_ssh_public_key_success(
+    client, ssh_key_sign_request_body, ssh_key_sign_response_mock, mocker: MockFixture
+):
+    mock_post = mocker.patch("httpx.Client.post")
+    mock_post.return_value = httpx.Response(
+        status_code=200,
+        json=ssh_key_sign_response_mock,
+    )
+
+    response = client.sign_org_ssh_public_key(
+        body=ssh_key_sign_request_body,
+    )
+
+    assert isinstance(response, SSHKeySignResponse)
+    assert response.certificate == ssh_key_sign_response_mock["certificate"]
+
+    # The organization route is distinct from the project one: a certificate from
+    # it carries an organization-scoped principal, so hitting the wrong URL would
+    # silently issue the wrong scope.
+    call_kwargs = mock_post.call_args
+    assert call_kwargs.kwargs["url"].endswith("/v2/certs/ssh/org/sign/")
+
+
+def test_sign_org_ssh_public_key_with_dict_body(
+    client, ssh_key_sign_response_mock, mocker: MockFixture
+):
+    mock_post = mocker.patch("httpx.Client.post")
+    mock_post.return_value = httpx.Response(
+        status_code=200,
+        json=ssh_key_sign_response_mock,
+    )
+
+    response = client.sign_org_ssh_public_key(
+        body={"publicKey": "ssh-rsa AAAAB3... user@example.com"},
+    )
+
+    assert isinstance(response, SSHKeySignResponse)
+    assert response.certificate == ssh_key_sign_response_mock["certificate"]
+
+
+def test_sign_org_ssh_public_key_unauthorized(
+    client, ssh_key_sign_request_body, mocker: MockFixture
+):
+    """A caller without organization-scope permission is rejected."""
+    mock_post = mocker.patch("httpx.Client.post")
+    mock_post.return_value = httpx.Response(
+        status_code=401,
+        json={"error": "subject is not authorized for this operation"},
+    )
+
+    with pytest.raises(Exception) as exc:
+        client.sign_org_ssh_public_key(
+            body=ssh_key_sign_request_body,
+        )
+
+    assert str(exc.value) == "subject is not authorized for this operation"
+
+
+def test_sign_org_ssh_public_key_server_error(
+    client, ssh_key_sign_request_body, mocker: MockFixture
+):
+    mock_post = mocker.patch("httpx.Client.post")
+    mock_post.return_value = httpx.Response(
+        status_code=500,
+        json={"error": "internal server error"},
+    )
+
+    with pytest.raises(Exception) as exc:
+        client.sign_org_ssh_public_key(
+            body=ssh_key_sign_request_body,
+        )
+
+    assert str(exc.value) == "internal server error"
