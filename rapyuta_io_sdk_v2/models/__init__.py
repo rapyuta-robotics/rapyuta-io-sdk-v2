@@ -97,6 +97,8 @@ from rapyuta_io_sdk_v2.models.secret import (
 # Static Route models
 from rapyuta_io_sdk_v2.models.staticroute import (
     StaticRoute as StaticRoute,
+    StaticRouteSpec as StaticRouteSpec,
+    StaticRouteRateLimit as StaticRouteRateLimit,
     StaticRouteList as StaticRouteList,
 )
 
