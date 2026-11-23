@@ -16,10 +16,31 @@ from pydantic import BaseModel, Field, field_validator
 from .utils import BaseList, BaseMetadata, BaseObject
 
 
+class StaticRouteExposure(BaseModel):
+    """How the route reaches its deployment. Omitted or mode "cluster" keeps the default path."""
+
+    mode: Literal["cluster", "tunnel"] | None = Field(
+        default=None, description="cluster (default) or tunnel (Cloudflare Tunnel)"
+    )
+    fixed_ip: bool | None = Field(
+        default=None,
+        description="tunnel only: keep the hostname on the cluster IP and backhaul through the tunnel",
+        alias="fixedIP",
+    )
+    origin: str | None = Field(
+        default=None,
+        description="tunnel only: HTTP(S) origin on the edge, e.g. http://localhost:80",
+    )
+
+
 class StaticRouteSpec(BaseModel):
     """Specification for StaticRoute resource."""
 
     url: str | None = Field(default=None, description="URL for the static route")
+    exposure: StaticRouteExposure | None = Field(
+        default=None,
+        description="How the route is exposed (cluster or Cloudflare Tunnel)",
+    )
     source_ip_range: list[str] | None = Field(
         default=None,
         description="List of source IP ranges in CIDR notation",

@@ -147,3 +147,41 @@ def test_delete_staticroute_success(client, mocker: MockFixture):
 
     # Validate the response
     assert response is None
+
+
+def test_staticroute_exposure_round_trip():
+    body = {
+        "apiVersion": "api.rapyuta.io/v2",
+        "kind": "StaticRoute",
+        "metadata": {"name": "gateway", "region": "jp"},
+        "spec": {
+            "sourceIPRange": ["10.0.0.0/24"],
+            "exposure": {
+                "mode": "tunnel",
+                "fixedIP": True,
+                "origin": "http://localhost:80",
+            },
+        },
+    }
+
+    route = StaticRoute.model_validate(body)
+    dumped = route.model_dump(by_alias=True, exclude_none=True)
+
+    assert dumped["spec"]["exposure"] == {
+        "mode": "tunnel",
+        "fixedIP": True,
+        "origin": "http://localhost:80",
+    }
+    assert dumped["spec"]["sourceIPRange"] == ["10.0.0.0/24"]
+
+
+def test_staticroute_exposure_rejects_unknown_mode():
+    body = {
+        "apiVersion": "api.rapyuta.io/v2",
+        "kind": "StaticRoute",
+        "metadata": {"name": "gateway"},
+        "spec": {"exposure": {"mode": "direct"}},
+    }
+
+    with pytest.raises(ValueError):
+        StaticRoute.model_validate(body)
